@@ -35,25 +35,25 @@ def setchainLPTJTAG(Chain):
     SetPortByte(base_adr, 0)
 
 def resetLPTJTAG: 
-    SetPortByte(base_adr, 0);
-    SetPortByte(ctrl_adr, STRB | TRST);  # Strobe with TRST high
-    SetPortByte(ctrl_adr, STRB);         # Strobe with TRST low
-    SetPortByte(ctrl_adr, STRB | TRST);  # Strobe with TRST high
-    SetPortByte(base_adr, 0);
+    SetPortByte(base_adr, 0)
+    SetPortByte(ctrl_adr, STRB | TRST)  # Strobe with TRST high
+    SetPortByte(ctrl_adr, STRB)         # Strobe with TRST low
+    SetPortByte(ctrl_adr, STRB | TRST)  # Strobe with TRST high
+    SetPortByte(base_adr, 0)
 
 def enableLPTJTAG:
     status = GetPortByte(ctrl_adr)
-    SetPortByte(ctrl_adr, status | 0x02);
+    SetPortByte(ctrl_adr, status | 0x02)
 
 def TMSHighLPTJTAG:
     SetPortByte(base_adr, TMS)
-    SetPortByte(base_adr, TCKTMS);
-    SetPortByte(base_adr, TMS);
+    SetPortByte(base_adr, TCKTMS)
+    SetPortByte(base_adr, TMS)
 
 def TMSLowLPTJTAG:
-    SetPortByte(base_adr, 0);
-    SetPortByte(base_adr, TCK);
-    SetPortByte(base_adr, 0);
+    SetPortByte(base_adr, 0)
+    SetPortByte(base_adr, TCK)
+    SetPortByte(base_adr, 0)
 
 def idleLPTJTAG:
     for i in range(5):
@@ -70,15 +70,14 @@ def jtagioLPTJTAG(TMSvalue, TDIvalue, TDOvalue):
     if (TMSvalue>0):
         sendbit = (sendbit | TMS)
     else: 
-        sendbit = (sendbit & (!TMS));
-
+        sendbit = (sendbit & (!TMS))
     sendbit = sendbit | 0x10
     SetPortByte(base_adr, sendbit)
-    sendbit = sendbit | TCK;
+    sendbit = sendbit | TCK
     SetPortByte(base_adr, sendbit)
-    rcvbit  = GetPortByte(status_adr);
-    rcvbit  = (!rcvbit) & TDO;
-    sendbit = sendbit & (!TCK);
+    rcvbit  = GetPortByte(status_adr)
+    rcvbit  = (!rcvbit) & TDO
+    sendbit = sendbit & (!TCK)
     SetPortByte(base_adr, sendbit)
     if (rcvbit == TDO):
         TDOvalue = 0
@@ -86,63 +85,45 @@ def jtagioLPTJTAG(TMSvalue, TDIvalue, TDOvalue):
         TDOvalue = 1
 
 def ShiftDataLPTJTAG(Data, DataSize, sendtms):
-    if (DataSize > 32)
+    if (DataSize > 32):
         result = 0
-    else
-begin
-    tmp := 0;
+    else:
+        tmp := 0
+        for i in range(1,DataSize+1)
+            jtagioLPTJTAG ( (DataSize & sendtms), (Data & 0x01), tdo)
+            tmp = tmp | (( tdo & 0x01) << (i-1) )
+            Data = Data >> 1
+    result = tmp
+    return(result)
 
-    for i:=1 to DataSize do
-    begin
-        jtagioLPTJTAG( byte ((i = DataSize) and sendtms), byte (Data and $01), tdo);
-        tmp := tmp or ( (Longword (tdo and $01)) shl (i-1) );
-        Data := Data shr 1;
-    end;
+def StartIRShiftLPTJTAG():
+    jtagioLPTJTAG(0, 0, tdo)
+    jtagioLPTJTAG(1, 0, tdo)
+    jtagioLPTJTAG(1, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
 
-    Result := tmp;
-end;
-end;
+def StartDRShiftLPTJTAG():
+    jtagioLPTJTAG(0, 0, tdo)
+    jtagioLPTJTAG(1, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
 
-procedure StartIRShiftLPTJTAG();
-var
-    tdo:    byte;
-begin
-    jtagioLPTJTAG(0, 0, tdo);
-    jtagioLPTJTAG(1, 0, tdo);
-    jtagioLPTJTAG(1, 0, tdo);
-    jtagioLPTJTAG(0, 0, tdo);
-    jtagioLPTJTAG(0, 0, tdo);
-end;
+def ExitIRShiftLPTJTAG():
+    jtagioLPTJTAG(1, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
 
-procedure StartDRShiftLPTJTAG();
-var
-    tdo:    byte;
-begin
-    jtagioLPTJTAG(0, 0, tdo);
-    jtagioLPTJTAG(1, 0, tdo);
-    jtagioLPTJTAG(0, 0, tdo);
-    jtagioLPTJTAG(0, 0, tdo);
-end;
-
-procedure ExitIRShiftLPTJTAG();
-var
-    tdo:    byte;
-begin
-    jtagioLPTJTAG(1, 0, tdo);
-    jtagioLPTJTAG(0, 0, tdo);
-    jtagioLPTJTAG(0, 0, tdo);
-    jtagioLPTJTAG(0, 0, tdo);
-end;
-
-procedure ExitDRShiftLPTJTAG();
-var
-    tdo:    byte;
-begin
-    jtagioLPTJTAG(1, 0, tdo);
-    jtagioLPTJTAG(0, 0, tdo);
-    jtagioLPTJTAG(0, 0, tdo);
-    jtagioLPTJTAG(0, 0, tdo);
-end;
+def ExitDRShiftLPTJTAG():
+    jtagioLPTJTAG(1, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
 
 
-end.
+def ExitDRShiftLPTJTAG():
+    jtagioLPTJTAG(1, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
+    jtagioLPTJTAG(0, 0, tdo)
