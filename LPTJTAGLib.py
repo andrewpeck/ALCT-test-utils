@@ -25,6 +25,7 @@ def openLPTJTAG(TComponent):
     LPTPort = parallel.Parallel()
 
 def closeLPTJTAG():
+    return(0)
 
 def setchainLPTJTAG(Chain):
     SetPortByte(base_adr, Chain)
@@ -63,19 +64,19 @@ def jtagioLPTJTAG(TMSvalue, TDIvalue, TDOvalue):
     if (TDIvalue>0):
         sendbit = (sendbit | TDI)
     else:
-        sendbit = (sendbit & (!TDI))
+        sendbit = (sendbit & (not TDI))
 
     if (TMSvalue>0):
         sendbit = (sendbit | TMS)
     else: 
-        sendbit = (sendbit & (!TMS))
+        sendbit = (sendbit & (not TMS))
     sendbit = sendbit | 0x10
     SetPortByte(base_adr, sendbit)
     sendbit = sendbit | TCK
     SetPortByte(base_adr, sendbit)
     rcvbit  = GetPortByte(status_adr)
-    rcvbit  = (!rcvbit) & TDO
-    sendbit = sendbit & (!TCK)
+    rcvbit  = (not rcvbit) & TDO
+    sendbit = sendbit & (not TCK)
     SetPortByte(base_adr, sendbit)
     if (rcvbit == TDO):
         TDOvalue = 0
@@ -86,10 +87,10 @@ def ShiftDataLPTJTAG(Data, DataSize, sendtms):
     if (DataSize > 32):
         result = 0
     else:
-        tmp := 0
-        for i in range(1,DataSize+1)
+        tmp = 0
+        for i in range(DataSize): 
             jtagioLPTJTAG ( (DataSize & sendtms), (Data & 0x01), tdo)
-            tmp = tmp | (( tdo & 0x01) << (i-1) )
+            tmp = tmp | (( tdo & 0x01) << i )
             Data = Data >> 1
     result = tmp
     return(result)

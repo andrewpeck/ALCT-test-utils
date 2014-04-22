@@ -1,15 +1,14 @@
-import LPTJTAGLib.py
+from LPTJTAGLib import *
 
 IR_REG = 0
 DR_REG = 1
 modulename = '"ppdev"'
 jtagdevice = '/dev/jtag'
 
-def open_jtag:
-if (!ActiveHW):
-    if (!driverJTAG):
+def open_jtag():
+    if (not ActiveHW) and (not driverJTAG): 
         nPort = openLPTJTAG(Owner)
-        if nPort = -1 : 
+        if nPort == -1: 
             ActiveHW = False
         else :
             ActiveHW = True
@@ -47,7 +46,7 @@ def TMS_Low():
 def lights_jtag(): 
     if ActiveHW: lightsLPTJTAG()
 
-def jtag_io(tms_, tdi_, tdo_)
+def jtag_io(tms_, tdi_, tdo_): 
     if ActiveHW: jtagioLPTJTAG(tms_, tdi_, tdo_)
 
 # Write JTAG Instruction Register 
@@ -90,8 +89,8 @@ def ShiftData(Data, DataSize, sendtms):
             #write data
             jtag_io(tms, tdi, tdo)
 
-            tmp := tmp | ( (tdo & 0x01) << i )
-            Data := Data >> 1
+            tmp = tmp | ( (tdo & 0x01) << i )
+            Data = Data >> 1
         return(tmp)
     else: 
         return 0
@@ -99,7 +98,7 @@ def ShiftData(Data, DataSize, sendtms):
 def IOExchange(Send, Recv, Size, RegType):
     ChunkSz = 8
     #I:  longint
-    if (!ActiveHW or (Size <= 0): 
+    if (not ActiveHW) or (Size <= 0): 
             return(0)
     else: 
         if (RegType == IR_REG): 
@@ -115,7 +114,7 @@ def IOExchange(Send, Recv, Size, RegType):
                 else: 
                     Recv[i] = 0xFF & ShiftData(Send[i], Size - ChunkSz*i, true)
 
-        if RegType = IR_REG: 
+        if RegType == IR_REG: 
             ExitIRShift()
         else: 
             ExitDRShift()
@@ -128,7 +127,7 @@ def StartIRShift():
     jtag_io(0, 0, tdo)
     jtag_io(0, 0, tdo)
 
-def StartDRShift() 
+def StartDRShift(): 
     jtag_io(0, 0, tdo)
     jtag_io(1, 0, tdo)
     jtag_io(0, 0, tdo)
