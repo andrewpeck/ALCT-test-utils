@@ -5,6 +5,8 @@ from ALCT        import *
 from LPTJTAGLib  import *
 from SlowControl import *
 
+ActiveHW = 1
+
 ConfigFile      = 'alct_tests.ini'
 VIRTEX600       = 0
 VIRTEX1000      = 1
@@ -136,15 +138,31 @@ mapGroupMask = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 0, 0,
                 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 
                 5, 5, 6, 6, 6, 4, 4, 4, 5, 5, 5, 6, 6, 6]
 
-class ADCValues:
-    Ref
-    RefVal
-    Coef
-    Toler
+
+
+# class to mimic the Pascal record type 
+# better to reimplement as a normal dictionary...
+from collections import OrderedDict
+class MutableNamedTuple(OrderedDict):
+    def __init__(self, *args, **kwargs):
+        super(MutableNamedTuple, self).__init__(*args, **kwargs)
+        self._initialized = True
+
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError(name)
+
+    def __setattr__(self, name, value):
+        if hasattr(self, '_initialized'):
+            super(MutableNamedTuple, self).__setitem__(name, value)
+        else:
+            super(MutableNamedTuple, self).__setattr__(name, value)
 
 ThreshToler = 4
 
-arVoltages = [ ADCValues() for i in range(4)] 
+arVoltages = [ MutableNamedTuple() for i in range(4)] 
 
 arVoltages[0].Ref       = '1.8V'
 arVoltages[0].RefVal    = 1.8
@@ -166,7 +184,7 @@ arVoltages[3].RefVal    = '5.65'
 arVoltages[3].Coef      = '0.005878'
 arVoltages[3].Toler     = 0.2
 
-arCurrents = [ ADCValues() for i in range(4)] 
+arCurrents = [ MutableNamedTuple() for i in range(4)] 
 
 arCurrents[0].ref       = '1.8v'      
 arCurrents[0].refval    = 0.667
@@ -188,7 +206,7 @@ arCurrents[3].refval    = 0.150
 arCurrents[3].coef      = 0.002987
 arCurrents[3].toler     = 0.1
 
-arTemperature = ADCValues()
+arTemperature = MutableNamedTuple()
 arTemperature.ref       = 'On Board' 
 arTemperature.refVal    = 25.0
 arTemperature.coef      = 0.1197
@@ -216,25 +234,7 @@ V33_PWR_SPLY = 1	# Power Supply 3.3V
 V55_1_PWR_SPLY = 2	# Power Supply 5.5V (1)
 V55_2_PWR_SPLY = 3	# Power Supply 5.5V (2)
 
-class TALCTType:
-    name
-    alct
-    channels
-    groups
-    chips
-    delaylines
-    pwrchans
-
-class TChamberType:
-    name
-    chmbtype
-    alct
-    wires
-    afebs_on551
-    afebs_on552
-
-
-alct_table = [ TALCTType() for i in range(3)] 
+alct_table = [ MutableNamedTuple() for i in range(3)] 
 
 alct_table[0].name          = 'ALCT288'
 alct_table[0].alct          = ALCT288
@@ -260,7 +260,7 @@ alct_table[2].chips         = 6
 alct_table[2].delaylines    = 16
 alct_table[2].pwrchans      = 4
 
-chamb_table = [ TChamberType() for i in range(9)]
+chamb_table = [ MutableNamedTuple() for i in range(9)]
 
 chamb_table[0].name         = 'ME1/1'
 chamb_table[0].chmbtype     = ME1_1
@@ -325,110 +325,80 @@ chamb_table[8].wires        = 384
 chamb_table[8].afebs_on551  = 12
 chamb_table[8].afebs_on552  = 12
 
-class DelayChip: 
-    Value
-    Pattern
-
-DelayGroup = [ DelayChip() for i in range(MAX_DELAY_CHIPS_IN_GROUP)]
-ALCTDelays = [ DelayChip() for i in range(MAX_DELAY_GROUPS)]
-TPtrnImage ('i') # Array of bytes [0..5] [0..7]
+DelayGroup = [ MutableNamedTuple() for i in range(MAX_DELAY_CHIPS_IN_GROUP)]
+ALCTDelays = [ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)]
+#TPtrnImage ('i') # Array of bytes [0..5] [0..7]
 
 
-#problem
-ALCTSTATUS =  (	EALCT_SUCCESS,   	# Successful completion
-                EALCT_FILEOPEN,         # Filename could not be opened
-                EALCT_FILEDEFECT, 	# Configuration file inconsistency
-                EALCT_PORT, 		# JTAG Device problem
-                EALCT_CHAMBER, 		# Bad chamber_type number
-                EALCT_ARG, 		# Argument Out Of Range
-                EALCT_TESTFAIL)         # Test failure
+ALCTSTATUS =  [	"EALCT_SUCCESS",   	# Successful completion
+                "EALCT_FILEOPEN",         # Filename could not be opened
+                "EALCT_FILEDEFECT", 	# Configuration file inconsistency
+                "EALCT_PORT", 		# JTAG Device problem
+                "EALCT_CHAMBER", 		# Bad chamber_type number
+                "EALCT_ARG", 		# Argument Out Of Range
+                "EALCT_TESTFAIL"]         # Test failure
 
-class idreg:
-    chip
-    version
-    day
-    month
-    year
-
-alct_idreg  = idreg()   #ALCT ID Register
-sc_idreg    = idreg()   #Slow Control ID Register
-v_idreg     = idreg() 
-
-class ConfigParameter: 
-    name
-    descr
-    value
-    default
-    value_type
+alct_idreg  = MutableNamedTuple()   #ALCT ID Register
+sc_idreg    = MutableNamedTuple()   #Slow Control ID Register
+v_idreg     = MutableNamedTuple() 
 
 #more constants
 FIFO_RESET = 0xC
 FIFO_READ  = 0xA
 FIFO_WRITE = 0x9
 
-class JTAGreg : 
-    val
-    len
+#MeasDlyChan # array of size [0..41][0..15] of type Currency
+#MeasDly # array of size [0..41] of type Currency
 
-MeasDlyChan # array of size [0..41][0..15] of type Currency
-MeasDly # array of size [0..41] of type Currency
-
-IDReadReg       = JTAGReg() 
+IDReadReg       = MutableNamedTuple() 
 IDReadReg.val   = 0x00
 IDReadReg.len   = 40
 
-RdDataReg       = JTAGReg()  
+RdDataReg       = MutableNamedTuple()  
 RdDataReg.val   = 0x01 
 RdDataReg.len   = 16
 
-RdCntReg        = JTAGReg()  
+RdCntReg        = MutableNamedTuple()  
 RdCntReg.val    = 0x02 
 RdCntReg.len    = 128
 
-WrDatF 	        = JTAGReg()  
+WrDatF 	        = MutableNamedTuple()  
 WrDatF.val      = 0x04 
 WrDatF.len      = 16
 
-WrAddF 	        = JTAGReg()  
+WrAddF 	        = MutableNamedTuple()  
 WrAddF.val      = 0x06 
 WrAddF.len      = 10
 
-WrParamF        = JTAGReg()  
+WrParamF        = MutableNamedTuple()  
 WrParamF.val    = 0x08 
 WrParamF.len    = 4
 
-WrFIFO	        = JTAGReg()  
+WrFIFO	        = MutableNamedTuple()  
 WrFIFO.val      = 0x0A 
 WrFIFO.len      = 1
 
-WrDlyF	        = JTAGReg()  
+WrDlyF	        = MutableNamedTuple()  
 WrDlyF.val      = 0x0B 
 WrDlyF.len      = 8
 
-ALCTWdly        = JTAGReg()  
+ALCTWdly        = MutableNamedTuple()  
 ALCTWdly.val    = 0x0D 
 ALCTWdly.len    = 120
 
-ALCTRdly        = JTAGReg()  
+ALCTRdly        = MutableNamedTuple()  
 ALCTRdly.val    = 0x0E 
 ALCTRdly.len    = 120
 
-RdParamDly      = JTAGReg()  
+RdParamDly      = MutableNamedTuple()  
 RdParamDly.val  = 0x15 
 RdParamDly.len  = 6 # !! Change for Different Boards
 
-WrParamDly      = JTAGReg()  
+WrParamDly      = MutableNamedTuple()  
 WrParamDly.val  = 0x16 
 WrParamDly.len  = 6 # !! Change for Different Boards
 
-
-class Rfield:
-    name
-    mask
-    bit
-    default
-
-CRfld = [ Rfield() for i in range(26)] 
+CRfld = [ MutableNamedTuple() for i in range(26)] 
 
 CRfld[0].name       ='trig_mode'
 CRfld[0].mask       =3

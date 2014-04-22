@@ -6,18 +6,10 @@ modulename = '"ppdev"'
 jtagdevice = '/dev/jtag'
 
 def open_jtag():
-    if (not ActiveHW) and (not driverJTAG): 
-        nPort = openLPTJTAG(Owner)
-        if nPort == -1: 
-            ActiveHW = False
-        else :
-            ActiveHW = True
+    ActiveHW = openLPTJTAG()
 
 def close_jtag():
-    if ActiveHW:
-        closeLPTJTAG()
-        nPort = -1
-        ActiveHW = False
+    ActiveHW = closeLPTJTAG()
 
 def set_chain(Chan):
     if ActiveHW: setchainLPTJTAG(Chan)

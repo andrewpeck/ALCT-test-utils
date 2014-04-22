@@ -21,11 +21,11 @@ def GetPortByte(adr):
 def SetPortByte(adr,data):
     ctypes.windll.inpout32.Out32(adr, data)
 
-def openLPTJTAG(TComponent):
-    LPTPort = parallel.Parallel()
+def openLPTJTAG():
+    return(0)
 
 def closeLPTJTAG():
-    return(0)
+    return(-1)
 
 def setchainLPTJTAG(Chain):
     SetPortByte(base_adr, Chain)
