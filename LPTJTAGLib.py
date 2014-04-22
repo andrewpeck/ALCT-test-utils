@@ -1,4 +1,3 @@
-#if (sys.platform == win32): 
 import ctypes
 
 base_adr    = 0x378
@@ -22,11 +21,10 @@ def GetPortByte(adr):
 def SetPortByte(adr,data):
     ctypes.windll.inpout32.Out32(adr, data)
 
-
 def openLPTJTAG(TComponent):
     LPTPort = parallel.Parallel()
 
-def closeLPTJTAG:
+def closeLPTJTAG():
 
 def setchainLPTJTAG(Chain):
     SetPortByte(base_adr, Chain)
@@ -34,28 +32,28 @@ def setchainLPTJTAG(Chain):
     SetPortByte(ctrl_adr, 0)
     SetPortByte(base_adr, 0)
 
-def resetLPTJTAG: 
+def resetLPTJTAG():  
     SetPortByte(base_adr, 0)
     SetPortByte(ctrl_adr, STRB | TRST)  # Strobe with TRST high
     SetPortByte(ctrl_adr, STRB)         # Strobe with TRST low
     SetPortByte(ctrl_adr, STRB | TRST)  # Strobe with TRST high
     SetPortByte(base_adr, 0)
 
-def enableLPTJTAG:
+def enableLPTJTAG(): 
     status = GetPortByte(ctrl_adr)
     SetPortByte(ctrl_adr, status | 0x02)
 
-def TMSHighLPTJTAG:
+def TMSHighLPTJTAG(): 
     SetPortByte(base_adr, TMS)
     SetPortByte(base_adr, TCKTMS)
     SetPortByte(base_adr, TMS)
 
-def TMSLowLPTJTAG:
+def TMSLowLPTJTAG(): 
     SetPortByte(base_adr, 0)
     SetPortByte(base_adr, TCK)
     SetPortByte(base_adr, 0)
 
-def idleLPTJTAG:
+def idleLPTJTAG(): 
     for i in range(5):
         TMSHighLPTJTAG()
 
