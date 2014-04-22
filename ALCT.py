@@ -618,7 +618,7 @@ def Write6DelayLines(dlys, mask, option):   # overloaded function
         readdlys[i].pattern = shiftdata(dlys[i].pattern, 16, i=5)
 
     ExitDRShift 
-    WriteIR(IntToHex(ParamRegWrite,2), V_IR)
+    WriteIR(ParamRegWrite, V_IR)
     WriteDR('1ff', parlen)
 
 def SCReadEPROMID():
@@ -848,8 +848,8 @@ def SetThreshold(ch, value):
         for i in range(0,len):
             temp = temp | (((tmp >> i)  & 0x1) << (11-i))
 
-        WriteIR(IntToHex(0x8+(realch // 12),2), SC_IR)
-        WriteDR(IntToHex(temp,3), len)
+        WriteIR(0x8+(realch // 12), SC_IR)
+        WriteDR(temp, len)
 
 
 def ReadThreshold(ch):
@@ -862,14 +862,14 @@ def ReadThreshold(ch):
         for i in range(0,4):
             temp = temp | (((tmp >> i) & 0x1) << (3-i))
 
-        WriteIR(IntToHex(0x10+arADCChip[ch],2), SC_IR)
-        WriteDR(IntToHex(temp,3),len)
+        WriteIR(0x10+arADCChip[ch], SC_IR)
+        WriteDR(temp,len)
 
         time.sleep(0.1)     #sleep 100 ms
 
-        WriteIR(IntToHex(0x10+arADCChip[ch],2), SC_IR)
+        WriteIR(0x10+arADCChip[ch], SC_IR)
 
-        tmp = int(ReadDR(IntToHex(temp,3),len),16)
+        tmp = int(ReadDR(temp,len),16)
 
         temp = 0
 
@@ -886,7 +886,7 @@ def SetGroupStandbyReg(group, value):
     if ( (data == '') and (group >=0) and (group < wgroups) ):
         res = int(data,16)
         res = (res ^ ((res >> (group*6) & (int(0x3f))) << (6*group))) | ((int(value & 0x3F)) << (group*6))
-        SetStandbyReg(IntToHex(res, 12))
+        SetStandbyReg(res)
 
 
 def ReadGroupStandbyReg(group):
@@ -923,7 +923,7 @@ def SetTestPulsePower(sendval):
     len = 1
     if (ActiveHW):
         WriteIR('26', SC_IR)
-        WriteDR(IntToHex(sendval,1), len)
+        WriteDR(sendval, len)
 
 def ReadTestPulsePower(): 
     len = 1
@@ -940,13 +940,13 @@ def SetTestPulsePowerAmp(value):
         for i in range(0,len-1):
             temp = temp | (((value >> i) & 0x1) << (7-i))
         WriteIR('3', SC_IR)
-        WriteDR(IntToHex(temp, 3), len)
+        WriteDR(temp, len)
 
 def SetTestPulseWireGroupMask(value):
     len = 7
     if (ActiveHW):
         WriteIR('20', SC_IR)
-        WriteDR(IntToHex(value & 0x7f, 2), len)
+        WriteDR(value & 0x7f, len)
 
 def ReadTestPulseWireGroupMask(): 
     len = 7
@@ -960,7 +960,7 @@ def SetTestPulseStripLayerMask(value):
     len = 6
     if (ActiveHW):
         WriteIR('22', SC_IR)
-        WriteDR(IntToHex(value & 0x3f, 2), len)
+        WriteDR(value & 0x3f, len)
 
 def ReadTestPulseStripLayerMask(): 
     len = 6
@@ -979,7 +979,7 @@ def ReadVoltageADC(chan):
 
         for i in range(0,3):
             WriteIR('12', SC_IR)
-            temp = int(ReadDR(IntToHex(temp,3), len),16)
+            temp = int(ReadDR(temp, len),16)
         result = 0
 
         for i in range(0,len):
@@ -999,7 +999,7 @@ def ReadCurrentADC(chan):
             temp = temp | ((((chan+2) >> i) & 0x1) << (3-i))
         for i in range(0,3):
             WriteIR('12', SC_IR)
-            temp = int(ReadDR(IntToHex(temp,3), len),16)
+            temp = int(ReadDR(temp, len),16)
         result = 0
         for i in range(1,len):
             result = result | (((temp >> i) & 0x1) << (10-i))
@@ -1032,7 +1032,7 @@ def  ReadTemperature():
 def SetFIFOMode(mode):
     if (ActiveHW):
         WriteIR(WrParamF.val, V_IR)
-        WriteDR(IntToHex((0x8 | mode) & 0xF,1),WrParamF.len)
+        WriteDR((0x8 | mode) & 0xF, WrParamF.len)
 
 def SetFIFOReset(): 
     if (ActiveHW): 
@@ -1085,7 +1085,7 @@ def SetTestBoardDelay(delay):
         WriteDR(FIFO_RESET,WrParamF.len)
 
         WriteIR(WrDlyF.val, V_IR)
-        WriteDR(IntToHex(FlipByte((255-delay) & 0xFF),2) ,WrDlyF.len)
+        WriteDR(FlipByte((255-delay) & 0xFF) ,WrDlyF.len)
 
         WriteIR(WrParamF.val, V_IR)
         WriteDR(8,WrParamF.len)
