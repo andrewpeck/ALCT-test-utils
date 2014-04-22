@@ -1,4 +1,5 @@
 from LPTJTAGLib import *
+ActiveHW = 1
 
 IR_REG = 0
 DR_REG = 1
@@ -44,30 +45,33 @@ def jtag_io(tms_, tdi_, tdo_):
 # Write JTAG Instruction Register 
 def WriteIR(IR, IRSize):
     arLen = ((IRSize-1) // 8) + 1
+    arIR = []
     for i in range(arLen): 
-        arIR[i] = 0xFF & (IR >> i*8)
+        arIR.append (0xFF & (IR >> i*8))
     IOExchange(arIR, arIR, IRSize, IR_REG)
-    return(arIr)
+    return(arIR)
 
 # Write JTAG Data Register
 def WriteDR(DR, DRSize):
     arLen = ((DRSize-1) // 8) + 1
+    arDR = []
     for i in range(arLen): 
-        arDR[i] = 0xFF & (DR >> i*8)
+        arDR.append (0xFF & (DR >> i*8))
     IOExchange(arDR, arDR, DRSize, DR_REG)
-    return(arDr)
+    return(arDR)
 
 # Read JTAG Data Register
 def ReadDR(DR, DRSize):
     arLen = ((DRSize-1) // 8) + 1
+    arDR = []
     for i in range(arLen): 
-        arDR[i] = 0xFF & (DR >> i*8)
+        arDR.append (0xFF & (DR >> i*8))
     IOExchange(arDR, arDR, DRSize, DR_REG)
-    return(arDr)
+    return(arDR)
 
-#ShiftData(Data: Longword DataSize: byte; sendtms: boolean): Longword;
 def ShiftData(Data, DataSize, sendtms):
-    if ActiveHW and (DataSize > 0) and (DataSize <= 32) : 
+    tmp = 0
+    if (ActiveHW and (DataSize > 0) and (DataSize <= 32)) :
         for i in range(DataSize):
             #set TMS value
             if (sendtms): 
@@ -77,6 +81,8 @@ def ShiftData(Data, DataSize, sendtms):
 
             #set TDI value
             tdi = Data & 0x01
+
+            tdo = 0
 
             #write data
             jtag_io(tms, tdi, tdo)
@@ -102,17 +108,18 @@ def IOExchange(Send, Recv, Size, RegType):
         for i,j in enumerate(Send):
             if (Size > ChunkSz*i): 
                 if (Size - ChunkSz*i) > ChunkSz: 
-                    Recv[i] = 0xFF & ShiftData(Send[i], ChunkSz, false)
+                    Recv[i] = 0xFF & ShiftData(Send[i], ChunkSz, False)
                 else: 
-                    Recv[i] = 0xFF & ShiftData(Send[i], Size - ChunkSz*i, true)
+                    Recv[i] = 0xFF & ShiftData(Send[i], Size - ChunkSz*i, True)
 
         if RegType == IR_REG: 
             ExitIRShift()
         else: 
             ExitDRShift()
-        return (size)
+        return (Size)
 
 def StartIRShift(): 
+    tdo = 0
     jtag_io(0, 0, tdo)
     jtag_io(1, 0, tdo)
     jtag_io(1, 0, tdo)
@@ -120,18 +127,21 @@ def StartIRShift():
     jtag_io(0, 0, tdo)
 
 def StartDRShift(): 
+    tdo = 0
     jtag_io(0, 0, tdo)
     jtag_io(1, 0, tdo)
     jtag_io(0, 0, tdo)
     jtag_io(0, 0, tdo)
 
 def ExitIRShift(): 
+    tdo = 0
     jtag_io(1, 0, tdo)
     jtag_io(0, 0, tdo)
     jtag_io(0, 0, tdo)
     jtag_io(0, 0, tdo)
 
 def ExitDRShift(): 
+    tdo = 0
     jtag_io(1, 0, tdo)
     jtag_io(0, 0, tdo)
     jtag_io(0, 0, tdo)

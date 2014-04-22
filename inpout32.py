@@ -44,5 +44,5 @@ for n in range(4):
     read.append(ctypes.windll.inpout32.Inp32(0x378))   #Dummy read to see what is going on
     ctypes.windll.inpout32.Out32(0x37a, 0)
 
-print read
+print(read)
 
