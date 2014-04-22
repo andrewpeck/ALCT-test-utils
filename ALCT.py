@@ -175,13 +175,13 @@ arVoltages[1].Coef      = 0.005878
 arVoltages[1].Toler     = 0.2
 
 arVoltages[2].Ref       = '1st 5.5V'
-arVoltages[2].RefVal    = '5.65'
-arVoltages[2].Coef      = '0.005878'
+arVoltages[2].RefVal    = 5.65
+arVoltages[2].Coef      = 0.005878
 arVoltages[2].Toler     = 0.2
 
 arVoltages[3].Ref       = '2nd 5.5V'
-arVoltages[3].RefVal    = '5.65'
-arVoltages[3].Coef      = '0.005878'
+arVoltages[3].RefVal    = 5.65
+arVoltages[3].Coef      = 0.005878
 arVoltages[3].Toler     = 0.2
 
 arCurrents = [ MutableNamedTuple() for i in range(4)] 
@@ -218,21 +218,21 @@ ALCT384 = 1 # ALCT 384 Channels
 ALCT672 = 2 # ALCT 672 Channels
 
 #CHAMBER
-ME1_1	= 0 # ME1/1
-ME1_2	= 1 # ME1/2
-ME1_3	= 2 # ME1/3
-ME2_1	= 3 # ME2/1
-ME2_2	= 4 # ME2/2
-ME3_1	= 5 # ME3/1
-ME3_2	= 6 # ME3/2
-ME4_1	= 7 # ME4/1
-ME4_2	= 8 # ME4/2
+ME1_1   = 0 # ME1/1
+ME1_2   = 1 # ME1/2
+ME1_3   = 2 # ME1/3
+ME2_1   = 3 # ME2/1
+ME2_2   = 4 # ME2/2
+ME3_1   = 5 # ME3/1
+ME3_2   = 6 # ME3/2
+ME4_1   = 7 # ME4/1
+ME4_2   = 8 # ME4/2
 
 #PWR_SPLY
-V18_PWR_SPLY = 0	# Power Supply 1.8V
-V33_PWR_SPLY = 1	# Power Supply 3.3V
-V55_1_PWR_SPLY = 2	# Power Supply 5.5V (1)
-V55_2_PWR_SPLY = 3	# Power Supply 5.5V (2)
+V18_PWR_SPLY = 0        # Power Supply 1.8V
+V33_PWR_SPLY = 1        # Power Supply 3.3V
+V55_1_PWR_SPLY = 2      # Power Supply 5.5V (1)
+V55_2_PWR_SPLY = 3      # Power Supply 5.5V (2)
 
 alct_table = [ MutableNamedTuple() for i in range(3)] 
 
@@ -330,7 +330,7 @@ ALCTDelays = [ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)]
 #TPtrnImage ('i') # Array of bytes [0..5] [0..7]
 
 
-ALCTSTATUS =  [	"EALCT_SUCCESS",   	# Successful completion
+ALCTSTATUS =  ["EALCT_SUCCESS",   	# Successful completion
                 "EALCT_FILEOPEN",         # Filename could not be opened
                 "EALCT_FILEDEFECT", 	# Configuration file inconsistency
                 "EALCT_PORT", 		# JTAG Device problem
@@ -601,7 +601,7 @@ def Write6DelayLines(dlys, mask, option):   # overloaded function
     WriteDR(0x1ff & (not (mask << 2)), parlen)
 
     WriteIR(ParamRegRead, V_IR)
-    ReadDR('0', parlen)
+    ReadDR(0x0, parlen)
 
     WriteIR(Wdly, V_IR)
     StartDRShift
@@ -619,38 +619,38 @@ def Write6DelayLines(dlys, mask, option):   # overloaded function
 
     ExitDRShift 
     WriteIR(ParamRegWrite, V_IR)
-    WriteDR('1ff', parlen)
+    WriteDR(0x1ff, parlen)
 
 def SCReadEPROMID():
-    WriteIR('7F0',11)
+    WriteIR(0x7F0,11)
     time.sleep(0.1)     #sleep 100 ms
-    WriteIR('7FF',11)
-    WriteIR('7FE',11)
-    result = ReadDR('ffffffff',33)
-    WriteIR('7FF',11)
+    WriteIR(0x7FF,11)
+    WriteIR(0x7FE,11)
+    result = ReadDR(0xffffffff,33)
+    WriteIR(0x7FF,11)
     return (result)
 
 def SCReadFPGAID(): 
-    WriteIR('7F0',11)
+    WriteIR(0x7F0,11)
     time.sleep(0.1)     #sleep 100 ms
-    WriteIR('7FF',11)
-    WriteIR('6FF',11)
-    result = ReadDR('1fffffffe',33)
-    WriteIR('7FF',11)
+    WriteIR(0x7FF,11)
+    WriteIR(0x6FF,11)
+    result = ReadDR(0x1fffffffe,33)
+    WriteIR(0x7FF,11)
     return(result)
 
 def SCEraseEPROM(): 
-    if ( (int(SCReadEPROMID,16) & PROG_SC_EPROM_ID_MASK) == PROG_SC_EPROM_ID ):
-        WriteIR('7E8',11)
-        WriteDR('4',7)
-        WriteIR('7EB',11)
-        WriteDR('1',17)
-        WriteIR('7EC',11)
+    if (SCReadEPROMID & PROG_SC_EPROM_ID_MASK) == PROG_SC_EPROM_ID :
+        WriteIR(0x7E8, 11)
+        WriteDR(0x4,7)
+        WriteIR(0x7EB,11)
+        WriteDR(0x1,17)
+        WriteIR(0x7EC,11)
         time.sleep(0.2)     #sleep 200 ms
-        WriteIR('7F0',11)
+        WriteIR(0x7F0,11)
         time.sleep(0.1)     #sleep 100 ms
-        WriteIR('7FF',11)
-        WriteDR('0',2)
+        WriteIR(0x7FF,11)
+        WriteDR(0x0,2)
         result = True
     else:
         result = False
@@ -660,10 +660,10 @@ def SCEraseEPROM():
 def SCBlankCheckEPROM(errs):
     len = 16385
     blocks = 64
-    if	(Int(SCReadEPROMID,16) & PROG_SC_EPROM_ID_MASK) == PROG_SC_EPROM_ID:
-        WriteIR('7E8',11)
-        WriteDR('34',7)
-        WriteIR('7E5',11)
+    if	(SCReadEPROMID & PROG_SC_EPROM_ID_MASK) == PROG_SC_EPROM_ID:
+        WriteIR(0x7E8,11)
+        WriteDR(0x34,7)
+        WriteIR(0x7E5,11)
         time.sleep(0.1)     #sleep 100 ms
         errs = 0
         for i in range(0,blocks):
@@ -682,15 +682,15 @@ def SCBlankCheckEPROM(errs):
             ExitDRShift
             if (errs > 0):
                 break
-        WriteIR('7F0',11)
+        WriteIR(0x7F0,11)
         time.sleep(0.1)     #sleep 100 ms
-        WriteIR('7FF',11)
-        WriteIR('7F0',11)
+        WriteIR(0x7FF,11)
+        WriteIR(0x7F0,11)
         time.sleep(0.1)     #sleep 100 ms
-        WriteIR('7FF',11)
-        WriteIR('7F0',11)
+        WriteIR(0x7FF,11)
+        WriteIR(0x7F0,11)
         time.sleep(0.1)     #sleep 100 ms
-        WriteIR('7FF',11)
+        WriteIR(0x7FF,11)
         if (errs == 0):
             result = True
     else: 
@@ -698,45 +698,45 @@ def SCBlankCheckEPROM(errs):
 
 
 def VReadFPGAID(): 
-    WriteIR('1F',5)
-    WriteIR('1F',5)
-    WriteIR('9',5)
-    result = ReadDR('ffffffff',34)
-    WriteIR('1F',5)
+    WriteIR(0x1F,5)
+    WriteIR(0x1F,5)
+    WriteIR(0x9,5)
+    result = ReadDR(0xffffffff,34)
+    WriteIR(0x1F,5)
     return(result)
 
 def VReadEPROMID1(): 
-    WriteIR('1FF0',13)
+    WriteIR(0x1FF0,13)
     time.sleep(0.1)     #sleep 100 ms
-    WriteIR('1FFF',13)
-    WriteIR('1FFF',13)
-    WriteIR('1FFE',13)
-    result = ReadDR('ffffffff',34)
-    WriteIR('1FFF',13)
+    WriteIR(0x1FFF,13)
+    WriteIR(0x1FFF,13)
+    WriteIR(0x1FFE,13)
+    result = ReadDR(0xffffffff,34)
+    WriteIR(0x1FFF,13)
     return(result)
 
 def VReadEPROMID2(): 
-    WriteIR('1FFFF0',21)
+    WriteIR(0x1FFFF0,21)
     time.sleep(0.1)     #sleep 100 ms
-    WriteIR('1FFFFF',21)
-    WriteIR('1FFFFE',21)
-    result = ReadDR('ffffffff',34)
-    WriteIR('1FFFFFF',21)
+    WriteIR(0x1FFFFF,21)
+    WriteIR(0x1FFFFE,21)
+    result = ReadDR(0xffffffff,34)
+    WriteIR(0x1FFFFFF,21)
     return(result)
 
 
 def VEraseEPROM1(): 
-    if  ((int(VReadEPROMID1,16) & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID) or  \
-        ((int(VReadEPROMID1,16) & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID2): 
-        WriteIR('1FE8',13)
-        WriteDR('8',8)
-        WriteIR('1FEB',13)
-        WriteDR('2',18)
-        WriteIR('1FEC',13)
+    if  ((VReadEPROMID1 & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID) or  \
+        ((VReadEPROMID1 & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID2): 
+        WriteIR(0x1FE8,13)
+        WriteDR(0x8,8)
+        WriteIR(0x1FEB,13)
+        WriteDR(0x2,18)
+        WriteIR(0x1FEC,13)
         time.sleep(0.2)     #sleep 200 ms
-        WriteIR('1FF0',13)
+        WriteIR(0x1FF0,13)
         time.sleep(0.1)     #sleep 100 ms
-        WriteIR('1FFF',13)
+        WriteIR(0x1FFF,13)
         result = True
     else:
         result = False
@@ -744,17 +744,17 @@ def VEraseEPROM1():
 
 
 def VEraseEPROM2(): 
-    if  ((int(VReadEPROMID2,16) & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID) or \
-        ((int(VReadEPROMID2,16) & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID2):
-        WriteIR('1FFFE8',21)
-        WriteDR('4',8)
-        WriteIR('1FFFEB',21)
-        WriteDR('1',18)
-        WriteIR('1FFFEC',21)
+    if  ((VReadEPROMID2 & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID) or \
+        ((VReadEPROMID2 & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID2):
+        WriteIR(0x1FFFE8,21)
+        WriteDR(0x4,8)
+        WriteIR(0x1FFFEB,21)
+        WriteDR(0x1,18)
+        WriteIR(0x1FFFEC,21)
         time.sleep(0.2)     #sleep 200 ms
-        WriteIR('1FFFF0',21)
+        WriteIR(0x1FFFF0,21)
         time.sleep(0.1)     #sleep 100 ms
-        WriteIR('1FFFFF',21)
+        WriteIR(0x1FFFFF,21)
         result = True
     else:
         result = False
@@ -762,17 +762,17 @@ def VEraseEPROM2():
 
 
 def V600EraseEPROM(): 
-    if  ((int(VReadEPROMID1,16) & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID) or \
-        ((int(VReadEPROMID1,16) & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID2) :
-        WriteIR('1FE8',13)
-        WriteDR('8',8)
-        WriteIR('1FEB',13)
-        WriteDR('2',18)
-        WriteIR('1FEC',13)
+    if  ((VReadEPROMID1 & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID) or \
+        ((VReadEPROMID1 & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID2) :
+        WriteIR(0x1FE8,13)
+        WriteDR(0x8,8)
+        WriteIR(0x1FEB,13)
+        WriteDR(0x2,18)
+        WriteIR(0x1FEC,13)
         time.sleep(0.2)     #sleep 200 ms
-        WriteIR('1FF0',13)
+        WriteIR(0x1FF0,13)
         time.sleep(0.1)     #sleep 100 ms
-        WriteIR('1FFF',13)
+        WriteIR(0x1FFF,13)
         result = True
     else: 
         result = False
@@ -781,20 +781,20 @@ def V600EraseEPROM():
 def VBlankCheckEPROM1(errs): 
     len = 8192
     blocks = 512
-    if  ((int(VReadEPROMID1,16) & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID) or \
-        ((int(VReadEPROMID1,16) & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID2):
-        WriteIR('1FE8',13)
-        WriteDR('34',7)
-        WriteIR('1FF0',13)
+    if  ((VReadEPROMID1 & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID) or \
+        ((VReadEPROMID1 & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID2):
+        WriteIR(0x1FE8,13)
+        WriteDR(0x34,7)
+        WriteIR(0x1FF0,13)
         time.sleep(0.1)     #sleep 100 ms
-        WriteIR('1FE8',13)
-        WriteDR('34',7)
-        WriteIR('1FEB',13)
-        WriteDR('0',17)
+        WriteIR(0x1FE8,13)
+        WriteDR(0x34,7)
+        WriteIR(0x1FEB,13)
+        WriteDR(0x0,17)
         errs = 0
 
         for i in range(0,blocks):
-            WriteIR('1FEF',13)
+            WriteIR(0x1FEF,13)
             time.sleep(0.1)     #sleep 100 ms
             StartDRShift
             for p in range(0,(len)//32):
@@ -811,11 +811,11 @@ def VBlankCheckEPROM1(errs):
             if (errs > 0) :
                 break
 
-        WriteIR('1FF0',13)
+        WriteIR(0x1FF0,13)
         time.sleep(0.1)     #sleep 100 ms
-        WriteIR('1FFF',13)
-        WriteIR('1FFF',13)
-        WriteDR('0',2)
+        WriteIR(0x1FFF,13)
+        WriteIR(0x1FFF,13)
+        WriteDR(0x0,2)
 
         if (errs == 0):
             result = True
@@ -869,7 +869,7 @@ def ReadThreshold(ch):
 
         WriteIR(0x10+arADCChip[ch], SC_IR)
 
-        tmp = int(ReadDR(temp,len),16)
+        tmp = ReadDR(temp,len)
 
         temp = 0
 
@@ -883,9 +883,10 @@ def ReadThreshold(ch):
 def SetGroupStandbyReg(group, value):
     wgroups = 7
     data = ReadStandbyReg()
+    #fix this
     if ( (data == '') and (group >=0) and (group < wgroups) ):
-        res = int(data,16)
-        res = (res ^ ((res >> (group*6) & (int(0x3f))) << (6*group))) | ((int(value & 0x3F)) << (group*6))
+        res = data
+        res = (res ^ ((res >> (group*6) & (0x3f)) << (6*group))) | ((value & 0x3F) << (group*6))
         SetStandbyReg(res)
 
 
@@ -893,23 +894,24 @@ def ReadGroupStandbyReg(group):
     wgroups = 7
     result  = 0
     data    = ReadStandbyReg()
+    #fix this
     if ((data == '') and (group >= 0) and (group < (wgroups))):
-        result = (int(data,16) >> (group*6)) & 0x3F
+        result = (data,16 >> (group*6)) & 0x3F
     return(result)
 
 
 def SetStandbyReg(value):
     len = 42
     if (ActiveHW):
-        WriteIR('24', SC_IR)
+        WriteIR(0x24, SC_IR)
         WriteDR(value, len)
 
 def ReadStandbyReg(): 
     len = 42
     result = ''
     if (ActiveHW):
-        WriteIR('25', SC_IR)
-        result = ReadDR('0',len)
+        WriteIR(0x25, SC_IR)
+        result = ReadDR(0x0,len)
     return(result)
 
 
@@ -922,15 +924,15 @@ def SetStandbyForChan(chan, onoff):
 def SetTestPulsePower(sendval):
     len = 1
     if (ActiveHW):
-        WriteIR('26', SC_IR)
+        WriteIR(0x26, SC_IR)
         WriteDR(sendval, len)
 
 def ReadTestPulsePower(): 
     len = 1
     result = -1
     if (ActiveHW):
-        WriteIR('27', SC_IR)
-        result = int(ReadDR('0',len),16)
+        WriteIR(0x27, SC_IR)
+        result = ReadDR(0x0,len)
     return(result)
 
 def SetTestPulsePowerAmp(value):
@@ -939,35 +941,35 @@ def SetTestPulsePowerAmp(value):
         temp = 0
         for i in range(0,len-1):
             temp = temp | (((value >> i) & 0x1) << (7-i))
-        WriteIR('3', SC_IR)
+        WriteIR(0x3, SC_IR)
         WriteDR(temp, len)
 
 def SetTestPulseWireGroupMask(value):
     len = 7
     if (ActiveHW):
-        WriteIR('20', SC_IR)
+        WriteIR(0x20, SC_IR)
         WriteDR(value & 0x7f, len)
 
 def ReadTestPulseWireGroupMask(): 
     len = 7
     result = -1
     if (ActiveHW):
-        WriteIR('21', SC_IR)
-        result = int(ReadDR('0', len),16)
+        WriteIR(0x21, SC_IR)
+        result = ReadDR(0x0, len)
     return(result)
 
 def SetTestPulseStripLayerMask(value):
     len = 6
     if (ActiveHW):
-        WriteIR('22', SC_IR)
+        WriteIR(0x22, SC_IR)
         WriteDR(value & 0x3f, len)
 
 def ReadTestPulseStripLayerMask(): 
     len = 6
     result = -1
     if (ActiveHW):
-        WriteIR('23', SC_IR)
-        result = int(ReadDR('0', len),16)
+        WriteIR(0x23, SC_IR)
+        result = ReadDR(0x0, len)
 
 def ReadVoltageADC(chan):
     len = 11
@@ -978,8 +980,8 @@ def ReadVoltageADC(chan):
             temp = temp | ((((chan+6) >> i) & 0x1) << (3-i))
 
         for i in range(0,3):
-            WriteIR('12', SC_IR)
-            temp = int(ReadDR(temp, len),16)
+            WriteIR(0x12, SC_IR)
+            temp = ReadDR(temp, len)
         result = 0
 
         for i in range(0,len):
@@ -998,8 +1000,8 @@ def ReadCurrentADC(chan):
         for i in range(0,4):
             temp = temp | ((((chan+2) >> i) & 0x1) << (3-i))
         for i in range(0,3):
-            WriteIR('12', SC_IR)
-            temp = int(ReadDR(temp, len),16)
+            WriteIR(0x12, SC_IR)
+            temp = ReadDR(temp, len)
         result = 0
         for i in range(1,len):
             result = result | (((temp >> i) & 0x1) << (10-i))
@@ -1014,8 +1016,8 @@ def ReadTemperatureADC():
     result = 0
     if (ActiveHW):
         for i in range(3): 
-            WriteIR('12', SC_IR)
-            temp = int(ReadDR('5', len),16)
+            WriteIR(0x12, SC_IR)
+            temp = ReadDR(0x5, len)
 
         for i in range(1,len): 
             result = result | (((temp >> i) & 0x1) << (10-i))
@@ -1061,12 +1063,12 @@ def SetFIFOReadWrite():
 def FIFOClock(): 
     if (ActiveHW): 
         WriteIR(WrFIFO.val, V_IR)
-        WriteDR('1',WrFIFO.len)
+        WriteDR(0x1,WrFIFO.len)
 
 def ReadFIFOCounters(): 
     if (ActiveHW): 
         WriteIR(RdCntReg.val, V_IR)
-        result = ReadDR('0',RdCntReg.len)
+        result = ReadDR(0x0,RdCntReg.len)
     return(result)
 
 def SetFIFOValue(val):
