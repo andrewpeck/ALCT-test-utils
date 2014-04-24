@@ -61,71 +61,86 @@ def idleLPTJTAG():
     for i in range(5):
         TMSHighLPTJTAG()
 
-def jtagioLPTJTAG(TMSvalue, TDIvalue, TDOvalue):
-    sendbit = GetPortByte(base_adr)
+def jtagioLPTJTAG(TMSvalue, TDIvalue):
 
+    sendbit = GetPortByte(base_adr)
+   
     if (TDIvalue>0):
-        sendbit = (sendbit | TDI)
+        sendbit = sendbit | TDI
     else:
-        sendbit = (sendbit & (not TDI))
+        sendbit = sendbit & notTDI
 
     if (TMSvalue>0):
-        sendbit = (sendbit | TMS)
+        sendbit = sendbit | TMS
     else: 
-        sendbit = (sendbit & (not TMS))
-    sendbit = sendbit | 0x10
+        sendbit = sendbit & notTMS
+
+    sendbit = sendbit | TDO
     SetPortByte(base_adr, sendbit)
+
+    # Clock Rise
     sendbit = sendbit | TCK
     SetPortByte(base_adr, sendbit)
-    rcvbit  = GetPortByte(status_adr)
-    rcvbit  = (not rcvbit) & TDO
-    sendbit = sendbit & (not TCK)
-    SetPortByte(base_adr, sendbit)
-    if (rcvbit == TDO):
-        TDOvalue = 0
-    else:
-        TDOvalue = 1
 
-def ShiftDataLPTJTAG(Data, DataSize, sendtms):
-    if (DataSize > 32):
-        result = 0
-    else:
-        tmp = 0
-        for i in range(DataSize): 
-            jtagioLPTJTAG ( (DataSize & sendtms), (Data & 0x01), tdo)
-            tmp = tmp | (( tdo & 0x01) << i )
-            Data = Data >> 1
-    result = tmp
-    return(result)
+    # Read TDO Bit
+    rcvbit  = GetPortByte(status_adr)
+    rcvbit  = rcvbit & TDO
+    rcvbit  = not rcvbit
+    rcvbit  = rcvbit & 0xFF
+
+    # Clock Fall
+    sendbit = sendbit & (notTCK)
+    SetPortByte(base_adr, sendbit)
+    
+    #if (rcvbit == TDO):
+    #    TDOvalue = 0
+    #else:
+    #TDOvalue = 1
+    #
+    TDOvalue = not rcvbit
+    #print(rcvbit)
+        
+    return(TDOvalue)
+
+#def ShiftDataLPTJTAG(Data, DataSize, sendtms):
+#    if (DataSize > 32):
+#        result = 0
+#    else:
+#        tmp = 0
+#        for i in range(DataSize): 
+#            tdo = jtagioLPTJTAG ( (DataSize & sendtms), (Data & 0x01))
+#            tmp = tmp | (( tdo & 0x01) << i )
+#            Data = Data >> 1
+#    result = tmp
+#    return(result)
 
 def StartIRShiftLPTJTAG():
-    jtagioLPTJTAG(0, 0, tdo)
-    jtagioLPTJTAG(1, 0, tdo)
-    jtagioLPTJTAG(1, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
+    tdo=jtagioLPTJTAG(0, 0)
+    tdo=jtagioLPTJTAG(1, 0)
+    tdo=jtagioLPTJTAG(1, 0)
+    tdo=jtagioLPTJTAG(0, 0)
+    tdo=jtagioLPTJTAG(0, 0)
 
 def StartDRShiftLPTJTAG():
-    jtagioLPTJTAG(0, 0, tdo)
-    jtagioLPTJTAG(1, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
+    tdo=jtagioLPTJTAG(0, 0)
+    tdo=jtagioLPTJTAG(1, 0)
+    tdo=jtagioLPTJTAG(0, 0)
+    tdo=jtagioLPTJTAG(0, 0)
 
 def ExitIRShiftLPTJTAG():
-    jtagioLPTJTAG(1, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
+    tdo=jtagioLPTJTAG(1, 0)
+    tdo=jtagioLPTJTAG(0, 0)
+    tdo=jtagioLPTJTAG(0, 0)
+    tdo=jtagioLPTJTAG(0, 0)
 
 def ExitDRShiftLPTJTAG():
-    jtagioLPTJTAG(1, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
-
+    tdo=jtagioLPTJTAG(1, 0)
+    tdo=jtagioLPTJTAG(0, 0)
+    tdo=jtagioLPTJTAG(0, 0)
+    tdo=jtagioLPTJTAG(0, 0)
 
 def ExitDRShiftLPTJTAG():
-    jtagioLPTJTAG(1, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
-    jtagioLPTJTAG(0, 0, tdo)
+    tdo=jtagioLPTJTAG(1, 0)
+    tdo=jtagioLPTJTAG(0, 0)
+    tdo=jtagioLPTJTAG(0, 0)
+    tdo=jtagioLPTJTAG(0, 0)
