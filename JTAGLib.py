@@ -1,4 +1,6 @@
 from LPTJTAGLib import *
+import math
+
 ActiveHW = 1
 
 IR_REG = 0

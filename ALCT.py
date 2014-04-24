@@ -18,8 +18,8 @@ RdTrig          = 0x03
 WrTrig          = 0x04
 RdCfg           = 0x06 # read control register
 WrCfg           = 0x07 # write control register
-Wdly            = 0x0d # write delay lines. cs_dly bits in Par
-Rdly            = 0x0e # read  delay lines. cs_dly bits in Par
+Wdly            = 0x0D # write delay lines. cs_dly bits in Par
+Rdly            = 0x0E # read  delay lines. cs_dly bits in Par
 CollMaskRead    = 0x13
 CollMaskWrite   = 0x14
 ParamRegRead    = 0x15
@@ -27,36 +27,36 @@ ParamRegWrite   = 0x16
 InputEnable     = 0x17
 InputDisable    = 0x18
 YRwrite         = 0x19
-OSread          = 0x1a
-SNRead          = 0x1b
-SNwrite0        = 0x1c
-SNwrite1        = 0x1d
-SNreset         = 0x1e
-Bypass          = 0x1f
+OSread          = 0x1A
+SNRead          = 0x1B
+SNwrite0        = 0x1C
+SNwrite1        = 0x1D
+SNreset         = 0x1E
+Bypass          = 0x1F
 
-PROG_SC_EPROM_ID        = 0x0005024093
-PROG_SC_EPROM_ID_MASK   = 0x1ffffffff
+PROG_SC_EPROM_ID        = 0X0005024093
+PROG_SC_EPROM_ID_MASK   = 0X01FFFFFFFF
 
-PROG_SC_FPGA_ID         = 0x0000838126
-PROG_SC_FPGA_ID_MASK    = 0x1ffffffff
+PROG_SC_FPGA_ID         = 0X0000838126
+PROG_SC_FPGA_ID_MASK    = 0X01FFFFFFFF
 
-PROG_V_EPROM1_ID        = 0x000A04C126
-PROG_V_EPROM1_ID_MASK   = 0x03fffffff
-PROG_V_EPROM1_ID2       = 0x000A06C126
+PROG_V_EPROM1_ID        = 0X000A04C126
+PROG_V_EPROM1_ID_MASK   = 0X003FFFFFFF
+PROG_V_EPROM1_ID2       = 0X000A06C126
 
-PROG_V_EPROM2_ID        = 0x0005026093
-PROG_V_EPROM2_ID_MASK   = 0x03fffffff
+PROG_V_EPROM2_ID        = 0X0005026093
+PROG_V_EPROM2_ID_MASK   = 0X003FFFFFFF
 
-PROG_V_EPROM2_ID2       = 0x0005036093
+PROG_V_EPROM2_ID2       = 0X0005036093
 
-PROG_V_FPGA_ID          = 0x000290024c
-PROG_V_FPGA_ID_MASK     = 0x003fffffff
+PROG_V_FPGA_ID          = 0X000290024C
+PROG_V_FPGA_ID_MASK     = 0X003FFFFFFF
 
-PROG_V_FPGA600_7_ID     = 0x0021460126
-PROG_V_FPGA600_7_ID_MASK= 0x003fffffff
+PROG_V_FPGA600_7_ID     = 0X0021460126
+PROG_V_FPGA600_7_ID_MASK= 0X003FFFFFFF
 
-PROG_V_FPGA600_ID       = 0x0001460126
-PROG_V_FPGA600_ID_MASK  = 0x000fffffff
+PROG_V_FPGA600_ID       = 0X0001460126
+PROG_V_FPGA600_ID_MASK  = 0X000FFFFFFF
 
 
 PROG_SC_IR_SIZE         = 11
@@ -70,13 +70,13 @@ CTRL_SC_ID_DR_SIZE      = 40
 USER_V_FPGA_ID          = 0x0925200207
 USER_V_ID_DR_SIZE       = 40
 
-
-V_IR        = 5
-SC_IR       = 6
-SLOW_CTL    = 0
-FAST_CTL    = 1
-BOARD_SN    = 2
-MEZAN_SN    = 3
+# JTAG Chains
+V_IR        = 0x5
+SC_IR       = 0x6
+SLOW_CTL    = 0x0
+FAST_CTL    = 0x1
+BOARD_SN    = 0x2
+MEZAN_SN    = 0x3
 
 RegSz = [
     40,     # IDRead = 0x0,
@@ -575,7 +575,7 @@ OperDescr = [
 #import JTAGLib, JTAGUtils, SysUtils
 
 def SetChain(ch): 
-    set_chain(arJTAGChains[ch])
+    set_chain(0)
 
 def WriteRegister(reg, value, overload):
     WriteIR(reg, V_IR) 
