@@ -164,25 +164,25 @@ ThreshToler = 4
 
 arVoltages = [ MutableNamedTuple() for i in range(4)] 
 
-arVoltages[0].Ref       = '1.8V'
-arVoltages[0].RefVal    = 1.8
-arVoltages[0].Coef      = 0.005878
-arVoltages[0].Toler     = 0.1
+arVoltages[0].ref       = '1.8v'
+arVoltages[0].refval    = 1.8
+arVoltages[0].coef      = 0.005878
+arVoltages[0].toler     = 0.1
 
-arVoltages[1].Ref       = '3.3V'
-arVoltages[1].RefVal    = 3.3
-arVoltages[1].Coef      = 0.005878
-arVoltages[1].Toler     = 0.2
+arVoltages[1].ref       = '3.3v'
+arVoltages[1].refval    = 3.3
+arVoltages[1].coef      = 0.005878
+arVoltages[1].toler     = 0.2
 
-arVoltages[2].Ref       = '1st 5.5V'
-arVoltages[2].RefVal    = 5.65
-arVoltages[2].Coef      = 0.005878
-arVoltages[2].Toler     = 0.2
+arVoltages[2].ref       = '5.5v1'
+arVoltages[2].refval    = 5.65
+arVoltages[2].coef      = 0.005878
+arVoltages[2].toler     = 0.2
 
-arVoltages[3].Ref       = '2nd 5.5V'
-arVoltages[3].RefVal    = 5.65
-arVoltages[3].Coef      = 0.005878
-arVoltages[3].Toler     = 0.2
+arVoltages[3].ref       = '5.5v2'
+arVoltages[3].refval    = 5.65
+arVoltages[3].coef      = 0.005878
+arVoltages[3].toler     = 0.2
 
 arCurrents = [ MutableNamedTuple() for i in range(4)] 
 
@@ -196,19 +196,20 @@ arCurrents[1].refval    = 1.1
 arCurrents[1].coef      = 0.002987
 arCurrents[1].toler     = 0.2
 
-arCurrents[2].ref       = '1st 5.5V'      
+arCurrents[2].ref       = '5.5v1'      
 arCurrents[2].refval    = 0.150
 arCurrents[2].coef      = 0.002987
 arCurrents[2].toler     = 0.1
 
-arCurrents[3].ref       = '2nd 5.5V'      
+arCurrents[3].ref       = '5.5v2'      
 arCurrents[3].refval    = 0.150
 arCurrents[3].coef      = 0.002987
 arCurrents[3].toler     = 0.1
 
 arTemperature = MutableNamedTuple()
-arTemperature.ref       = 'On Board' 
-arTemperature.refVal    = 25.0
+
+arTemperature.ref       = 'On Board Temperature' 
+arTemperature.refval    = 25.0
 arTemperature.coef      = 0.1197
 arTemperature.toler     = 5.0
 
@@ -574,14 +575,17 @@ OperDescr = [
 
 #import JTAGLib, JTAGUtils, SysUtils
 
+# Select JTAG Programming Chain
 def SetChain(ch): 
-    set_chain(0)
+    set_chain(ch)
 
+# Write Virtex Register
 def WriteRegister(reg, value, overload):
     WriteIR(reg, V_IR) 
     result = WriteDR(value, RegSz[reg])
     return (result)
 
+# Read Virtex Register
 def ReadRegister(reg): 
     WriteIR(reg, V_IR)
     result = ReadDR(0,RegSz[reg])
@@ -835,6 +839,7 @@ def V600BlankCheckEPROM(errs):
     return(0)
     #PLACEHOLDER
 
+#done
 def SetThreshold(ch, value):
     SetChain(SLOW_CTL)
     DRlength  = 12
@@ -852,7 +857,7 @@ def SetThreshold(ch, value):
     WriteIR(0xFF & (0x8+(realch // 12)), SC_IR)
     WriteDR(data & 0xFFF, DRlength)
 
-
+#done
 def ReadThreshold(ch):
     SetChain(SLOW_CTL)
     DRLength = 11
@@ -876,8 +881,7 @@ def ReadThreshold(ch):
     WriteIR(chip, SC_IR)
     read = ReadDR(data,DRLength)
     
-    for i in range(1,DRLength):
-        result = result | (((read >> i) & 0x1) << (10-i))
+    result=FlipDR(read,DRLength)
     
     return(result)
 
@@ -904,47 +908,40 @@ def ReadGroupStandbyReg(group):
 
 def SetStandbyReg(value):
     len = 42
-    if (ActiveHW):
-        WriteIR(0x24, SC_IR)
-        WriteDR(value, len)
+    WriteIR(0x24, SC_IR)
+    WriteDR(value, len)
 
 def ReadStandbyReg(): 
     len = 42
     result = ''
-    if (ActiveHW):
-        WriteIR(0x25, SC_IR)
-        result = ReadDR(0x0,len)
-    return(result)
-
+    WriteIR(0x25, SC_IR)
+    result = ReadDR(0x0,len)
 
 def SetStandbyForChan(chan, onoff):
-    if (chan >= 0) and (chan < 42) : 
+    if (chan >= 0) and (chan < 42): 
         value = ReadGroupStandbyReg(chan // 6) & 0x3F
         value = (value ^ (((value >> (chan % 6)) & 0x1 ) << (chan % 6) )) | (int(onoff) << (chan % 6))
         SetGroupStandbyReg(chan % 6, value)
 
 def SetTestPulsePower(sendval):
     len = 1
-    if (ActiveHW):
-        WriteIR(0x26, SC_IR)
-        WriteDR(sendval, len)
+    WriteIR(0x26, SC_IR)
+    WriteDR(sendval, len)
 
 def ReadTestPulsePower(): 
     len = 1
     result = -1
-    if (ActiveHW):
-        WriteIR(0x27, SC_IR)
-        result = ReadDR(0x0,len)
+    WriteIR(0x27, SC_IR)
+    result = ReadDR(0x0,len)
     return(result)
 
 def SetTestPulsePowerAmp(value):
     len = 9
-    if (ActiveHW):
-        temp = 0
-        for i in range(0,len-1):
-            temp = temp | (((value >> i) & 0x1) << (7-i))
-        WriteIR(0x3, SC_IR)
-        WriteDR(temp, len)
+    temp = 0
+    for i in range(0,len-1):
+        temp = temp | (((value >> i) & 0x1) << (7-i))
+    WriteIR(0x3, SC_IR)
+    WriteDR(temp, len)
 
 def SetTestPulseWireGroupMask(value):
     len = 7
@@ -973,60 +970,63 @@ def ReadTestPulseStripLayerMask():
         WriteIR(0x23, SC_IR)
         result = ReadDR(0x0, len)
 
+#done
+def FlipDR(data,length): 
+    result=0
+    for i in range(1,length):
+        result = result | (((data >> i) & 0x1) << (10-i))
+    return(result)
+
+#done
 def ReadVoltageADC(chan):
-    len = 11
+    SetChain(SLOW_CTL)
+    DRlength = 11
     result = 0
-    if (ActiveHW):
-        temp = 0
-        for i in range(0,4):
-            temp = temp | ((((chan+6) >> i) & 0x1) << (3-i))
+    data = 0
 
-        for i in range(0,3):
-            WriteIR(0x12, SC_IR)
-            temp = ReadDR(temp, len)
-        result = 0
+    for i in range(4):
+        data = data | ((((chan+6) >> i) & 0x1) << (3-i))
 
-        for i in range(0,len):
-            result = result | (((temp >> i) & 0x1) << (10-i))
+    data = data & 0xFFF
+
+    for i in range(3):
+        WriteIR(0x12, SC_IR)
+        read = ReadDR(data, DRlength)
+        
+    result=FlipDR(read,DRlength)
+    
     return(result)
 
-def ReadVoltage(chan): 
-    result = ReadVoltageADC(chan)*arVoltages[chan].Coef
-    return(result)
-
+#done
 def ReadCurrentADC(chan):
-    len = 11
-    result = 0
-    if (ActiveHW): 
-        temp = 0
-        for i in range(0,4):
-            temp = temp | ((((chan+2) >> i) & 0x1) << (3-i))
-        for i in range(0,3):
-            WriteIR(0x12, SC_IR)
-            temp = ReadDR(temp, len)
-        result = 0
-        for i in range(1,len):
-            result = result | (((temp >> i) & 0x1) << (10-i))
+    SetChain(SLOW_CTL)
+    DRlength = 11
+    data = 0
+    
+    for i in range(0,4):
+        data = data | ((((chan+2) >> i) & 0x1) << (3-i))
+        
+    for i in range(0,3):
+        WriteIR(0x12, SC_IR)
+        read = ReadDR(data, DRlength)
+
+    result=FlipDR(read,DRlength)
+    
     return(result)
 
-def ReadCurrent(chan):
-    result = ReadCurrentADC(chan)*arCurrents[chan].Coef
-    return(result)
-
+#done
 def ReadTemperatureADC(): 
-    len = 11
-    result = 0
-    if (ActiveHW):
-        for i in range(3): 
-            WriteIR(0x12, SC_IR)
-            temp = ReadDR(0x5, len)
+    DRlength = 11
+    for i in range(3): 
+        WriteIR(0x12, SC_IR)
+        read = ReadDR(0x5, DRlength)
 
-        for i in range(1,len): 
-            result = result | (((temp >> i) & 0x1) << (10-i))
+    result=FlipDR(read,DRlength)
     return(result)
 
-def  ReadTemperature(): 
-    result = ReadTemperatureADC()*arTemperature.Coef-50
+#done
+def ReadTemperature(): 
+    result = ReadTemperatureADC()*arTemperature.coef-50
     return(result)
 
 ################################################################################
