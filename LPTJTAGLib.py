@@ -5,8 +5,11 @@ status_adr  = base_adr + 0x1
 ctrl_adr    = base_adr + 0x2
 
 TDI         = 0x01
+notTDI      = 0xFE
 TCK         = 0x02
+notTCK      = 0xFD
 TMS         = 0x04
+notTMS      = 0xFB
 TDITMS      = 0x05
 TCKTMS      = 0x06
 notTCKTMS   = 0xF9
