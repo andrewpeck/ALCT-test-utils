@@ -836,47 +836,49 @@ def V600BlankCheckEPROM(errs):
     #PLACEHOLDER
 
 def SetThreshold(ch, value):
-    len = 12
-    if (ActiveHW):
-        temp = 0
-        realch = ch
-        if (ch >= 33):
-            realch = ch+3
-        time.sleep(0.1)     #sleep 100 ms
-        tmp = value & 0xFF
-        tmp = tmp | (( realch % 12) << 8)
-        for i in range(0,len):
-            temp = temp | (((tmp >> i)  & 0x1) << (11-i))
+    SetChain(SLOW_CTL)
+    DRlength  = 12
+    data    = 0
+    realch  = ch
+    if (ch >= 33):
+        realch = ch+3
+    time.sleep(0.01)     #sleep 10 ms
+    value = value & 0xFF
+    value = value | (( realch % 12) << 8)
+    
+    for i in range(DRlength):
+        data = data | (((value >> i)  & 0x1) << (11-i))
 
-        WriteIR(0x8+(realch // 12), SC_IR)
-        WriteDR(temp, len)
+    WriteIR(0xFF & (0x8+(realch // 12)), SC_IR)
+    WriteDR(data & 0xFFF, DRlength)
 
 
 def ReadThreshold(ch):
-    len = 11
+    SetChain(SLOW_CTL)
+    DRLength = 11
     result = 0
-    if (ActiveHW):
-        time.sleep(0.1)     #sleep 100 ms
-        temp = 0
-        tmp  = arADCChannel[ch]
-        for i in range(0,4):
-            temp = temp | (((tmp >> i) & 0x1) << (3-i))
+    data = 0  
 
-        WriteIR(0x10+arADCChip[ch], SC_IR)
-        WriteDR(temp,len)
+    channel = 0xFF & arADCChannel[ch]
+    chip    = 0xFF & (0x10 + arADCChip[ch])
+    
 
-        time.sleep(0.1)     #sleep 100 ms
+    for i in range(4):
+        data = 0xFFF & (data | (((channel >> i) & 0x1) << (3-i)))
 
-        WriteIR(0x10+arADCChip[ch], SC_IR)
+    time.sleep(0.01)     #sleep 10 ms
 
-        tmp = ReadDR(temp,len)
+    WriteIR(chip, SC_IR)
+    WriteDR(data, DRLength)
 
-        temp = 0
+    #time.sleep(0.1)     #sleep 10 ms
 
-        for i in range(1,len):
-            temp = temp | (((tmp >> i) & 0x1) << (10-i))
-        result = temp
-
+    WriteIR(chip, SC_IR)
+    read = ReadDR(data,DRLength)
+    
+    for i in range(1,DRLength):
+        result = result | (((read >> i) & 0x1) << (10-i))
+    
     return(result)
 
 
@@ -1192,7 +1194,6 @@ def ReadFIFOfast(numwords, cntrs):
 
 
 def PinPointRiseTime(TimeR, value, ch, StartDly_R, alct_dly, num): 
-    #SetLength(cntrs, 16)
     RegisterMaskDone = 0
     tb_dly = 0
 
@@ -1224,7 +1225,6 @@ def PinPointRiseTime(TimeR, value, ch, StartDly_R, alct_dly, num):
             break
 
 def PinPointRiseTime50(TimeR, TimeR_50, value, ch, StartDly_R, alct_dly, num): 
-
     SetDelayTest(value, ch, StartDly_R, alct_dly, tb_dly)
 
     FirstChn = False
@@ -1259,7 +1259,6 @@ def PinPointRiseTime50(TimeR, TimeR_50, value, ch, StartDly_R, alct_dly, num):
         return(0)
 
 def PinPointFallTime(TimeF, value, ch, StartDly_F, alct_dly, num): 
-
     SetDelayTest(value, ch, StartDly_F, alct_dly, tb_dly)
     FirstChn = False
 
@@ -1290,7 +1289,6 @@ def PinPointFallTime(TimeF, value, ch, StartDly_F, alct_dly, num):
 
 
 def FindStartDly(StartDly_R, StartDly_F, value, ch, alct_dly, num): 
-
     RegMaskDoneR    = 0
     RegMaskDoneF    = 0
     MaxChannelsCntr = 0
@@ -1495,12 +1493,7 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
     for i in range(16): 
         DeltaBeginTime[ch][i] = DelayTimeR_0[i] - BeginTime_Min[ch]
 
-#def WriteToFile(BeginTime_Min: MeasDly
-#    DeltaBeginTime: MeasDlyChan
-#    DelayTime: MeasDlyChan
-#    Average: MeasDly
-#    BoardNum: string
-#    PathString: string)
+#def WriteToFile(BeginTime_Min, DeltaBeginTime, DelayTime, Average, BoardNum, PathStrin):
 #var
 #    TxtFile : TextFile
 #    DataBuffer1, DataBuffer2: string
@@ -1645,3 +1638,4 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
 #            else
 #                Result := False
 #        }
+
