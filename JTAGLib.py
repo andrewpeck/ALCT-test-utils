@@ -39,113 +39,101 @@ def TMS_Low():
 def lights_jtag(): 
     if ActiveHW: lightsLPTJTAG()
 
-def jtag_io(tms_, tdi_, tdo_): 
-    if ActiveHW: jtagioLPTJTAG(tms_, tdi_, tdo_)
+def jtag_io(tms_, tdi_): 
+    tdo=jtagioLPTJTAG(tms_, tdi_)
+    return(tdo)
 
 # Write JTAG Instruction Register 
 def WriteIR(IR, IRSize):
-    arLen = ((IRSize-1) // 8) + 1
-    arIR = []
-    for i in range(arLen): 
-        arIR.append (0xFF & (IR >> i*8))
-    IOExchange(arIR, arIR, IRSize, IR_REG)
-    return(arIR)
+    #arLen = ((IRSize-1) // 8) + 1
+    #arIR = []
+    #for i in range(arLen): 
+    #    arIR.append (0xFF & (IR >> i*8))
+    IR = IOExchange(IR, IRSize, IR_REG)
+    return(IR)
 
 # Write JTAG Data Register
 def WriteDR(DR, DRSize):
-    arLen = ((DRSize-1) // 8) + 1
-    arDR = []
-    for i in range(arLen): 
-        arDR.append (0xFF & (DR >> i*8))
-    IOExchange(arDR, arDR, DRSize, DR_REG)
-    return(arDR)
+    #arLen = ((DRSize-1) // 8) + 1
+    #arDR = []
+    #for i in range(arLen): 
+    #    arDR.append (0xFF & (DR >> i*8))
+    DR = IOExchange(DR, DRSize, DR_REG)
+    return(DR)
 
 # Read JTAG Data Register
 def ReadDR(DR, DRSize):
-    arLen = ((DRSize-1) // 8) + 1
-    arDR = []
-    for i in range(arLen): 
-        arDR.append (0xFF & (DR >> i*8))
-    IOExchange(arDR, arDR, DRSize, DR_REG)
-    return(arDR)
+    #arLen = ((DRSize-1) // 8) + 1
+    #arDR = []
+    #for i in range(arLen): 
+    #    arDR.append (0xFF & (DR >> i*8))
+    DR = IOExchange(DR, DRSize, DR_REG)
+    return(DR)
 
 def ShiftData(Data, DataSize, sendtms):
-    tmp = 0
-    if (ActiveHW and (DataSize > 0) and (DataSize <= 32)) :
-        for i in range(DataSize):
-            #set TMS value
-            if (sendtms): 
-                tms = 0xFF & DataSize
-            else: 
-                tms = 0x00
+    result = 0
 
-            #set TDI value
-            tdi = Data & 0x01
+    if (DataSize < 0 or DataSize >32):
+        return(0)
+    for i in range(1,DataSize+1):
+        #set TMS value
+        if (sendtms) and (i==DataSize):
+           tms = 0x01
+        else:
+            tms = 0x00
 
-            tdo = 0
+        #set TDI value
+        tdi = Data & (0x1)
+        #write data
+        tdo=jtag_io(tms, tdi)
+        #Shift out one bit
+        Data = Data >> 1
 
-            #write data
-            jtag_io(tms, tdi, tdo)
+        result = result | ((tdo & 0x01) << (i-1))
 
-            tmp = tmp | ( (tdo & 0x01) << i )
-            Data = Data >> 1
-        return(tmp)
+    return(result)
+
+def IOExchange(Send, DataSize, RegType):
+    ChunkSize   = 8
+    nChunks     = ( abs(DataSize-1)//ChunkSize) + 1
+    Recv=0
+    
+    if (DataSize <= 0): 
+        return(0)
+
+    if (RegType == IR_REG): 
+        StartIRShift()
+    elif (RegType == DR_REG): 
+        StartDRShift()
+    
+    for i in range(nChunks):
+        #print("nchunks loop = %i" % i)
+        if (DataSize > ChunkSize*i):
+            if (DataSize - ChunkSize*i) > ChunkSize:
+                tdo = 0xFF & ShiftData(0xFF & (Send >> 8*i), ChunkSize, False)
+            else:
+                tdo = 0xFF & ShiftData(0xFF & (Send >> 8*i), DataSize - ChunkSize*i, True)
+
+        Recv = Recv | tdo << (8*i)
+    
+    if RegType == IR_REG: 
+        ExitIRShift()
     else: 
-        return 0
+        ExitDRShift()
+    #print(Recv)
+    return (Recv)
 
-def IOExchange(Send, Recv, Size, RegType):
-    ChunkSz = 8
-    #I:  longint
-    if (not ActiveHW) or (Size <= 0): 
-            return(0)
-    else: 
-        if (RegType == IR_REG): 
-            StartIRShift()
-        elif (RegType == DR_REG): 
-            StartDRShift()
+def StartIRShift():
+    StartIRShiftLPTJTAG()
 
-        #for index,item in enumerate(my_list):
-        for i,j in enumerate(Send):
-            if (Size > ChunkSz*i): 
-                if (Size - ChunkSz*i) > ChunkSz: 
-                    Recv[i] = 0xFF & ShiftData(Send[i], ChunkSz, False)
-                else: 
-                    Recv[i] = 0xFF & ShiftData(Send[i], Size - ChunkSz*i, True)
+def StartDRShift():
+    StartDRShiftLPTJTAG()
 
-        if RegType == IR_REG: 
-            ExitIRShift()
-        else: 
-            ExitDRShift()
-        return (Size)
-
-def StartIRShift(): 
-    tdo = 0
-    jtag_io(0, 0, tdo)
-    jtag_io(1, 0, tdo)
-    jtag_io(1, 0, tdo)
-    jtag_io(0, 0, tdo)
-    jtag_io(0, 0, tdo)
-
-def StartDRShift(): 
-    tdo = 0
-    jtag_io(0, 0, tdo)
-    jtag_io(1, 0, tdo)
-    jtag_io(0, 0, tdo)
-    jtag_io(0, 0, tdo)
-
-def ExitIRShift(): 
-    tdo = 0
-    jtag_io(1, 0, tdo)
-    jtag_io(0, 0, tdo)
-    jtag_io(0, 0, tdo)
-    jtag_io(0, 0, tdo)
+def ExitIRShift():
+    ExitIRShiftLPTJTAG()
 
 def ExitDRShift(): 
-    tdo = 0
-    jtag_io(1, 0, tdo)
-    jtag_io(0, 0, tdo)
-    jtag_io(0, 0, tdo)
-    jtag_io(0, 0, tdo)
+    ExitDRShiftLPTJTAG()
 
 
 
