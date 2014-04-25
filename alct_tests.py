@@ -6,44 +6,71 @@ from SlowControl import *
 import datetime
 
 def main():
-    ActiveHW = 1
-    #enable_jtag()
-    #resetLPTJTAG()
-    NUM_AFEB=24
-    #jtagioLPTJTAG(1,1)
-    #set_chain(1)
-    #WriteDR(0xFF,8)
-    #ReadDR()
-    #WriteDR(0xFF,8)
-    #jtagioLPTJTAG(0,1)
+    #ActiveHW = 1
+    SetALCTType(ALCT384)
+    #NUM_AFEB=24
+    ReadAllCurrents()
+    ReadAllVoltages()
     WriteAllThresholds(0)
     ReadAllThresholds()
-    #SetThreshold(0, 0xFF)
-    #SetThreshold(0,0)
-    #IOExchange(0xFA,6,IR_REG)
-    #print(ReadThreshold(0))
+    print (ReadTemperature())
+
+def ReadAllVoltages(): 
+    print("\n%s > Read Power Supply Voltages" % Now()) 
+    for i in range (4): 
+        ADC     = ReadVoltageADC(i)
+        voltage = ADC * arVoltages[i].coef
+        print ("\t %s\tExpect=%.2fV   Read=%2.2fV  (ADC=0x%03X)" % (arVoltages[i].ref, arVoltages[i].refval, voltage, ADC))
     
+def ReadAllVoltages(): 
+    print("\n%s > Read Power Supply Voltages" % Now()) 
+    for i in range (4): 
+        ADC     = ReadVoltageADC(i)
+        voltage = ADC * arVoltages[i].coef
+        print ("\t %s\tExpect=%.2fV   Read=%2.2fV  (ADC=0x%03X)" % (arVoltages[i].ref, arVoltages[i].refval, voltage, ADC))
+
+def ReadAllCurrents(): 
+    print("\n%s > Read Power Supply Currents" % Now()) 
+    for i in range (4): 
+        ADC     = ReadCurrentADC(i)
+        current = ADC * arCurrents[i].coef
+        print ("\t %s\tExpect=%.2fA   Read=%2.2fA  (ADC=0x%03X)" % (arCurrents[i].ref, arCurrents[i].refval, current, ADC))
     
-def Now():
-    ts = time.time()
-    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-    return(st)
- 
 def ReadAllThresholds(): 
     NUM_AFEB=24
-    print("%s > === Read All Thresholds (Ref %.0f V)" % (Now(), ADC_REF))
+    print("%s > Read All Thresholds" % Now())
     for j in range (NUM_AFEB): 
         thresh = ReadThreshold(j)
-        print("    AFEB # %i: \tThreshold = %.3f V, ADC=%i" % (j, (ADC_REF/1023)*thresh, thresh))
+        print("\t AFEB #%02i:  Threshold=%.3fV (ADC=0x%04X)" % (j, (ADC_REF/1023)*thresh, thresh))
 
 def WriteAllThresholds(thresh):
-    print("%s > === Write All Thresholds to %i" % (Now(), thresh))
+    print("%s > Write All Thresholds to %i" % (Now(), thresh))
     for i in range(NUM_AFEB): 
         SetThreshold(i, thresh);
+    print("\t All thresholds set to %i" % thresh)
+
+def Now():
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+    return(st)
+
+def Day():
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+    return(st)
 
 def SetALCTType(alct_type):
-    NUM_AFEB = ALCTBoard.chips * ALCTBoard.groups;
-    Wires    = ALCTBoard.channels
+    name        = alct_table[alct_type].name         
+    alct        = alct_table[alct_type].alct         
+    channels    = alct_table[alct_type].channels     
+    groups      = alct_table[alct_type].groups       
+    chips       = alct_table[alct_type].chips        
+    delaylines  = alct_table[alct_type].delaylines   
+    pwrchans    = alct_table[alct_type].pwrchans     
+
+    global NUM_AFEB = chips * groups
+    global Wires    = channels
+
     #lbAFEBn.Caption := 'AFEB # (0..'+IntToStr(NUM_AFEB-1)+')';
     #seAFEBn.Max := NUM_AFEB-1;
     #seTCH.Max := NUM_AFEB-1;
