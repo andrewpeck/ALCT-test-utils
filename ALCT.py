@@ -839,53 +839,6 @@ def V600BlankCheckEPROM(errs):
     return(0)
     #PLACEHOLDER
 
-#done
-def SetThreshold(ch, value):
-    SetChain(SLOW_CTL)
-    DRlength  = 12
-    data    = 0
-    realch  = ch
-    if (ch >= 33):
-        realch = ch+3
-    time.sleep(0.01)     #sleep 10 ms
-    value = value & 0xFF
-    value = value | (( realch % 12) << 8)
-    
-    for i in range(DRlength):
-        data = data | (((value >> i)  & 0x1) << (11-i))
-
-    WriteIR(0xFF & (0x8+(realch // 12)), SC_IR)
-    WriteDR(data & 0xFFF, DRlength)
-
-#done
-def ReadThreshold(ch):
-    SetChain(SLOW_CTL)
-    DRLength = 11
-    result = 0
-    data = 0  
-
-    channel = 0xFF & arADCChannel[ch]
-    chip    = 0xFF & (0x10 + arADCChip[ch])
-    
-
-    for i in range(4):
-        data = 0xFFF & (data | (((channel >> i) & 0x1) << (3-i)))
-
-    time.sleep(0.01)     #sleep 10 ms
-
-    WriteIR(chip, SC_IR)
-    WriteDR(data, DRLength)
-
-    #time.sleep(0.1)     #sleep 10 ms
-
-    WriteIR(chip, SC_IR)
-    read = ReadDR(data,DRLength)
-    
-    result=FlipDR(read,DRLength)
-    
-    return(result)
-
-
 def SetGroupStandbyReg(group, value):
     wgroups = 7
     data = ReadStandbyReg()
@@ -975,58 +928,6 @@ def FlipDR(data,length):
     result=0
     for i in range(1,length):
         result = result | (((data >> i) & 0x1) << (10-i))
-    return(result)
-
-#done
-def ReadVoltageADC(chan):
-    SetChain(SLOW_CTL)
-    DRlength = 11
-    result = 0
-    data = 0
-
-    for i in range(4):
-        data = data | ((((chan+6) >> i) & 0x1) << (3-i))
-
-    data = data & 0xFFF
-
-    for i in range(3):
-        WriteIR(0x12, SC_IR)
-        read = ReadDR(data, DRlength)
-        
-    result=FlipDR(read,DRlength)
-    
-    return(result)
-
-#done
-def ReadCurrentADC(chan):
-    SetChain(SLOW_CTL)
-    DRlength = 11
-    data = 0
-    
-    for i in range(0,4):
-        data = data | ((((chan+2) >> i) & 0x1) << (3-i))
-        
-    for i in range(0,3):
-        WriteIR(0x12, SC_IR)
-        read = ReadDR(data, DRlength)
-
-    result=FlipDR(read,DRlength)
-    
-    return(result)
-
-#done
-def ReadTemperatureADC(): 
-    DRlength = 11
-    for i in range(3): 
-        WriteIR(0x12, SC_IR)
-        read = ReadDR(0x5, DRlength)
-
-    result=FlipDR(read,DRlength)
-    return(result)
-
-#done
-def ReadTemperature(): 
-    result = ReadTemperatureADC()*arTemperature.coef-50
     return(result)
 
 ################################################################################
