@@ -1,4 +1,5 @@
-import time
+#import time
+from time import sleep 
 
 from JTAGLib     import *
 from ALCT        import *
@@ -572,7 +573,6 @@ OperDescr = [
             'Load Virtex 1000 EPROM #2',
             'Load Virtex 1000 FPGA' ]
 
-
 #import JTAGLib, JTAGUtils, SysUtils
 
 # Select JTAG Programming Chain
@@ -659,7 +659,6 @@ def SCEraseEPROM():
     else:
         result = False
     return(result)
-
 
 def SCBlankCheckEPROM(errs):
     len = 16385
@@ -848,7 +847,6 @@ def SetGroupStandbyReg(group, value):
         res = (res ^ ((res >> (group*6) & (0x3f)) << (6*group))) | ((value & 0x3F) << (group*6))
         SetStandbyReg(res)
 
-
 def ReadGroupStandbyReg(group):
     wgroups = 7
     result  = 0
@@ -857,7 +855,6 @@ def ReadGroupStandbyReg(group):
     if ((data == '') and (group >= 0) and (group < (wgroups))):
         result = (data,16 >> (group*6)) & 0x3F
     return(result)
-
 
 def SetStandbyReg(value):
     len = 42
@@ -1539,4 +1536,3 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
 #            else
 #                Result := False
 #        }
-
