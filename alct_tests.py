@@ -1,83 +1,86 @@
-from JTAGLib     import *
-from ALCT        import *
-from LPTJTAGLib  import *
 from SlowControl import *
-
+from ALCT        import *
+from common import Now
+from common import Day
+import delays
+import random
 import datetime
+import time
 
 def main():
-    ActiveHW = 1
-    #enable_jtag()
-    #resetLPTJTAG()
-    NUM_AFEB=24
-    #jtagioLPTJTAG(1,1)
-    #set_chain(1)
-    #WriteDR(0xFF,8)
-    #ReadDR()
-    #WriteDR(0xFF,8)
-    #jtagioLPTJTAG(0,1)
-    WriteAllThresholds(0)
-    ReadAllThresholds()
-    #SetThreshold(0, 0xFF)
-    #SetThreshold(0,0)
-    #IOExchange(0xFA,6,IR_REG)
-    #print(ReadThreshold(0))
+    ALCT384=1
+    global  alcttype
+    alcttype=ALCT384
+    SelfTest(alcttype)
+    k=input("press close to exit")
     
+    #ActiveHW = 1
+    #SetALCTType(ALCT384)
+    #WriteAllThresholds(random.getrandbits(8))
+    #ReadAllThresholds()
+    #ReadAllVoltages()
+    #ReadAllCurrents()
+    #CheckTemperature()
+    #delays.ReadPatterns(SendPtrns,alcttype)
+    # for i in range(alct[alcttype].groups): 
+       #for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP): 
+           # print(SendPtrns[i][j].Pattern)
+
+    #ReadIDCodes()
+    #delays.Walking1(ALCT384)
+       #delays.SetDelaysChips(ALCT384)
+
+
+
+def ReadIDCodes():
+    print("\n%s> Read Board/Firmware ID Codes" % Now()) 
+    print("\t  Slow Control Firmware ID: 0x%X" % ReadIDCode(0))
+    print("\t  Fast Control Firmware ID: 0x%X" % ReadIDCode(1))
+    print("\t  Board Serial Number:      0x%X" % ReadBoardSN(0x2))
+    print("\t  Mezz. Serial Number:      0x%X" % ReadBoardSN(0x3))
+
+def ReadAllVoltages():
+    print("\n%s> Read Power Supply Voltages" % Now())
+    npwrchannels = alct[1].pwrchans
+    for i in range (alct[alcttype].pwrchans): 
+        ADC     = ReadVoltageADC(i)
+        voltage = ADC * arVoltages[i].coef
+        print ("\t  %s\tExpect=%.2fV   Read=%2.2fV  (ADC=0x%03X)" % (arVoltages[i].ref, arVoltages[i].refval, voltage, ADC))
+
+def ReadAllCurrents(): 
+    print("\n%s> Read Power Supply Currents" % Now())
+    for i in range (alct[alcttype].pwrchans): 
+        ADC     = ReadCurrentADC(i)
+        current = ADC * arCurrents[i].coef
+        print ("\t  %s\tExpect=%.2fA   Read=%2.2fA  (ADC=0x%03X)" % (arCurrents[i].ref, arCurrents[i].refval, current, ADC))
     
-def Now():
-    ts = time.time()
-    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-    return(st)
- 
 def ReadAllThresholds(): 
     NUM_AFEB=24
-    print("%s > === Read All Thresholds (Ref %.0f V)" % (Now(), ADC_REF))
+    print("\n%s> Read All Thresholds" % Now())
     for j in range (NUM_AFEB): 
         thresh = ReadThreshold(j)
-        print("    AFEB # %i: \tThreshold = %.3f V, ADC=%i" % (j, (ADC_REF/1023)*thresh, thresh))
+        print("\t  AFEB #%02i:  Threshold=%.3fV (ADC=0x%03X)" % (j, (ADC_REF/1023)*thresh, thresh))
 
 def WriteAllThresholds(thresh):
-    print("%s > === Write All Thresholds to %i" % (Now(), thresh))
+    print("\n%s> Write All Thresholds to %i" % (Now(), thresh))
     for i in range(NUM_AFEB): 
         SetThreshold(i, thresh);
+    print("\t  All thresholds set to %i" % thresh)
 
-def SetALCTType(alct_type):
-    NUM_AFEB = ALCTBoard.chips * ALCTBoard.groups;
-    Wires    = ALCTBoard.channels
-    #lbAFEBn.Caption := 'AFEB # (0..'+IntToStr(NUM_AFEB-1)+')';
-    #seAFEBn.Max := NUM_AFEB-1;
-    #seTCH.Max := NUM_AFEB-1;
-    #seChanNum.Max := NUM_AFEB-1;
-    #seChartCh1.Max := NUM_AFEB-1;
-    #seChartCh2.Max := NUM_AFEB-1;
-    #seFIFOCh.Max := NUM_AFEB-1;
-    #seSingleCableChan.Max := NUM_AFEB-1;
-    #        SetLength(dataFIFOwrite, NUM_AFEB);
-    #        SetLength(dataFIFOread, NUM_AFEB);
-    #parlen := ALCTBoard.groups + 2;
+def CheckTemperature():
+    print("\n%s> Check Board Temperature" % Now())
+    print("\t  Board Temperature=%0.2fF" % ReadTemperature())
 
-    #for i:= 0 to ALCTBoard.groups - 1 do
-    #begin
-    #    for j:=0 to ALCTBoard.chips -1 do
-    #    begin
-    #    arDelays[i][j].Value := 0;
-    #    arDelays[i][j].Pattern := 0;
-    #    end;
-    #end;
-    #for i:=0 to MAX_DELAY_GROUPS - 1 do
-    #begin
-    #    (FindComponent('DG'+IntToStr(i)) as TCheckBox).Enabled := false;
-    #    (FindComponent('edStndby'+IntToStr(i+1)) as TEdit).Enabled := false;
-    #    (FindComponent('edStndby'+IntToStr(i+1)) as TEdit).Text := '00';
-    #end;
-    #for i:=0 to ALCTBoard.groups - 1 do
-    #begin
-    #    (FindComponent('DG'+IntToStr(i)) as TCheckBox).Enabled := true;
-    #    (FindComponent('edStndby'+IntToStr(i+1)) as TEdit).Enabled := true;
-    #end;
-    #CurrChart.BottomAxis.Minimum := 0;
-    #CurrChart.BottomAxis.Maximum := NUM_AFEB;
-    #end;
+def Now():
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+    return(st)
+
+def Day():
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+    return(st)
+
 
 if __name__ == "__main__":
     main()
