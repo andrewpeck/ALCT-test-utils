@@ -1,29 +1,42 @@
-from time import sleep 
-import ALCT
-import JTAGLib
+import time
+from JTAGLib     import *
+from LPTJTAGLib  import *
+from ALCT        import *
+from common     import Now
+from common     import Printer
+import sys
 
-#Returns INTEGER form of Firmware ID
-def ReadIDCodeStr (alct_ctl): 
-    if (alct_ctl == SLOW_CTL): 
-        WriteIR('00', SC_IR)
-        return(ReadDR(id, CTRL_SC_ID_DR_SIZE)) 
+#done
+def ReadIDCode (alct_ctl): 
+    if (alct_ctl == SLOW_CTL):
+        SetChain(SLOW_CTL) # Slow Control Control Chain
+        WriteIR(0, SC_IR)
+        return(ReadDR(0x00, CTRL_SC_ID_DR_SIZE)) 
     elif (alct_ctl == FAST_CTL):
-        WriteIR('00', V_IR);
-        return(ReadDR(id, USER_V_ID_DR_SIZE))
+        SetChain(4) # Virtex Control Chain
+        WriteIR(0, V_IR)
+        return(ReadDR(0x00, USER_V_ID_DR_SIZE))
     else: 
         return(0)
 
+#done
 def ReadBoardSN(board_type):
-    if board_type == BOARD_SN:
-        cr_str := ReadRegister(RdCfg);
-        cr_str[1] := '0';
-        #cr_str := '0020A03806B1193FC1';
-        WriteRegister(WrCfg, cr_str);
-    elif board_type == MEZAN_SN: 
-        cr_str := ReadRegister(RdCfg);
-        cr_str[1] := '1';
-        #cr_str := '1020A03806B1193FC1';
-        WriteRegister(WrCfg, cr_str);
+    SetChain(4) # Virtex Control Chain
+    
+    if board_type == BOARD_SN: 
+        cr_str    = ReadRegister(RdCfg)
+        cr_str = cr_str & 0x0fffffffffffffffff
+        
+        #cr_str[1] = 0
+        #cr_str = '0020A03806B1193FC1'
+        
+        WriteRegister(WrCfg, cr_str)
+    elif board_type == MEZAN_SN:
+        cr_str = ReadRegister(RdCfg)
+        cr_str = cr_str | 0x100000000000000000
+        #cr_str[1] = '1'
+        #cr_str = '1020A03806B1193FC1'
+        WriteRegister(WrCfg, cr_str)
     else: 
         return(0)
 
@@ -52,16 +65,16 @@ def ReadBoardSN(board_type):
     sleep(0.001)
 
     #read 64 bits of SN bit by bit
-    WriteIR(SNread, V_IR);
-    read = ReadDR(0x0,1)
-    result = 0x0
-    for i in range(64)
-        result = result | (read & (0x1<<i)) 
+    result=0
+    for i in range(64):
+        WriteIR(SNRead,V_IR)
+        bit = ReadDR(0,1) & 0x1
+        result = result | bit << i
     return(result)
-
+    
 def StrToIDCode(idstr): 
     id = alct_idreg()
-    if (len(idstrA) <= 64): 
+    if (len(idstr) <= 64): 
         id.chip     = 0xF    & (idcode)
         id.version  = 0xF    & (idcode >> 4)
         id.year     = 0xFFFF & (idcode >> 8)
@@ -71,7 +84,7 @@ def StrToIDCode(idstr):
 
 #done
 def SetThreshold(ch, value):
-    SetChain(SLOW_CTL)
+    SetChain(0x0)
     DRlength  = 12
     data    = 0
     realch  = ch
