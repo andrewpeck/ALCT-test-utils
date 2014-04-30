@@ -24,7 +24,9 @@ Rdly            = 0x0E # read  delay lines. cs_dly bits in Par
 CollMaskRead    = 0x13
 CollMaskWrite   = 0x14
 ParamRegRead    = 0x15
+DelayCtrlRead   = 0x15
 ParamRegWrite   = 0x16
+DelayCtrlWrite  = 0x16
 InputEnable     = 0x17
 InputDisable    = 0x18
 YRwrite         = 0x19
@@ -72,12 +74,13 @@ USER_V_FPGA_ID          = 0x0925200207
 USER_V_ID_DR_SIZE       = 40
 
 # JTAG Chains
-V_IR        = 0x5
-SC_IR       = 0x6
 SLOW_CTL    = 0x0
 FAST_CTL    = 0x1
 BOARD_SN    = 0x2
 MEZAN_SN    = 0x3
+VRTX_CH		= 0x3
+V_IR        = 0x5
+SC_IR       = 0x6
 
 RegSz = [
     40,     # IDRead = 0x0,
@@ -126,6 +129,8 @@ parlen  = None
 ADC_REF = 1.225 # Reference Voltage
 
 arJTAGChains = [0x1, 0x0, 0x5, 0x4]
+# 0x1 = Slow Control
+# 0x4 = Mezzanine 
 
 arADCChannel = [1, 0, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 10, 
                 9, 8,  7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2,  3, 
@@ -236,31 +241,31 @@ V33_PWR_SPLY = 1        # Power Supply 3.3V
 V55_1_PWR_SPLY = 2      # Power Supply 5.5V (1)
 V55_2_PWR_SPLY = 3      # Power Supply 5.5V (2)
 
-alct_table = [ MutableNamedTuple() for i in range(3)] 
+alct = [ MutableNamedTuple() for i in range(3)] 
 
-alct_table[0].name          = 'ALCT288'
-alct_table[0].alct          = ALCT288
-alct_table[0].channels      = 288
-alct_table[0].groups        = 3
-alct_table[0].chips         = 6
-alct_table[0].delaylines    = 16
-alct_table[0].pwrchans      = 3
+alct[0].name          = 'ALCT288'
+alct[0].alct          = ALCT288
+alct[0].channels      = 288
+alct[0].groups        = 3
+alct[0].chips         = 6
+alct[0].delaylines    = 16
+alct[0].pwrchans      = 3
 
-alct_table[1].name          = 'ALCT384'
-alct_table[1].alct          = ALCT384
-alct_table[1].channels      = 384
-alct_table[1].groups        = 4
-alct_table[1].chips         = 6
-alct_table[1].delaylines    = 16
-alct_table[1].pwrchans      = 4
+alct[1].name          = 'ALCT384'
+alct[1].alct          = ALCT384
+alct[1].channels      = 384
+alct[1].groups        = 4
+alct[1].chips         = 6
+alct[1].delaylines    = 16
+alct[1].pwrchans      = 4
 
-alct_table[2].name          = 'ALCT672'
-alct_table[2].alct          = ALCT672
-alct_table[2].channels      = 672
-alct_table[2].groups        = 7
-alct_table[2].chips         = 6
-alct_table[2].delaylines    = 16
-alct_table[2].pwrchans      = 4
+alct[2].name          = 'ALCT672'
+alct[2].alct          = ALCT672
+alct[2].channels      = 672
+alct[2].groups        = 7
+alct[2].chips         = 6
+alct[2].delaylines    = 16
+alct[2].pwrchans      = 4
 
 chamb_table = [ MutableNamedTuple() for i in range(9)]
 
@@ -328,9 +333,12 @@ chamb_table[8].afebs_on551  = 12
 chamb_table[8].afebs_on552  = 12
 
 DelayGroup = [ MutableNamedTuple() for i in range(MAX_DELAY_CHIPS_IN_GROUP)]
-ALCTDelays = [ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)]
-#TPtrnImage ('i') # Array of bytes [0..5] [0..7]
+ALCTDelays = [MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)]
+arDelays  = [[ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)] for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)]
+SendPtrns  = [[ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)] for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)]
+ReadPtrns  = [[ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)] for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)]
 
+#TPtrnImage ('i') # Array of bytes [0..5] [0..7]
 
 ALCTSTATUS =  ["EALCT_SUCCESS",   	# Successful completion
                 "EALCT_FILEOPEN",         # Filename could not be opened
@@ -573,14 +581,14 @@ OperDescr = [
             'Load Virtex 1000 EPROM #2',
             'Load Virtex 1000 FPGA' ]
 
-#import JTAGLib, JTAGUtils, SysUtils
+
 
 # Select JTAG Programming Chain
 def SetChain(ch): 
     set_chain(ch)
 
 # Write Virtex Register
-def WriteRegister(reg, value, overload):
+def WriteRegister(reg, value):
     WriteIR(reg, V_IR) 
     result = WriteDR(value, RegSz[reg])
     return (result)
@@ -841,31 +849,32 @@ def V600BlankCheckEPROM(errs):
 def SetGroupStandbyReg(group, value):
     wgroups = 7
     data = ReadStandbyReg()
-    #fix this
-    if ( (data == '') and (group >=0) and (group < wgroups) ):
+    if (group >=0) and (group < wgroups):
         res = data
         res = (res ^ ((res >> (group*6) & (0x3f)) << (6*group))) | ((value & 0x3F) << (group*6))
-        SetStandbyReg(res)
+        SetStandbyReg(res & 0xFFFFFFFFFFFF)
 
 def ReadGroupStandbyReg(group):
+    SetChain(SLOW_CTL)
     wgroups = 7
-    result  = 0
     data    = ReadStandbyReg()
-    #fix this
-    if ((data == '') and (group >= 0) and (group < (wgroups))):
-        result = (data,16 >> (group*6)) & 0x3F
-    return(result)
+    if (group >=0) and (group < wgroups):
+        return((data >> (group*6)) & 0x3F)
+    else: 
+        print("Problem with Read Group Standby Reg")
 
 def SetStandbyReg(value):
+    #SetChain(SLOW_CTL)
     len = 42
     WriteIR(0x24, SC_IR)
     WriteDR(value, len)
 
 def ReadStandbyReg(): 
+    SetChain(SLOW_CTL)
     len = 42
-    result = ''
     WriteIR(0x25, SC_IR)
     result = ReadDR(0x0,len)
+    return(result)
 
 def SetStandbyForChan(chan, onoff):
     if (chan >= 0) and (chan < 42): 
@@ -1536,3 +1545,19 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
 #            else
 #                Result := False
 #        }
+
+#def SetALCTType(alct_type):
+#    name        = alct[alct_type].name         
+#    alct        = alct[alct_type].alct         
+#    channels    = alct[alct_type].channels     
+#    groups      = alct[alct_type].groups       
+#    chips       = alct[alct_type].chips        
+#    delaylines  = alct[alct_type].delaylines   
+#    pwrchans    = alct[alct_type].pwrchans     
+#
+#    global NUM_AFEB
+#    NUM_AFEB = chips * groups
+#    global Wires
+#    Wires    = channels
+#    global PwrChans
+#    PwrChans = pwrchans
