@@ -5,11 +5,8 @@ status_adr  = base_adr + 0x1
 ctrl_adr    = base_adr + 0x2
 
 TDI         = 0x01
-notTDI      = 0xFE
 TCK         = 0x02
-notTCK      = 0xFD
 TMS         = 0x04
-notTMS      = 0xFB
 TDITMS      = 0x05
 TCKTMS      = 0x06
 notTCKTMS   = 0xF9
@@ -68,12 +65,12 @@ def jtagioLPTJTAG(TMSvalue, TDIvalue):
     if (TDIvalue>0):
         sendbit = sendbit | TDI
     else:
-        sendbit = sendbit & notTDI
+        sendbit = sendbit & ~TDI
 
     if (TMSvalue>0):
         sendbit = sendbit | TMS
     else: 
-        sendbit = sendbit & notTMS
+        sendbit = sendbit & ~TMS
 
     sendbit = sendbit | TDO
     SetPortByte(base_adr, sendbit)
@@ -89,7 +86,7 @@ def jtagioLPTJTAG(TMSvalue, TDIvalue):
     rcvbit  = rcvbit & 0xFF
 
     # Clock Fall
-    sendbit = sendbit & (notTCK)
+    sendbit = sendbit & (~TCK)
     SetPortByte(base_adr, sendbit)
     
     #if (rcvbit == TDO):
