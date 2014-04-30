@@ -154,7 +154,7 @@ def ReadCurrentADC(chan):
     DRlength = 11
     data = 0
     
-    for i in range(0,4):
+    for i in range(4):
         data = data | ((((chan+2) >> i) & 0x1) << (3-i))
         
     for i in range(0,3):
@@ -179,4 +179,192 @@ def ReadTemperatureADC():
 def ReadTemperature(): 
     result = ReadTemperatureADC()*arTemperature.coef-50
     return(result)
+
+def SelfTest(alcttype):
+    CurrErrs = 0
+    Errs    = 0
+    SetChain(SLOW_CTL)
+
+    print("\n%s> Start Slow Control Self Test" % Now()) 
+    Errs += CheckVoltages(alcttype)
+    Errs += CheckCurrents(alcttype)
+    Errs += CheckTemperature()
+    Errs += CheckAFEBThresholds(alct[alcttype].groups*alct[alcttype].chips)
+    Errs += CheckStandbyRegister()
+    Errs += CheckTestPulsePowerDown() 
+    Errs += CheckTestPulsePowerUp() 
+    Errs += CheckTestPulseWireGroupMask()
+    SetStandbyReg(0) #Turn Off All AFEBs
+
+    if Errs>0: 
+        print('\nSlow Control Self Test Failed with %i Failed Subtests' % Errs)
+    else: 
+        print('\nSlow Control Self Test Finished Without Errors')
+
+def CheckAFEBThresholds(NUM_AFEBS): 
+    print("Checking AFEB Thresholds") 
+    CurrErrs=0
+    for afeb in range(NUM_AFEBS): 
+        for thresh in range(256): 
+            if thresh%25 == 0: 
+                write=thresh
+                SetThreshold(afeb,write)
+                read = ReadThreshold(afeb)/4.0
+                output=("\t AFEB #%02i: Write=%03i Read=%03.0f" % (afeb,write,read) ) 
+                Printer(output)
+                if abs(write-read)>ThreshToler: 
+                    print("ERROR in AFEB #%02i: Write=%03i Read=%03.0f\r" % (afeb,write,read) ) 
+                    CurrErrs +=1
+
+    #sys.stdout.flush()
+    if CurrErrs==0: 
+        print('\n\t ====> Passed')
+        return(0)
+    else: 
+        print('\t ====> Failed Thresholds Quick Test with %i Errors' % CurrErrs)
+        return(1)
+
+def CheckStandbyRegister(): 
+    print("Checking Standby Register")
+    CurrErrs = 0
+    for i in range(7): 
+        sendval = 0x30 | (i & 0x0f)
+        SetGroupStandbyReg(i, sendval)
+        readval = ReadGroupStandbyReg(i)
+        if readval != sendval: 
+            CurrErrs = CurrErrs+1
+            print('Error: Standby Register for Wire Group #%i send=%02X read=%02X' % ((i+1),sendval,readval))
+
+    if CurrErrs==0: 
+        print('\t ====> Passed')
+        return(0)
+    else: 
+        print('\t ====> Failed Standby Register Test with %i Errors' % CurrErrs)
+        return(1)
+
+def CheckTestPulsePowerDown(): 
+    print('Checking Test Pulse Power Down')
+    CurrErrs = 0
+    sendval = 0
+    SetTestPulsePower(sendval)
+    readval = ReadTestPulsePower()
+    if readval != sendval: 
+        print('\t Error: Test Pulse Power Down send=%02X read=%02X' % (sendval,readval))
+        CurrErrs+=1
+
+    if CurrErrs==0: 
+        print('\t ====> Passed')
+        return(0)
+    else: 
+        print('\t ====> Failed Test Pulse Power Down Test with %i Errors' % CurrErrs)
+        return(1)
+
+def CheckTestPulsePowerUp(): 
+    print('Checking Test Pulse Power Up')
+    CurrErrs = 0
+    sendval = 0
+    SetTestPulsePower(sendval)
+    readval = ReadTestPulsePower()
+    if readval != sendval: 
+        print('Error: Test Pulse Power Up send=%02X read=%02X' % (sendval,readval))
+        CurrErrs += 1
+
+    if CurrErrs==0: 
+        print('\t ====> Passed')
+        return(0)
+    else: 
+        print('\t ====> Failed Test Pulse Power Up Test with %i Errors' % CurrErrs)
+        return(1)
+
+def CheckTestPulseWireGroupMask(): 
+    print('Checking Test Pulse Wire Group Mask')
+    CurrErrs = 0
+    sendval = 0
+    for sendval in range (0x7F+1): 
+        SetTestPulseWireGroupMask(sendval)
+        readval = ReadTestPulseWireGroupMask()
+        if readval != sendval: 
+            print('\t Error: Test Pulse Wire Group Mask send=%02X read=%02X' % (sendval,readval))
+            CurrErrs += 1
+    if CurrErrs==0: 
+        print('\t ====> Passed')
+        return(0)
+    else: 
+        print('\t ====> Failed Test Pulse Wire Group Mask Test with %i Errors' % CurrErrs)
+        return(1)
+
+
+def CheckTestPulseStripLayerMask(): 
+    print('Checking Test Pulse Strip Layer Mask')
+    CurrErrs = 0
+    for sendval in range(0x3F+1): 
+        SetTestPulseWireGroupMask(sendval)
+        readval = ReadTestPulseWireGroupMask()
+        if readval != sendval:
+            print('\t Error: Test Pulse Strip Layer Mask send=%02X read=%02X' % (sendval,readval))
+            CurrErrs += 1
+    if CurrErrs==0: 
+        print('\t ====> Passed')
+        return(0)
+    else: 
+        print('\t ====> Failed Test Pulse Wire Group Mask Test with %i Errors' % CurrErrs)
+        return(1)
+
+
+
+def CheckVoltages(alcttype): 
+    print('Checking Voltages')
+    CurrErrs=0
+    for i in range(alct[alcttype].pwrchans): 
+        readval = ReadVoltageADC(i)
+        if not (abs(readval*arVoltages[i].coef-arVoltages[i].refval) < arVoltages[i].toler): 
+            CurrErrs+=1
+            print("\t Fail", end='')
+        else: 
+            print("\t Pass ", end='')
+        print("\t %s \tread=%.03f expect=%.03f +- %0.03f" % (arVoltages[i].ref, readval*arVoltages[i].coef, arVoltages[i].refval, arVoltages[i].toler))
+
+    if CurrErrs==0: 
+        print('\t ====> Passed')
+        return(0)
+    else: 
+        print('\t ====> Failed Voltage Test with %i Errors' % CurrErrs)
+        return(1)
+
+def CheckCurrents(alcttype): 
+    print('Checking Currents')
+    CurrErrs=0
+    for i in range(alct[alcttype].pwrchans): 
+        readval = ReadCurrentADC(i)
+        if not (abs(readval*arCurrents[i].coef-arCurrents[i].refval) < arCurrents[i].toler): 
+            CurrErrs+=1
+            print("\t Fail", end='')
+        else: 
+            print("\t Pass ", end='')
+
+        print("\t %s \tread=%.03f expect=%.03f +- %0.03f" % (arCurrents[i].ref, readval*arCurrents[i].coef, arCurrents[i].refval, arCurrents[i].toler))
+
+    if CurrErrs==0: 
+        print('\t ====> Passed')
+        return(0)
+    else: 
+        print('\t ====> Failed Current Test with %i Errors' % CurrErrs)
+        return(1)
+        
+def CheckTemperature(): 
+    print('Checking Temperature')
+    CurrErrs=0
+    readval = ReadTemperatureADC()
+    if not (abs((readval*arTemperature.coef-50)-arTemperature.refval) < arTemperature.toler): 
+        CurrErrs+=1
+        print("Error: ", end='')
+    print("\t %s read=%.03f expect=%.03f +- %0.03f" % (arTemperature.ref, readval*arTemperature.coef-50, arTemperature.refval, arTemperature.toler))
+
+    if CurrErrs==0: 
+        print('\t ====> Passed')
+        return(0)
+    else: 
+        print('\t ====> Failed Current Test with %i Errors' % CurrErrs)
+        return(1)
+        
 
