@@ -76,16 +76,18 @@ def ShiftData(Data, DataSize, sendtms):
     result = 0
 
     if (DataSize < 0 or DataSize >32):
+        print("Shifting invalid data size!")
         return(0)
     for i in range(1,DataSize+1):
+
         #set TMS value
         if (sendtms) and (i==DataSize):
            tms = 0x01
         else:
             tms = 0x00
-
         #set TDI value
         tdi = Data & (0x1)
+
         #write data
         tdo=jtag_io(tms, tdi)
         #Shift out one bit
