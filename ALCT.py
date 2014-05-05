@@ -339,11 +339,6 @@ chamb_table[8].wires        = 384
 chamb_table[8].afebs_on551  = 12
 chamb_table[8].afebs_on552  = 12
 
-DelayGroup = [ MutableNamedTuple() for i in range(MAX_DELAY_CHIPS_IN_GROUP)]
-ALCTDelays = [MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)]
-arDelays  = [[ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)] for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)]
-SendPtrns  = [[ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)] for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)]
-ReadPtrns  = [[ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)] for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)]
 
 #TPtrnImage ('i') # Array of bytes [0..5] [0..7]
 
