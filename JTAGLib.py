@@ -82,7 +82,7 @@ def ShiftData(Data, DataSize, sendtms):
 
         #set TMS value
         if (sendtms) and (i==DataSize):
-           tms = 0x01
+           tms = 0x1
         else:
             tms = 0x00
         #set TDI value
