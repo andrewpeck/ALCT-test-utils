@@ -73,7 +73,6 @@ CTRL_SC_ID_DR_SIZE      = 40
 USER_V_FPGA_ID          = 0x0925200207
 USER_V_ID_DR_SIZE       = 40
 
-# JTAG Chains
 SLOW_CTL    = 0x0
 FAST_CTL    = 0x1
 BOARD_SN    = 0x2
@@ -81,6 +80,18 @@ MEZAN_SN    = 0x3
 VRTX_CH		= 0x3
 V_IR        = 0x5
 SC_IR       = 0x6
+
+SLOWCTL_PROGRAM=0x1
+SLOWCTL_CONTROL=0x0
+VIRTEX_PROGRAM = 0x5
+VIRTEX_CONTROL = 0x4
+
+arJTAGChains = [0x1, 0x0, 0x5, 0x4]
+# 0x1 = Slow Control    Programming
+# 0x0 = Slow Control    Control
+# 0x5 = Virtex          Programming
+# 0x4 = Virtex          Control 
+
 
 RegSz = [
     40,     # IDRead = 0x0,
@@ -127,10 +138,6 @@ NUM_AFEB                    = 42
 parlen  = None
 
 ADC_REF = 1.225 # Reference Voltage
-
-arJTAGChains = [0x1, 0x0, 0x5, 0x4]
-# 0x1 = Slow Control
-# 0x4 = Mezzanine 
 
 arADCChannel = [1, 0, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 10, 
                 9, 8,  7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2,  3, 
@@ -596,7 +603,7 @@ def WriteRegister(reg, value):
 # Read Virtex Register
 def ReadRegister(reg): 
     WriteIR(reg, V_IR)
-    result = ReadDR(0,RegSz[reg])
+    result = ReadDR(0x0,RegSz[reg])
     return(result)
 
 def PrepareDelayLinePatterns(dlys, image): #dlys istype ALCTDelays, image istype TPtrnImage
@@ -1440,7 +1447,7 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
 #
 #
 #{
-#def FindStartDlyR(var StartDlyR_f: integer StartDly: integer; value: integer; ch: integer; alct_dly: integer; num: integer): boolean
+#def FindStartDlyR(var StartDlyR_f: integer StartDly: integer value: integer; ch: integer; alct_dly: integer; num: integer): boolean
 #var
 #    size, i, num_dly_ch, ChannelsCntr, tb_dly, StartDlyR: integer
 #    cntrs : array of byte
@@ -1475,7 +1482,7 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
 #                Result := False
 #
 #
-#def FindStartDlyF_tmp(var StartDlyF_f: integer StartDly: integer; value: integer; ch: integer; alct_dly: integer; num: integer): boolean
+#def FindStartDlyF_tmp(var StartDlyF_f: integer StartDly: integer value: integer; ch: integer; alct_dly: integer; num: integer): boolean
 #var
 #    size, i, num_dly_ch, ChannelsCntr, tb_dly, StartDlyF: integer
 #    cntrs : array of byte
@@ -1510,7 +1517,7 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
 #                Result := False
 #
 #
-#def FindStartDlyF(var StartDlyF_f: integer value: integer; ch: integer; alct_dly: integer; num: integer): boolean
+#def FindStartDlyF(var StartDlyF_f: integer value: integer ch: integer; alct_dly: integer; num: integer): boolean
 #var
 #    size, i, num_dly_ch, ChannelsCntr, tb_dly, StartDlyF: integer
 #    cntrs : array of byte
