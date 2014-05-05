@@ -180,40 +180,21 @@ def ReadTemperature():
     result = ReadTemperatureADC()*arTemperature.coef-50
     return(result)
 
-def SelfTest(alcttype):
-    CurrErrs = 0
-    Errs    = 0
-    SetChain(SLOW_CTL)
 
-    print("\n%s> Start Slow Control Self Test" % Now()) 
-    Errs += CheckVoltages(alcttype)
-    Errs += CheckCurrents(alcttype)
-    Errs += CheckTemperature()
-    Errs += CheckAFEBThresholds(alct[alcttype].groups*alct[alcttype].chips)
-    Errs += CheckStandbyRegister()
-    Errs += CheckTestPulsePowerDown() 
-    Errs += CheckTestPulsePowerUp() 
-    Errs += CheckTestPulseWireGroupMask()
-    SetStandbyReg(0) #Turn Off All AFEBs
-
-    if Errs>0: 
-        print('\nSlow Control Self Test Failed with %i Failed Subtests' % Errs)
-    else: 
-        print('\nSlow Control Self Test Finished Without Errors')
-
-def CheckAFEBThresholds(NUM_AFEBS): 
+def CheckThresholds(NUM_AFEBS,depth): 
     print("Checking AFEB Thresholds") 
     CurrErrs=0
     for afeb in range(NUM_AFEBS): 
+        if afeb !=0: print("")
         for thresh in range(256): 
-            if thresh%25 == 0: 
+            if thresh%depth == 0: 
                 write=thresh
                 SetThreshold(afeb,write)
                 read = ReadThreshold(afeb)/4.0
                 output=("\t AFEB #%02i: Write=%03i Read=%03.0f" % (afeb,write,read) ) 
                 Printer(output)
                 if abs(write-read)>ThreshToler: 
-                    print("ERROR in AFEB #%02i: Write=%03i Read=%03.0f\r" % (afeb,write,read) ) 
+                    print("\nERROR in AFEB #%02i: Write=%03i Read=%03.0f" % (afeb,write,read) ) 
                     CurrErrs +=1
 
     #sys.stdout.flush()
@@ -355,10 +336,11 @@ def CheckTemperature():
     print('Checking Temperature')
     CurrErrs=0
     readval = ReadTemperatureADC()
-    if not (abs((readval*arTemperature.coef-50)-arTemperature.refval) < arTemperature.toler): 
+    temp = (readval * arTemperature.coef)-50
+    if not (abs(temp-arTemperature.refval) < arTemperature.toler): 
         CurrErrs+=1
         print("Error: ", end='')
-    print("\t %s read=%.03f expect=%.03f +- %0.03f" % (arTemperature.ref, readval*arTemperature.coef-50, arTemperature.refval, arTemperature.toler))
+    print("\t %s read=%.03f expect=%.03f +- %0.03f" % (arTemperature.ref, temp, arTemperature.refval, arTemperature.toler))
 
     if CurrErrs==0: 
         print('\t ====> Passed')
