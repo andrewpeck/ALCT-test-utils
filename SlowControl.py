@@ -350,3 +350,25 @@ def CheckTemperature():
         return(1)
         
 
+def SelfTest(alcttype):
+    CurrErrs = 0
+    Errs    = 0
+    SetChain(SLOW_CTL)
+
+    print("\n%s> Start Slow Control Self Test\n" % Now()) 
+    Errs += CheckVoltages(alcttype)
+    Errs += CheckCurrents(alcttype)
+    Errs += CheckTemperature()
+    Errs += CheckThresholds(alct[alcttype].groups*alct[alcttype].chips,17)
+    Errs += CheckStandbyRegister()
+    Errs += CheckTestPulsePowerDown() 
+    Errs += CheckTestPulsePowerUp() 
+    Errs += CheckTestPulseWireGroupMask()
+    SetStandbyReg(0) #Turn Off All AFEBs
+
+    if Errs>0: 
+        print('\nSlow Control Self Test Failed with %i Failed Subtests' % Errs)
+    else: 
+        print('\nSlow Control Self Test Finished Without Errors')
+
+    k=input("\n<cr> to return to menu: ")
