@@ -1563,3 +1563,93 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
 #    Wires    = channels
 #    global PwrChans
 #    PwrChans = pwrchans
+
+def DetectMezzanineType(): 
+    # Mezzanine Chip Types
+    # VIRTEX600  = 0x00 (0)
+    # VIRTEX1000 = 0x01 (1)
+    # UNKNOWN    = 0xFF (255)
+
+    Err = 0
+    SetChain(arJTAGChains[2])
+
+    #Check EPROM 1 ID 
+    ir = 0x1FFFFF
+    WriteIR(ir, PROG_V_IR_SIZE)
+
+    ir = 0x1FFEFF
+    WriteIR(ir, PROG_V_IR_SIZE)
+
+    data = 0x0000000000
+    data = ReadDR(data, PROG_V_ID_DR_SIZE)
+
+    data = data & PROG_V_EPROM1_ID_MASK
+
+    if (data != PROG_V_EPROM1_ID) and (data != PROG_V_EPROM1_ID2): 
+        Err+=1
+
+    #Check EPROM 2 ID 
+    ir = 0x1FFFFF
+    WriteIR(ir, PROG_V_IR_SIZE)
+
+    ir = 0x1FFFFE
+    WriteIR(ir, PROG_V_IR_SIZE)
+
+    data = 0x0000000000
+    data = ReadDR(data, PROG_V_ID_DR_SIZE)
+    data = data & PROG_V_EPROM2_ID_MASK
+    if (data != PROG_V_EPROM2_ID) and (data != PROG_V_EPROM2_ID2): 
+        Err+=1
+
+    ir = 0x1FFFFF
+    WriteIR(ir, PROG_V_IR_SIZE)
+
+    ir = 0x09FFFF
+    WriteIR(ir, PROG_V_IR_SIZE)
+
+    data = 0x0000000000
+    data = ReadDR(data, PROG_V_ID_DR_SIZE)
+    data = data & PROG_V_FPGA_ID_MASK
+    if data != PROG_V_FPGA_ID:   
+        Err += 1
+
+    if Err==0: 
+        print('\t Mezanine Board with Xilinx Virtex 1000 chip is detected')
+        MezChipType = VIRTEX1000
+    else: 
+        Err = 0
+        ir = 0x1fff
+        WriteIR(ir, PROG_V_IR_SIZE-8)
+
+        ir = 0x1fff
+        WriteIR(ir, PROG_V_IR_SIZE-8)
+
+        ir = 0x1ffe
+        WriteIR(ir, PROG_V_IR_SIZE-8)
+
+        data = 0x0000000000
+        data = ReadDR(data, PROG_V_ID_DR_SIZE)
+        data = data & PROG_V_EPROM2_ID_MASK
+
+        if (data != PROG_V_EPROM2_ID) and (data != PROG_V_EPROM2_ID2): 
+            Err += 1
+
+        ir = 0x1fff
+        WriteIR(ir, PROG_V_IR_SIZE-8)
+
+        ir = 0x09ff
+        WriteIR(ir, PROG_V_IR_SIZE-8)
+
+        data = 0x0000000000
+        data = ReadDR(data, PROG_V_ID_DR_SIZE)
+        data = data & PROG_V_FPGA600_ID_MASK
+        if data != PROG_V_FPGA600_ID:
+           Err +=1 
+
+        if Err == 0: 
+            print('\t Mezzanine Board with Xilinx Virtex 600 chip is detected')
+            MezChipType = VIRTEX600
+        else: 
+            print('\t ERROR: Could not detect Mezanine Board')
+            MezChipType = UNKNOWN
+    return(MezChipType)
