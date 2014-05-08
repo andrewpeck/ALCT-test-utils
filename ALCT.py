@@ -1,6 +1,9 @@
-#import time
-from time import sleep 
+################################################################################
+# ALCT.py -- Generic Tools for ALCT I/O, Register Definitions
+################################################################################
 
+from time        import sleep 
+from Common      import MutableNamedTuple
 from JTAGLib     import *
 from ALCT        import *
 from LPTJTAGLib  import *
@@ -8,11 +11,14 @@ from SlowControl import *
 
 ActiveHW = 1
 
-ConfigFile      = 'alct_tests.ini'
-VIRTEX600       = 0
-VIRTEX1000      = 1
-UNKNOWN         = 255
-IDRead          = 0x00
+VIRTEX600       = 0x00 # Mezzanine Detection Virtex 600 Code
+VIRTEX1000      = 0x01 # Mezzanine Detection Virtex 1000 Code 
+UNKNOWN         = 0xFF # Mezzanine Detection Unknown ID Code
+
+################################################################################
+# Mezzanine Control Addresses
+################################################################################
+IDRead          = 0x00 # ID Read Address
 HCMaskRead      = 0x01
 HCMaskWrite     = 0x02
 RdTrig          = 0x03
@@ -36,6 +42,33 @@ SNwrite0        = 0x1C
 SNwrite1        = 0x1D
 SNreset         = 0x1E
 Bypass          = 0x1F
+
+# Array of the Sizes of Virtex Register Locations
+# Used by WriteRegister and ReadRegister
+RegSz = {
+    0x00: 40,   # IDRead        
+    0x01: 384,  # HCMaskRead    
+    0x02: 384,  # HCMaskWrite   
+    0x03: 2,    # RdTrig        
+    0x04: 2,    # WrTrig        
+    0x06: 69,   # RdCfg         // read control register
+    0x07: 69,   # WrCfg         // write control register
+    0x0D: 120,  # Wdly          // write delay lines. cs_dly bits in Par
+    0x0E: 120,  # Rdly          // read  delay lines. cs_dly bits in Par
+    0x13: 224,  # CollMaskRead  
+    0x14: 224,  # CollMaskWrite 
+    0x15: 6,    # ParamRegRead  
+    0x16: 6,    # ParamRegWrite 
+    0x17: 0,    # InputEnable   
+    0x18: 0,    # InputDisable  
+    0x19: 31,   # YRwrite       
+    0x1A: 49,   # OSread        
+    0x1B: 1,    # SNread        
+    0x1F: 1}    # Bypass        
+
+################################################################################
+# ID Masks and ID Codes
+################################################################################
 
 PROG_SC_EPROM_ID        = 0X0005024093
 PROG_SC_EPROM_ID_MASK   = 0X01FFFFFFFF
@@ -61,7 +94,6 @@ PROG_V_FPGA600_7_ID_MASK= 0X003FFFFFFF
 PROG_V_FPGA600_ID       = 0X0001460126
 PROG_V_FPGA600_ID_MASK  = 0X000FFFFFFF
 
-
 PROG_SC_IR_SIZE         = 11
 PROG_SC_ID_DR_SIZE      = 33
 PROG_V_IR_SIZE          = 21
@@ -73,71 +105,36 @@ CTRL_SC_ID_DR_SIZE      = 40
 USER_V_FPGA_ID          = 0x0925200207
 USER_V_ID_DR_SIZE       = 40
 
-SLOW_CTL    = 0x0
-FAST_CTL    = 0x1
-BOARD_SN    = 0x2
-MEZAN_SN    = 0x3
-VRTX_CH		= 0x3
-V_IR        = 0x5
-SC_IR       = 0x6
+################################################################################
+# JTAG Chains
+################################################################################
+SLOW_CTL        = 0x0
+FAST_CTL        = 0x1
+BOARD_SN        = 0x2
+MEZAN_SN        = 0x3
+VRTX_CH	        = 0x3
+V_IR            = 0x5
+SC_IR           = 0x6
 
-SLOWCTL_PROGRAM=0x1
-SLOWCTL_CONTROL=0x0
-VIRTEX_PROGRAM = 0x5
-VIRTEX_CONTROL = 0x4
-
+SLOWCTL_PROGRAM = 0x1 # Slow Control Programming
+SLOWCTL_CONTROL = 0x0 # Slow Control Control
+VIRTEX_PROGRAM  = 0x5 # Virtex Programming
+VIRTEX_CONTROL  = 0x4 # Virtex Control
+#array of JTAG Chains... legacy of old code
 arJTAGChains = [0x1, 0x0, 0x5, 0x4]
-# 0x1 = Slow Control    Programming
-# 0x0 = Slow Control    Control
-# 0x5 = Virtex          Programming
-# 0x4 = Virtex          Control 
 
 
-RegSz = [
-    40,     # IDRead = 0x0,
-    384,    # HCMaskRead    = 0x1,
-    384,    # HCMaskWrite   = 0x2,
-    2,      # RdTrig        = 0x3,
-    2,      # WrTrig        = 0x4,
-    0,      #
-    69,     # RdCfg         = 0x6, // read control register
-    69,     # WrCfg         = 0x7, // write control register
-    0,
-    0,
-    0,
-    0,
-    0,
-    120,    # Wdly          = 0xd, // write delay lines. cs_dly bits in Par
-    120,    # Rdly          = 0xe, // read  delay lines. cs_dly bits in Par
-    0,
-    0,
-    0,
-    0,
-    224,    # CollMaskRead  = 0x13,
-    224,    # CollMaskWrite = 0x14,
-    6,      # ParamRegRead  = 0x15,
-    6,      # ParamRegWrite = 0x16,
-    0,      # InputEnable   = 0x17,
-    0,      # InputDisable  = 0x18,
-    31,     # YRwrite       = 0x19,
-    49,     # OSread        = 0x1a,
-    1,      # SNread        = 0x1b,
-    0,
-    0,
-    0,
-    1]       # Bypass        = 0x1f
+################################################################################
+# Board Parameters
+################################################################################
 
-
-NUM_OF_DELAY_GROUPS         = 4
-NUM_OF_DELAY_CHIPS_IN_GROUP = 6
 MAX_DELAY_GROUPS            = 7
 MAX_DELAY_CHIPS_IN_GROUP    = 6
 MAX_NUM_AFEB                = 42
-NUM_AFEB                    = 42
-
 parlen  = None
 
-ADC_REF = 1.225 # Reference Voltage
+ADC_REF = 1.225 # ADC Reference Voltage
+ThreshToler = 4 # Threshold Tolerance (discrepancy is ok within +- ThreshToler)
 
 arADCChannel = [1, 0, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 10, 
                 9, 8,  7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2,  3, 
@@ -150,30 +147,6 @@ arADCChip    = [2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
 mapGroupMask = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 0, 0, 
                 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 
                 5, 5, 6, 6, 6, 4, 4, 4, 5, 5, 5, 6, 6, 6]
-
-
-
-# class to mimic the Pascal record type 
-# better to reimplement as a normal dictionary...
-from collections import OrderedDict
-class MutableNamedTuple(OrderedDict):
-    def __init__(self, *args, **kwargs):
-        super(MutableNamedTuple, self).__init__(*args, **kwargs)
-        self._initialized = True
-
-    def __getattr__(self, name):
-        try:
-            return self[name]
-        except KeyError:
-            raise AttributeError(name)
-
-    def __setattr__(self, name, value):
-        if hasattr(self, '_initialized'):
-            super(MutableNamedTuple, self).__setitem__(name, value)
-        else:
-            super(MutableNamedTuple, self).__setattr__(name, value)
-
-ThreshToler = 4
 
 arVoltages = [ MutableNamedTuple() for i in range(4)] 
 
@@ -248,6 +221,8 @@ V33_PWR_SPLY = 1        # Power Supply 3.3V
 V55_1_PWR_SPLY = 2      # Power Supply 5.5V (1)
 V55_2_PWR_SPLY = 3      # Power Supply 5.5V (2)
 
+
+# Array of Tuples to hold Properties of Different Board Types
 alct = [ MutableNamedTuple() for i in range(3)] 
 
 alct[0].name          = 'ALCT288'
@@ -274,6 +249,8 @@ alct[2].chips         = 6
 alct[2].delaylines    = 16
 alct[2].pwrchans      = 4
 
+# Array of Tuples to hold properties of Different Chamber Types
+# Not used by anything that I know of..?
 chamb_table = [ MutableNamedTuple() for i in range(9)]
 
 chamb_table[0].name         = 'ME1/1'
@@ -340,15 +317,14 @@ chamb_table[8].afebs_on551  = 12
 chamb_table[8].afebs_on552  = 12
 
 
-#TPtrnImage ('i') # Array of bytes [0..5] [0..7]
-
-ALCTSTATUS =  ["EALCT_SUCCESS",   	# Successful completion
-                "EALCT_FILEOPEN",         # Filename could not be opened
-                "EALCT_FILEDEFECT", 	# Configuration file inconsistency
-                "EALCT_PORT", 		# JTAG Device problem
-                "EALCT_CHAMBER", 		# Bad chamber_type number
-                "EALCT_ARG", 		# Argument Out Of Range
-                "EALCT_TESTFAIL"]         # Test failure
+ALCTSTATUS = [
+        1: "EALCT_SUCCESS",   	# Successful completion
+        2: "EALCT_FILEOPEN",    # Filename could not be opened
+        3: "EALCT_FILEDEFECT", 	# Configuration file inconsistency
+        4: "EALCT_PORT", 	# JTAG Device problem
+        5: "EALCT_CHAMBER", 	# Bad chamber_type number
+        6: "EALCT_ARG", 	# Argument Out Of Range
+        7: "EALCT_TESTFAIL"]    # Test failure
 
 alct_idreg  = MutableNamedTuple()   #ALCT ID Register
 sc_idreg    = MutableNamedTuple()   #Slow Control ID Register
@@ -358,9 +334,6 @@ v_idreg     = MutableNamedTuple()
 FIFO_RESET = 0xC
 FIFO_READ  = 0xA
 FIFO_WRITE = 0x9
-
-#MeasDlyChan # array of size [0..41][0..15] of type Currency
-#MeasDly # array of size [0..41] of type Currency
 
 IDReadReg       = MutableNamedTuple() 
 IDReadReg.val   = 0x00
@@ -412,6 +385,8 @@ WrParamDly.len  = 6 # !! Change for Different Boards
 
 CRfld = [ MutableNamedTuple() for i in range(26)] 
 
+
+# unused ? 
 CRfld[0].name       ='trig_mode'
 CRfld[0].mask       =3
 CRfld[0].bit        =0
@@ -542,7 +517,7 @@ CRfld[25].mask       =1
 CRfld[25].bit        =68
 CRfld[25].default    =0
 
-
+# Unused ? 
 CRdescr = [
             'Virtex Trigger Mode',
             'External Trigger Enable',
@@ -570,6 +545,7 @@ CRdescr = [
             'Mask All Wire Group inputs to LCT chips (affects all LCT chips)',
             'ALCT-bus spare signals (not currently used, set to be 0)' ]
 
+# Unused ? 
 OperDescr = [
             'Blank Check of Slow Control EPROM',
             'Blank Check of Virtex 1000 EPROM #1',
@@ -582,8 +558,6 @@ OperDescr = [
             'Load Virtex 1000 EPROM #1',
             'Load Virtex 1000 EPROM #2',
             'Load Virtex 1000 FPGA' ]
-
-
 
 # Select JTAG Programming Chain
 def SetChain(ch): 
@@ -600,40 +574,6 @@ def ReadRegister(reg):
     WriteIR(reg, V_IR)
     result = ReadDR(0x0,RegSz[reg])
     return(result)
-
-def PrepareDelayLinePatterns(dlys, image): #dlys istype ALCTDelays, image istype TPtrnImage
-    for i in range (0,4): 
-        dlys[i][0].Pattern = FlipByte(image[1][i*2]) | (word(image[4][i*2]) << 8)
-        dlys[i][1].Pattern = FlipByte(image[1][i*2]) | (word(image[4][i*2]) << 8)
-        dlys[i][2].Pattern = FlipByte(image[1][i*2]) | (word(image[4][i*2]) << 8)
-        dlys[i][3].Pattern = FlipByte(image[1][i*2]) | (word(image[4][i*2]) << 8)
-        dlys[i][4].Pattern = FlipByte(image[1][i*2]) | (word(image[4][i*2]) << 8)
-        dlys[i][5].Pattern = FlipByte(image[1][i*2]) | (word(image[4][i*2]) << 8)
-
-def Write6DelayLines(dlys, mask, option):   # overloaded function
-    WriteIR(ParamRegWrite, V_IR)
-    WriteDR(0x1ff & (not (mask << 2)), parlen)
-
-    WriteIR(ParamRegRead, V_IR)
-    ReadDR(0x0, parlen)
-
-    WriteIR(Wdly, V_IR)
-    StartDRShift
-
-    for i in range(0,6):
-        value   = ShiftData(FlipHalfByte(dlys[i].Value), 4, False)
-        pattern = ShiftData(dlys[i].Pattern, 16, i=5)
-
-    if ((option is bool) and (option is True)):
-        dlys[i].Value = value
-        dlys[i].Pattern = pattern
-    elif (option is readdlys):
-        readdlys[i].value   = shiftdata(fliphalfbyte(dlys[i].value), 4, False)
-        readdlys[i].pattern = shiftdata(dlys[i].pattern, 16, i=5)
-
-    ExitDRShift 
-    WriteIR(ParamRegWrite, V_IR)
-    WriteDR(0x1ff, parlen)
 
 def SCReadEPROMID():
     WriteIR(0x7F0,11)
@@ -709,7 +649,6 @@ def SCBlankCheckEPROM(errs):
     else: 
         result = False
 
-
 def VReadFPGAID(): 
     WriteIR(0x1F,5)
     WriteIR(0x1F,5)
@@ -737,7 +676,6 @@ def VReadEPROMID2():
     WriteIR(0x1FFFFFF,21)
     return(result)
 
-
 def VEraseEPROM1(): 
     if  ((VReadEPROMID1 & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID) or  \
         ((VReadEPROMID1 & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID2): 
@@ -755,7 +693,6 @@ def VEraseEPROM1():
         result = False
     return(result)
 
-
 def VEraseEPROM2(): 
     if  ((VReadEPROMID2 & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID) or \
         ((VReadEPROMID2 & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID2):
@@ -772,7 +709,6 @@ def VEraseEPROM2():
     else:
         result = False
     return(result)
-
 
 def V600EraseEPROM(): 
     if  ((VReadEPROMID1 & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID) or \
@@ -838,11 +774,9 @@ def VBlankCheckEPROM1(errs):
 
     return(result)
 
-
 def VBlankCheckEPROM2(errs):
     return(0)
     #PLACEHOLDER
-
 
 def V600BlankCheckEPROM(errs):
     return(0)
@@ -937,470 +871,6 @@ def FlipDR(data,length):
     for i in range(1,length):
         result = result | (((data >> i) & 0x1) << (10-i))
     return(result)
-
-################################################################################
-# Test Board FIFO Functions
-################################################################################
-
-def SetFIFOMode(mode):
-    if (ActiveHW):
-        WriteIR(WrParamF.val, V_IR)
-        WriteDR((0x8 | mode) & 0xF, WrParamF.len)
-
-def SetFIFOReset(): 
-    if (ActiveHW): 
-        WriteIR(WrParamF.val, V_IR)
-        WriteDR(8,WrParamF.len)
-        WriteIR(WrParamF.val, V_IR)
-        WriteDR(FIFO_RESET,WrParamF.len)
-        WriteIR(WrParamF.val, V_IR)
-        WriteDR(8,WrParamF.len)
-
-def SetFIFOWrite(): 
-    if (ActiveHW): 
-        WriteIR(WrParamF.val, V_IR)
-        WriteDR(FIFO_WRITE,WrParamF.len)
-
-def SetFIFORead(): 
-    if (ActiveHW): 
-        WriteIR(WrParamF.val, V_IR)
-        WriteDR(FIFO_READ,WrParamF.len)
-
-def SetFIFOReadWrite(): 
-    if (ActiveHW): 
-        WriteIR(WrParamF.val, V_IR)
-        WriteDR(FIFO_WRITE | FIFO_READ,WrParamF.len)
-
-def FIFOClock(): 
-    if (ActiveHW): 
-        WriteIR(WrFIFO.val, V_IR)
-        WriteDR(0x1,WrFIFO.len)
-
-def ReadFIFOCounters(): 
-    if (ActiveHW): 
-        WriteIR(RdCntReg.val, V_IR)
-        result = ReadDR(0x0,RdCntReg.len)
-    return(result)
-
-def SetFIFOValue(val):
-    if (ActiveHW): 
-        WriteIR(WrDatF.val, V_IR)
-        WriteDR(val,WrDatF.len)
-
-def SetFIFOChannel(ch,startdly):
-    if (ActiveHW): 
-        WriteIR(WrAddF.val, V_IR)
-        WriteDR( ch | startdly << 6,WrAddF.len)
-
-def SetTestBoardDelay(delay):
-    if (ActiveHW): 
-        WriteIR(WrParamF.val, V_IR)
-        WriteDR(FIFO_RESET,WrParamF.len)
-
-        WriteIR(WrDlyF.val, V_IR)
-        WriteDR(FlipByte((255-delay) & 0xFF) ,WrDlyF.len)
-
-        WriteIR(WrParamF.val, V_IR)
-        WriteDR(8,WrParamF.len)
-
-def SetALCTBoardDelay(ch, delay):
-    if (ActiveHW): 
-        for i in range (MAX_DELAY_CHIPS_IN_GROUP): 
-            dlys[i].Value = 0
-            dlys[i].Pattern = 0
-
-        dlys[ch % MAX_DELAY_CHIPS_IN_GROUP].Value = delay
-
-        Write6DelayLines(dlys, 1 << (ch // MAX_DELAY_CHIPS_IN_GROUP))
-
-def SetTestBoardFIFO(fifoval, fifochan, numwords, startdelay, alctdelay, testboarddelay):
-    numwords=1
-    startdelay=2
-    alctdelay=0
-    testboarddelay=0
-
-    if (ActiveHW): 
-        SetFIFOReset
-        SetFIFOChannel(fifochan, startdelay )
-        SetFIFOValue(fifoval)
-        SetTestBoardDelay(testboarddelay)
-        SetALCTBoardDelay(fifochan, alctdelay)
-        SetFIFOWrite
-        for i in range(1,numwords+1):
-            FIFOClock
-
-def SetDelayTest(fifoval, fifochan, startdelay, alctdelay, testboarddelay):
-    startdelay=2
-    alctdelay=0
-    testboarddelay=0
-    if (ActiveHW): 
-        SetFIFOChannel(fifochan, startdelay)
-        SetFIFOValue(fifoval)
-        SetTestBoardDelay(testboarddelay)
-        SetALCTBoardDelay(fifochan, alctdelay)
-
-def ReadFIFOValue():
-    if (ActiveHW): 
-        WriteIR(RdDataReg.val, V_IR)
-        result = ReadDR(0,RdDataReg.len)
-        return(result)
-    else: 
-        return(0)
-
-def ALCTEnableInput(): 
-    if (ActiveHW): 
-        WriteIR(WrParamDly.val, V_IR)
-        WriteDR(0x1FD,parlen)
-        WriteIR(RdParamDly.val, V_IR)
-        result = ReadDR(0, parlen)
-        return(result)
-    else: 
-        return(0)
-
-def ALCTDisableInput():
-    if (ActiveHW): 
-        WriteIR(WrParamDly.val, V_IR)
-        WriteDR(0x1FF,parlen)
-        WriteIR(RdParamDly.val, V_IR)
-        result = ReadDR(0, parlen)
-        return(result)
-    else: 
-        return(1)
-
-def ReadFIFO(vals, numwords, cntrs):
-    if (ActiveHW): 
-        SetFIFOReset()
-        SetFIFOWrite()
-        FIFOClock()
-        SetFIFOReadWrite()
-        ALCTEnableInput()
-
-        for i in range(numwords): 
-            FIFOClock
-            vals[i] = ReadFIFOValue
-
-        cntstr = ReadFIFOCounters()
-        result = cntstr
-
-        for i in range (16):
-            cntrs[15-i] = int(cntstr[i*2+1,i*2+2] + cntstr[i*2+2,i*2+3],16)
-
-def ReadFIFOfast(numwords, cntrs):
-    if (ActiveHW): 
-        SetFIFOReset()
-        SetFIFOWrite()
-        FIFOClock()
-        SetFIFOReadWrite()
-        ALCTEnableInput()
-        WriteIR(WrFIFO.val,V_IR)           # FIFOClock
-        for i in range(numwords):
-            if (ActiveHW): WriteDR(0x1,WrFIFO.len)    # FIFOClock
-
-        cntstr = ReadFIFOCounters()
-
-        for i in range(16):
-            cntrs[15-i] = int(cntstr[i*2+1,i*2+2] + cntstr[i*2+2,i*2+3],16)
-
-
-def PinPointRiseTime(TimeR, value, ch, StartDly_R, alct_dly, num): 
-    RegisterMaskDone = 0
-    tb_dly = 0
-
-    SetDelayTest(value, ch, StartDly_R, alct_dly, tb_dly)
-
-    FirstChn = False
-    for j in range(26): 
-        tb_dly = 10*j
-        SetTestBoardDelay(tb_dly)
-        ReadFIFOfast(num,cntrs)
-
-        for i in range(16):
-            if (cntrs[i] > 0) and ((value & (1 << i))>0) :
-                FirstChn = True
-
-            if (FirstChn) :
-                tb_dly = 10*(j-1)
-                break
-
-    for dly in range(tb_dly,256):
-        SetTestBoardDelay(dly)
-        ReadFIFOfast(num,cntrs)
-
-        for i in range (16):
-            if(cntrs[i]>(num/2)) and ((value & (1 << i))>0) and ((RegisterMaskDone & (1 << i))==0) :
-                TimeR[i] = dly
-                RegisterMaskDone = RegisterMaskDone | (1 << i)
-        if (RegisterMaskDone == Value):
-            break
-
-def PinPointRiseTime50(TimeR, TimeR_50, value, ch, StartDly_R, alct_dly, num): 
-    SetDelayTest(value, ch, StartDly_R, alct_dly, tb_dly)
-
-    FirstChn = False
-    for j in range (26):
-        tb_dly = 10*j
-        SetTestBoardDelay(tb_dly)
-        ReadFIFOfast(num,cntrs)
-
-        for i in range(16): 
-            if (cntrs[i] > 0) and ((value & (1 << i))>0): 
-                FirstChn = True
-
-        if(FirstChn): 
-            tb_dly = 10*(j-1)
-            break
-
-    for dly in range(tb_dly,256):
-        SetTestBoardDelay(dly)
-        ReadFIFOfast(num,cntrs)
-
-        for i in range(16):
-            if cntrs[i]>(num/2) and ((value & (1 << i))>0) and (RegisterMaskDone & (1 << i))==0:
-                TimeR[i]    = dly
-                tmp2[i]     = dly  
-                cnt2[i]     = cntrs[i]
-                TimeR_50[i] = tmp1[i] + ((tmp2[i]-tmp1[i])*(num/2 - cnt1[i]) / (cnt2[i]-cnt1[i]))
-                RegisterMaskDone = RegisterMaskDone | (1 << i)
-            tmp1[i] = dly  
-            cnt1[i] = cntrs[i]
-
-    if(RegisterMaskDone == Value): 
-        return(0)
-
-def PinPointFallTime(TimeF, value, ch, StartDly_F, alct_dly, num): 
-    SetDelayTest(value, ch, StartDly_F, alct_dly, tb_dly)
-    FirstChn = False
-
-    for j in range(26):
-        tb_dly = 10*j
-        SetTestBoardDelay(tb_dly)
-        ReadFIFOfast(num,cntrs)
-
-        for i in range(16):
-            if(cntrs[i] > 0) and ((value & (1 >> i))>0):
-                FirstChn = True
-
-        if(FirstChn): 
-            tb_dly = 10*(j-1)
-            break
-
-    for tb_dly in range (256): 
-        SetTestBoardDelay(tb_dly)
-        ReadFIFOfast(num,cntrs)
-
-        for i in range(16):
-            if cntrs[i]<(num/2) and ((value & (1 << i))>0) and ((RegisterMaskDone & (1 << i))==0):
-                TimeF[i] = tb_dly
-                RegisterMaskDone = RegisterMaskDone | (1 << i)
-
-        if(RegisterMaskDone == Value): 
-            break
-
-
-def FindStartDly(StartDly_R, StartDly_F, value, ch, alct_dly, num): 
-    RegMaskDoneR    = 0
-    RegMaskDoneF    = 0
-    MaxChannelsCntr = 0
-    FoundTimeBin    = False
-    FirstCnhR       = False
-    AllChnR         = False
-    FirstChnF       = False
-    AllChnF         = False
-    StartDly_R      = 5
-    StartDly_F      = 5
-    StartDly        = 5
-
-    #SetLength(cntrs, 16)
-    tb_dly = 0
-
-    SetDelayTest(value, ch, StartDly, alct_dly, tb_dly)
-
-    for StartDly in range (5,16):
-        # Access board
-        SetFIFOChannel(ch, StartDly)
-        ReadFIFOfast(num,cntrs)
-
-        # Check counters and increment
-        ChannelsCntr = 0  
-        MaskDoneR    = 0
-
-        for i in range(16):
-            if (cntrs[i] > (num/2)) and ((value & (1 << i))>0):
-                Inc(ChannelsCntr)
-                MaskDoneR = MaskDoneR | (1 << i)
-
-        # Check if time bin is found
-        if (ChannelsCntr > 0):
-            FirstCnhR = True
-        if (MaskDoneR == value):
-            AllChnR = True
-
-        if (not FirstCnhR):
-            StartDly_R = StartDly
-        else: 
-            if ((ChannelsCntr > 0) and (ChannelsCntr >= MaxChannelsCntr)):
-                MaxChannelsCntr = ChannelsCntr
-                StartDly_F      = StartDly
-                RegMaskDoneR    = MaskDoneR
-            else:
-                FirstChnF = True
-
-        if (FirstChnF):
-            MaskDoneF = 0
-            for i in range (16): 
-                if (cntrs[i] < (num/2)) and ((value & (1 << i))>0) : 
-                    MaskDoneF = MaskDoneF | (1 << i)
-
-                RegMaskDoneF = MaskDoneF
-                if (MaskDoneF == value):
-                    AllChnF = True
-
-            if (AllChnR and AllChnF):
-                FoundTimeBin = True
-                break
-
-    if (not FirstCnhR):
-        StartDly_R = 5
-
-    result = FoundTimeBin
-    return(result)
-
-def FindStartDlyPin(StartDly_R, StartDly_F, value, ch, alct_dly, num, RegMaskDone, ):
-    RegMaskDoneR = 0
-    RegMaskDoneF = 0
-    MaxChannelsCntr = 0
-    FoundTimeBin  = False
-    FirstCnhR = False    
-    AllChnR = False
-    FirstChnF = False    
-    AllChnF = False
-    StartDly_R = 5       
-    StartDly_F = 5
-    StartDly = 5
-    tb_dly  = 0
-
-    SetDelayTest(value, ch, StartDly, alct_dly, tb_dly)
-
-    for StartDly in range(5,16): 
-        #Access board
-        SetFIFOChannel(ch, StartDly )
-        ReadFIFOfast(num,cntrs)
-
-        #Check counters and increment
-        ChannelsCntr = 0  
-        MaskDoneR = 0
-
-        for i in range (16): 
-            if (cntrs[i] > (num/2)) and ((value & (1 << i))>0): 
-                ChannelsCntr+=1
-                MaskDoneR = MaskDoneR | (1 << i)
-
-            #Check if time bin is found
-            if (ChannelsCntr > 0): 
-                FirstCnhR = True
-            if (MaskDoneR == value): 
-                AllChnR = True
-
-            if (not FirstCnhR): 
-                StartDly_R = StartDly
-            else: 
-                if ((ChannelsCntr > 0) and (ChannelsCntr >= MaxChannelsCntr)): 
-                    MaxChannelsCntr = ChannelsCntr
-                    StartDly_F = StartDly
-                    RegMaskDoneR = MaskDoneR
-                else: 
-                    FirstChnF = True
-
-        if (FirstChnF): 
-            MaskDoneF = 0
-            for i in range(16): 
-                if (cntrs[i] < (num/2)) and ((value & (1 << i))>0): 
-                    MaskDoneF = MaskDoneF | (1 << i)
-
-            RegMaskDoneF = MaskDoneF
-            if (MaskDoneF == value): 
-                AllChnF = True
-
-        if (AllChnR and AllChnF): 
-            FoundTimeBin = True
-            break
-
-    if (not FirstCnhR): 
-        StartDly_R = 5
-
-    RegMaskDone[ch] = RegMaskDoneR and RegMaskDoneF
-    return (FoundTimeBin)
-
-
-def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, AverageDelay_Time, ErrMeasDly, RegMaskDone):
-    MinWidth    = 30 
-    MaxWidth    = 45
-    value       = 0xFFFF
-    num         = 100
-    ErrMeasDly  = 0
-
-    #pointless initialization
-    for i in range(16): 
-        TimeR_0[i] = 0
-        TimeF_0[i] = 0
-        TimeR_15[i] = 0
-        DelayTimeR_0[i] = 0
-        DelayTimeF_0[i] = 0
-        DelayTimeR_15[i] = 0
-        PulseWidth[i] = 0
-        DeltaBeginTime[ch][i] = 0
-        Delay_Time[ch][i] = 0
-
-    alct_dly = 0
-
-    if FindStartDlyPin(StartDly_R, StartDly_F, value, ch, alct_dly, num, RegMaskDone): 
-        PinPointRiseTime(TimeR_0, value, ch, StartDly_R, alct_dly, num)
-        PinPointFallTime(TimeF_0, value, ch, StartDly_F, alct_dly, num)
-
-        BeginTime_Min[ch] = StartDly_R*25 + 255*0.25     
-        for i in range(16): 
-            DelayTimeR_0[i] = StartDly_R*25 + TimeR_0[i]*0.25
-            DelayTimeF_0[i] = StartDly_F*25 + TimeF_0[i]*0.25
-            PulseWidth[i]   = DelayTimeF_0[i] - DelayTimeR_0[i]
-
-            if (i==0): 
-                PulseWidth_Min = PulseWidth[i]
-                PulseWidth_Max = PulseWidth[i]
-
-            if (DelayTimeR_0[i] < BeginTime_Min[ch]): 
-                BeginTime_Min[ch] = DelayTimeR_0[i]
-
-            if (PulseWidth[i] < PulseWidth_Min): 
-                PulseWidth_Min = PulseWidth[i]
-
-            if (PulseWidth[i] > PulseWidth_Max): 
-                PulseWidth_Max = PulseWidth[i]
-    else: 
-        ErrMeasDly = ErrMeasDly | 0x1
-
-    alct_dly = 15
-    AverageDelay_Time[ch] = 0 
-    SumDelay_Time = 0
-
-    if FindStartDly(StartDly_R, StartDly_F, value, ch, alct_dly, num): 
-        PinPointRiseTime(TimeR_15, value, ch, StartDly_R, alct_dly, num)
-        for i in range(16): 
-            DelayTimeR_15[i]    = StartDly_R*25 + TimeR_15[i]*0.25
-            Delay_Time[ch][i]   = DelayTimeR_15[i] - DelayTimeR_0[i]
-            SumDelay_Time       = SumDelay_Time + Delay_Time[ch][i]
-
-        AverageDelay_Time[ch] = SumDelay_Time / 16
-    else: 
-        ErrMeasDly = ErrMeasDly | 0x2
-
-    if (PulseWidth_Min < MinWidth): 
-        ErrMeasDly = ErrMeasDly | 0x4
-
-    if (PulseWidth_Max > MaxWidth): 
-        ErrMeasDly = ErrMeasDly | 0x8
-
-    for i in range(16): 
-        DeltaBeginTime[ch][i] = DelayTimeR_0[i] - BeginTime_Min[ch]
 
 #def WriteToFile(BeginTime_Min, DeltaBeginTime, DelayTime, Average, BoardNum, PathStrin):
 #var
@@ -1564,15 +1034,15 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
 #    global PwrChans
 #    PwrChans = pwrchans
 
+# Detect Mezzanine Type -- Works with only V600E or V1000E... 
+# Need to update for Spartan
 def DetectMezzanineType(): 
+    SetChain(arJTAGChains[2])
+    Err = 0
     # Mezzanine Chip Types
     # VIRTEX600  = 0x00 (0)
     # VIRTEX1000 = 0x01 (1)
     # UNKNOWN    = 0xFF (255)
-
-    Err = 0
-    SetChain(arJTAGChains[2])
-
     #Check EPROM 1 ID 
     ir = 0x1FFFFF
     WriteIR(ir, PROG_V_IR_SIZE)
