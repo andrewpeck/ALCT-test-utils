@@ -9,21 +9,19 @@ import random
 import sys
 import os
 
-#DelayGroup = [ MutableNamedTuple() for i in range(MAX_DELAY_CHIPS_IN_GROUP)]
-#ALCTDelays = [MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)]
-#arDelays  = [[ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)] for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)]
-#SendPtrns  = [[ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)] for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)]
-#ReadPtrns  = [[ MutableNamedTuple() for i in range(MAX_DELAY_GROUPS)] for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)]
-
+# Write Delay Chips
 def SetDelayLines(cs, patterns, delays, alcttype): 
+    # cs = chip select bitmask
+    # patterns = array of patterns to write
+    # delays = array of delay values to write
+
     SetChain(VIRTEX_CONTROL)
     PinMapOnRead = True
-    parlen = alct[alcttype].groups + 2
+    parlen = alct[alcttype].groups + 2  # Length of Data to Write
+
     for group in range (alct[alcttype].groups): 
         if ((cs & 0x7F) & (0x1 << group)) > 0:  
             dr = 0x1FF & (~((cs & (0x1 << group)) << 2) )
-            #log dr = 0x1fb
-            #dr = 0x1FF
 
             WriteIR(DelayCtrlWrite, V_IR)
             WriteDR(dr, parlen)
@@ -63,6 +61,23 @@ def ReadPatterns(pattern,alcttype):
     DR = 0
     PinMapOnRead = True
 
+    # This is a workaround... kind of silly.. but the easiest way to do it (and not too slow)
+    # If we write pattern = 
+    # ABCD EFGH IJKL MNOP QRST UVWX YZ12 3456 7890 (truncated)
+
+    # The Data Register is read LongWord by LongWord (16 bits) in a mixed up order
+    # 7809 4356 YZ21 VUWX QRTS NMOP IJLK EFHG BACD
+
+    # This gets reversed completely.. 
+    # DCAB GHFE KLJI POMN STRQ XWUV 12ZY 6534 9087
+
+    # Then if Pin remapping is selected... this rearranges into 
+    # Even Longwords have their last byte flipped
+    # Odd Longwords have their first byte flipped
+    # Then each LongWord is individually reversed
+    # Then we recover our original pattern... 
+    # ABCD EFGH IJKL MNOP QRST UVWX YZ12 3456 7890 (truncated)
+
     WriteIR(0x11,   V_IR)
     WriteDR(0x4001, 16)         # Enable Patterns from DelayChips into 384 bits ALCT Register
 
@@ -70,19 +85,19 @@ def ReadPatterns(pattern,alcttype):
     DR = ReadDR(DR,Wires)
     DR=DR & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
-    stringDR = hex(DR)
-    stringDR = stringDR[2:]
-    stringDR = stringDR.zfill(96)
-    stringDR = stringDR[::-1]
-    #print(stringDR)
+    stringDR = hex(DR)              # Convert dataregister to a hexdecimal string
+    stringDR = stringDR[2:]         # Cut off 0x from the string
+    stringDR = stringDR.zfill(96)   # Pad the string to make sure it is 96 digits (keep leading zeroes)
+    stringDR = stringDR[::-1]       # Invert the String
 
     for i in range(alct[alcttype].groups): 
         for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP): 
-            tmp = stringDR[0:4]
-            num = int(tmp,16)        # set num= first 4 hex digits
-            stringDR = stringDR[4:]         # cut off first 4 hex digits
+            tmp = stringDR[0:4]     # Grap the first four digits: 0xXXXX
+            num = int(tmp,16)       # set num= first 4 hex digits
+            stringDR = stringDR[4:] # cut off first 4 hex digits
 
             pattern[i][j] = (num) & 0xFFFF
+            # Invert the patterns
             if PinMapOnRead: 
                 pattern[i][j]=PinRemap(i,j,pattern[i][j])
 
@@ -91,14 +106,6 @@ def ReadPatterns(pattern,alcttype):
             stringPat = stringPat.zfill(4)
             stringPat = stringPat[::-1]
             pattern[i][j]=int(stringPat,16)
-
-    #for i in range(alct[alcttype].groups): 
-    #    for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP): 
-    #        num = int(stringDR[0:4],16)        # set num= first 4 hex digits
-    #        stringDR = stringDR[4:]         # cut off first 4 hex digits
-    #        pattern[i][j] = (num) & 0xFFFF
-    #        if PinMapOnRead: 
-    #            pattern[i][j]=PinRemap(i,j,pattern[i][j])
 
 def PinRemap(i,j,pattern): 
     a = pattern & 0xFF00
@@ -119,11 +126,11 @@ def PinRemap(i,j,pattern):
         pattern = tmp | b
     return (pattern)
 
+# Checks two patterns against eachother---returns number of Errors found
 def CheckPatterns(SendPtrns, ReadPtrns,alcttype): 
     Errs = 0
     for i in range(alct[alcttype].groups): 
         for j in range(6): 
-            #if ReadPtrns[i][j]== SendPtrns[i][j]: 
             for bit in range (16): 
                 if ((ReadPtrns[i][j] >> bit) & 0x1) != ((SendPtrns[i][j] >> bit) & 0x1):
                     Errs = Errs + 1
@@ -588,6 +595,7 @@ def RandomData(alcttype):
 #    end
 
 #def SetDelaysChips(value,pattern,alcttype): 
+
 def SetDelayChips(alcttype): 
     SendPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
     ReadPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
