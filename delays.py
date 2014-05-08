@@ -1,6 +1,6 @@
 from ALCT import *
-
 from time import sleep
+
 from common import Now
 from common import Day
 from common import Printer
@@ -434,15 +434,15 @@ def RandomData(alcttype):
 #def GeneratePattern(): 
 #    begin
 #    case FTestType of
-#        0..3:	pass := Wires
-#        4:   	pass := FNumOfPasses*2
-#        5:      pass := FNumOfPasses
+#        0..3:	pass  = Wires
+#        4:   	pass  = FNumOfPasses*2
+#        5:      pass  = FNumOfPasses
 #    Errs = 0
-#    #FTestForm.PrSt.Max := pass
-#    #FTestForm.PrSt.Position := 0
+#    #FTestForm.PrSt.Max  = pass
+#    #FTestForm.PrSt.Position  = 0
 #    fStop = False
 #    FTestForm.Log.Lines.Add(TimeToStr(Now())+ '> === ' + TestNames[FTestType] + '===')
-#    FTestForm.sbBar.SimpleText := TestNames[FTestType]
+#    FTestForm.sbBar.SimpleText  = TestNames[FTestType]
 #
 #    SetChain(VRTX_CH)
 #
@@ -460,11 +460,11 @@ def RandomData(alcttype):
 #    SetDelayLines(0x7F, SendPtrns, SendValues, alcttype)
 #
 #    for p in range(pass): 
-#        #FTestForm.PrSt.Position := p+1
+#        #FTestForm.PrSt.Position  = p+1
 #        if FTestType = 4 then
-#            FTestForm.lbPrSt.Caption := 'Pass #' + IntToStr((p div 2) + 1) + ' of ' +IntToStr(pass div 2)
+#            FTestForm.lbPrSt.Caption  = 'Pass #' + IntToStr((p div 2) + 1) + ' of ' +IntToStr(pass div 2)
 #        else
-#            FTestForm.lbPrSt.Caption := 'Pass #' + IntToStr(p+1) + ' of ' +IntToStr(pass)
+#            FTestForm.lbPrSt.Caption  = 'Pass #' + IntToStr(p+1) + ' of ' +IntToStr(pass)
 #
 #        case FTestType of
 #    0..3:  if not (FTestForm.FindComponent('DG'+IntToStr(p div (alct[alcttype].chips * ALCTBoard.delaylines))) as TCheckBox).Checked then
@@ -473,28 +473,28 @@ def RandomData(alcttype):
 #    WriteIR('11', V_IR)
 #    WRiteDR('4000', 16)
 #
-#        for i:= 0 to alct[alcttype].groups - 1 do
+#        for i = 0 to alct[alcttype].groups - 1 do
 #        begin
-#				for j:=0 to NUM_OF_DELAY_CHIPS_IN_GROUP - 1 do
+#				for j =0 to NUM_OF_DELAY_CHIPS_IN_GROUP - 1 do
 #				begin
-#					SendValues[i][j] := 0
+#					SendValues[i][j]  = 0
 #					case FTestType of
-#					  0: SendPtrns[i][j] 	:= 0 or (Integer ((p div 16) = ((i*6)+j)) shl (p mod 16))
-#					  1: SendPtrns[i][j] 	:= $FFFF and (not(Integer ((p div 16) = ((i*6)+j)) shl (p mod 16)))
-#					  2: SendPtrns[i][j] 	:= SendPtrns[i][j] or ((Integer ((p div 16) = ((i*6)+j)) shl (p mod 16)))
-#					  3: SendPtrns[i][j] 	:= SendPtrns[i][j] and (not(Integer ((p div 16) = ((i*6)+j)) shl (p mod 16)))
+#					  0: SendPtrns[i][j] 	 = 0 or (Integer ((p div 16) = ((i*6)+j)) shl (p mod 16))
+#					  1: SendPtrns[i][j] 	 = $FFFF and (not(Integer ((p div 16) = ((i*6)+j)) shl (p mod 16)))
+#					  2: SendPtrns[i][j] 	 = SendPtrns[i][j] or ((Integer ((p div 16) = ((i*6)+j)) shl (p mod 16)))
+#					  3: SendPtrns[i][j] 	 = SendPtrns[i][j] and (not(Integer ((p div 16) = ((i*6)+j)) shl (p mod 16)))
 #					  4: begin
 #                if Boolean ((p+1) mod 2) then
-#								  SendPtrns[i][j] := $5555
+#								  SendPtrns[i][j]  = $5555
 #							  else
-#								  SendPtrns[i][j] := $AAAA
+#								  SendPtrns[i][j]  = $AAAA
 #               end
-#					  5: SendPtrns[i][j] := Random($FFFF)
+#					  5: SendPtrns[i][j]  = Random($FFFF)
 #					else
-#						SendPtrns[i][j] := 0
+#						SendPtrns[i][j]  = 0
 #					end
-#					ReadValues[i][j] 		:= 0
-#					ReadPtrns[i][j] 	:= 0
+#					ReadValues[i][j] 		 = 0
+#					ReadPtrns[i][j] 	 = 0
 #				end
 #			end
 #
@@ -502,18 +502,18 @@ def RandomData(alcttype):
 #
 #			if FTestForm.ReadPatterns(ReadPtrns) = Wires then
 #			begin
-#				ErrOnePass := FTestForm.CheckPatterns(SendPtrns, ReadPtrns)
-#				Errs := Errs + ErrOnePass
-#        sentstr := ''
-#        readstr := ''
-#				for gr:= 0 to alct[alcttype].groups - 1 do
-#					for ch:=0 to NUM_OF_DELAY_CHIPS_IN_GROUP - 1 do
+#				ErrOnePass  = FTestForm.CheckPatterns(SendPtrns, ReadPtrns)
+#				Errs  = Errs + ErrOnePass
+#        sentstr  = ''
+#        readstr  = ''
+#				for gr = 0 to alct[alcttype].groups - 1 do
+#					for ch =0 to NUM_OF_DELAY_CHIPS_IN_GROUP - 1 do
 #          begin
-#            sentstr := IntToHex(SendPtrns[gr][ch], 4) + ' ' +sentstr
-#						readstr := IntToHex(ReadPtrns[gr][ch], 4) + ' ' +readstr
+#            sentstr  = IntToHex(SendPtrns[gr][ch], 4) + ' ' +sentstr
+#						readstr  = IntToHex(ReadPtrns[gr][ch], 4) + ' ' +readstr
 #          end
-#        status := readstr
-#        FTestForm.sbBar.SimpleText := status
+#        status  = readstr
+#        FTestForm.sbBar.SimpleText  = status
 #
 #				if ErrOnePass > 0 then
 #				begin
@@ -527,10 +527,10 @@ def RandomData(alcttype):
 #            //FTestForm.Log.Lines.Add('<-Read: '+readstr)
 #            if not fRepeatLast then
 #              begin
-#                fStop := True
-#                for gr:= 0 to alct[alcttype].groups - 1 do
+#                fStop  = True
+#                for gr = 0 to alct[alcttype].groups - 1 do
 #                begin
-#                  for ch:=0 to NUM_OF_DELAY_CHIPS_IN_GROUP - 1 do
+#                  for ch =0 to NUM_OF_DELAY_CHIPS_IN_GROUP - 1 do
 #                  begin
 #{                    if ReadPtrns[gr][ch] <> SendPtrns[gr][ch] then
 #                    begin
@@ -547,7 +547,7 @@ def RandomData(alcttype):
 #                      else
 #                        WriteDR('2000',16)
 #
-#                      for bit := 0 to 15 do
+#                      for bit  = 0 to 15 do
 #                      begin
 #                        if ((ReadPtrns[gr][ch] shr bit) and $1) <> ((SendPtrns[gr][ch] shr bit) and $1) then
 #                        begin
@@ -559,7 +559,7 @@ def RandomData(alcttype):
 #                  end
 #                end
 #                FTestForm.Log.Lines.Add(TimeToStr(Now())+ '> === ' + 'Stopped due to errors on pass #' + IntToStr(p+1))
-#                FTestForm.sbBar.SimpleText := 'Stopped due to errors on pass #' + IntToStr(p+1)
+#                FTestForm.sbBar.SimpleText  = 'Stopped due to errors on pass #' + IntToStr(p+1)
 #              end
 #              else
 #              begin
@@ -569,7 +569,7 @@ def RandomData(alcttype):
 #			end
 #			else
 #			begin
-#				fStop := true
+#				fStop  = true
 #                FTestForm.Log.Lines.Add('Pass #' + IntToStr((p div 2) +1 ) + ': Reading Failure ')
 #			end
 #			if Terminated or fStop then Exit
@@ -578,11 +578,11 @@ def RandomData(alcttype):
 #
 #		if old <> VRTX_CH then
 #		begin
-#			FTestForm.Chains.ItemIndex := old
+#			FTestForm.Chains.ItemIndex  = old
 #			FTestForm.SetChainClick(self)
 #		end
 #  		FTestForm.Log.Lines.Add(TimeToStr(Now())+ '> === ' + TestNames[FTestType] + ' Test Finished with ' + IntToStr(Errs) + ' Errors' + '===')
-#        FTestForm.sbBar.SimpleText := TestNames[FTestType] + ' Test Finished with ' + IntToStr(Errs) + ' Errors'
+#        FTestForm.sbBar.SimpleText  = TestNames[FTestType] + ' Test Finished with ' + IntToStr(Errs) + ' Errors'
 #        FTestForm.Update
 #	end
 #    end
