@@ -104,7 +104,6 @@ def SingleCableSelfTest():
     for (channel) in range (NUM_OF_AFEBS): 
         for i in range(7):
             SingleCableTest(i,0,10)
-               
 
 def SubtestMenu(alcttype): 
     channel=0
