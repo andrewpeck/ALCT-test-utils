@@ -1,4 +1,6 @@
-from SlowControl import *
+import SlowControl
+import SingleCable
+import TesterBoard
 from ALCT        import *
 from common import Now
 from common import Day
@@ -6,38 +8,103 @@ import delays
 import random
 import datetime
 import time
+import os
 
 def main():
     ALCT384=1
     global  alcttype
     alcttype=ALCT384
-    SelfTest(alcttype)
-    k=input("press close to exit")
+    #delays.SetDelayChips(ALCT384)
+    #k=input("delete me later")
+    MainMenu()
+    print("SIC TRANSIT GLORIA MUNDI")
+    sleep(0.1)
     
-    #ActiveHW = 1
-    #SetALCTType(ALCT384)
-    #WriteAllThresholds(random.getrandbits(8))
-    #ReadAllThresholds()
-    #ReadAllVoltages()
-    #ReadAllCurrents()
-    #CheckTemperature()
-    #delays.ReadPatterns(SendPtrns,alcttype)
-    # for i in range(alct[alcttype].groups): 
-       #for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP): 
-           # print(SendPtrns[i][j].Pattern)
+def MainMenu():
+    while True:
+        os.system('cls')
+        print("\n====================")
+        print(  " ALCT JTAG Test Menu")
+        print(  "====================\n")
+        ReadIDCodes()
+        DetectMezzanineType()
+        print("")
+        print("\t 0 ALCT Automatic Full Test")
+        print("\t 1 Slow Control Self-Test")
+        print("\t 2 Thresholds Linearity Full Scan")
+        print("\t 3 Delay ASICs Pattern Test")
+        print("\t 4 Delay ASICs Delay Test")
+        print("\t 5 Single Cable Test")
+        print("\t 8 Initialize JTAG Chains")
 
-    #ReadIDCodes()
-    #delays.Walking1(ALCT384)
-       #delays.SetDelaysChips(ALCT384)
+        k=input("\nChoose Test: ")
+        if not k: break
+        os.system('cls')
 
+            
+        ALCT384=1
+        global  alcttype
+        alcttype=ALCT384
+
+        if k=="0":
+            AutomaticFullTest()
+        if k=="1":
+            SlowControl.SelfTest(alcttype)
+        if k=="2":
+            SlowControl.CheckThresholds(alct[alcttype].groups*alct[alcttype].chips,1)
+        if k=="3":
+            delays.SubtestMenu(alcttype)
+        if k=="4":
+            TesterBoard.SubtestMenu(alcttype)
+        if k=="5":
+            SingleCable.SubtestMenu(alcttype)
+        if k=="8":
+            ChooseJTAGChain() 
+
+
+def ChooseJTAGChain():
+        while True: 
+            os.system('cls')
+            print("\n==========================")
+            print(  " JTAG Chain Initialization")
+            print(  "==========================\n")
+            print("\t 0 Slow Control Programming Chain")
+            print("\t 1 Slow Control Control Chain")
+            print("\t 2 Mezzanine Programming Chain")
+            print("\t 3 Mezzanine Control Chain")
+
+            k=input("\nChoose chain or <cr> to return to Main Menu: ")
+            os.system('cls')
+            print("")
+            if not k: break
+
+            if k=="0": 
+                SetChain(arJTAGChains[0])
+            if k=="1": 
+                SetChain(arJTAGChains[1])
+            if k=="2": 
+                SetChain(arJTAGChains[2])
+            if k=="3":
+                SetChain(arJTAGChains[3])
+            k=input("\n<cr> to return to menu: ")
+
+def AutomaticFullTest():
+    k=input("\nLoad Single Cable Firmware. Press s to skip, any key to Continue\n")
+    if k!="s":
+        SingleCable.SingleCableSelfTest()
+    
+    k=input("\nLoad Test Firmware. Press s to skip, any key to Continue\n")
+
+    k=input("\nLoad Normal Firmware. Press s to skip, any key to Continue\n")
+    if k!="s":
+        SlowControl.SelfTest(alcttype)    
 
 
 def ReadIDCodes():
-    print("\n%s> Read Board/Firmware ID Codes" % Now()) 
-    print("\t  Slow Control Firmware ID: 0x%X" % ReadIDCode(0))
-    print("\t  Fast Control Firmware ID: 0x%X" % ReadIDCode(1))
-    print("\t  Board Serial Number:      0x%X" % ReadBoardSN(0x2))
-    print("\t  Mezz. Serial Number:      0x%X" % ReadBoardSN(0x3))
+    print("\t Slow Control Firmware ID: 0x%X" % SlowControl.ReadIDCode(0))
+    print("\t Fast Control Firmware ID: 0x%X" % SlowControl.ReadIDCode(1))
+    print("\t Board Serial Number:      0x%X" % SlowControl.ReadBoardSN(0x2))
+    print("\t Mezz. Serial Number:      0x%X" % SlowControl.ReadBoardSN(0x3))
 
 def ReadAllVoltages():
     print("\n%s> Read Power Supply Voltages" % Now())
