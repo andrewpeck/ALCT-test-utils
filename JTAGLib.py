@@ -1,83 +1,122 @@
-from LPTJTAGLib import *
-import math
+################################################################################
+# JTAGLib.py -- Platform agnostic wrapper around the JTAG IO device of choice
+#               ALL IO in other modules should be done through this wrapper!! 
+################################################################################
 
-ActiveHW = 1
+import LPTJTAGLib
+import os
+import sys
 
 IR_REG = 0
 DR_REG = 1
-modulename = '"ppdev"'
-jtagdevice = '/dev/jtag'
 
 def open_jtag():
-    ActiveHW = openLPTJTAG()
+    if os.name == 'nt': 
+        LPTJTAGLib.openLPTJTAG()
 
 def close_jtag():
-    ActiveHW = closeLPTJTAG()
+    if os.name == 'nt': 
+        LPTJTAGLib.closeLPTJTAG()
 
 def set_chain(Chan):
-    if ActiveHW: setchainLPTJTAG(Chan)
+    if os.name == 'nt': 
+        LPTJTAGLib.setchainLPTJTAG(Chan)
 
 def reset_jtag():
-    if ActiveHW: resetLPTJTAG()
+    if os.name == 'nt': 
+        LPTJTAGLib.resetLPTJTAG()
 
 def enable_jtag():
-    if ActiveHW: enableLPTJTAG()
+    if os.name == 'nt': 
+        LPTJTAGLib.enableLPTJTAG()
 
 def idle_jtag():
-    if ActiveHW: idleLPTJTAG()
+    if os.name == 'nt': 
+        LPTJTAGLib.idleLPTJTAG()
 
 def rti_jtag():
-    if ActiveHW: rtiLPTJTAG()
+    if os.name == 'nt': 
+        LPTJTAGLib.rtiLPTJTAG()
 
 def oneclock_jtag():
-     if ActiveHW: oneclockLPTJTAG()
+    if os.name == 'nt': 
+        LPTJTAGLib.oneclockLPTJTAG()
 
 def TMS_High(): 
-    if ActiveHW: TMSHighLPTJTAG()
+    if os.name == 'nt': 
+        LPTJTAGLib.TMSHighLPTJTAG()
 
 def TMS_Low(): 
-     if ActiveHW: TMSLowLPTJTAG()
+    if os.name == 'nt': 
+        LPTJTAGLib.TMSLowLPTJTAG()
 
 def lights_jtag(): 
-    if ActiveHW: lightsLPTJTAG()
+    if os.name == 'nt': 
+        LPTJTAGLib.lightsLPTJTAG()
 
 def jtag_io(tms_, tdi_): 
-    tdo=jtagioLPTJTAG(tms_, tdi_)
-    return(tdo)
+    if os.name == 'nt': 
+        tdo=LPTJTAGLib.jtagioLPTJTAG(tms_, tdi_)
+        return(tdoTMSLowLPTJTAG)
+
+def StartIRShift():
+    if os.name == 'nt': 
+        LPTJTAGLib.StartIRShiftLPTJTAG()
+
+def StartDRShift():
+    if os.name == 'nt': 
+        LPTJTAGLib.StartDRShiftLPTJTAG()
+
+def ExitIRShift():
+    if os.name == 'nt': 
+        LPTJTAGLib.ExitIRShiftLPTJTAG()
+
+def ExitDRShift(): 
+    if os.name == 'nt': 
+        LPTJTAGLib.ExitDRShiftLPTJTAG()
 
 # Write JTAG Instruction Register 
 def WriteIR(IR, IRSize):
-    #arLen = ((IRSize-1) // 8) + 1
-    #arIR = []
-    #for i in range(arLen): 
-    #    arIR.append (0xFF & (IR >> i*8))
+
+    if (DataSize is None) or (Data is None): 
+        print("ERROR: Attempted to write invalid instruction register.")
+        sys.exit()
+
     IR = IOExchange(IR, IRSize, IR_REG)
     return(IR)
 
 # Write JTAG Data Register
 def WriteDR(DR, DRSize):
-    #arLen = ((DRSize-1) // 8) + 1
-    #arDR = []
-    #for i in range(arLen): 
-    #    arDR.append (0xFF & (DR >> i*8))
+    if (DataSize is None) or (Data is None): 
+        print("ERROR: Attempted to write invalid data register.")
+        sys.exit()
+
     DR = IOExchange(DR, DRSize, DR_REG)
     return(DR)
 
 # Read JTAG Data Register
 def ReadDR(DR, DRSize):
-    #arLen = ((DRSize-1) // 8) + 1
-    #arDR = []
-    #for i in range(arLen): 
-    #    arDR.append (0xFF & (DR >> i*8))
+    if (DataSize is None) or (Data is None): 
+        print("ERROR: Attempted to read invalid data register.")
+        sys.exit()
+
     DR = IOExchange(DR, DRSize, DR_REG)
     return(DR)
 
+# Shift Data into JTAG Register
 def ShiftData(Data, DataSize, sendtms):
     result = 0
 
+    # Quit if nothing is passed as data
+    if (DataSize is None) or (Data is None): 
+        print("ERROR: Attempted to shift invalid data.")
+        sys.exit()
+
+    # Quit if data is too large
     if (DataSize < 0 or DataSize >32):
-        print("Shifting invalid data size!")
-        return(0)
+        print("ERROR: Attempted to shift invalid sized data.")
+        sys.exit()
+
     for i in range(1,DataSize+1):
 
         #set TMS value
@@ -90,6 +129,7 @@ def ShiftData(Data, DataSize, sendtms):
 
         #write data
         tdo=jtag_io(tms, tdi)
+
         #Shift out one bit
         Data = Data >> 1
 
@@ -97,19 +137,28 @@ def ShiftData(Data, DataSize, sendtms):
 
     return(result)
 
+################################################################################
+# Sends and receives JTAG data... wrapper to to Start IR/DR Shift, Shift in data
+# while reading from TDO.. exit IR/DR shift. Returns TDO data. 
+################################################################################
 def IOExchange(Send, DataSize, RegType):
-    ChunkSize   = 8
-    nChunks     = ( abs(DataSize-1)//ChunkSize) + 1
-    Recv=0
     
-    if (DataSize <= 0): 
-        return(0)
+    if (DataSize is None) or (Send is None): 
+        print("ERROR: Invalid data. Error reading or board disconnected!")
+        sys.exit()
+
+    # We shift in 8 bit words 
+    ChunkSize   = 8
+
+    # Number of words needed to shift entire data 
+    nChunks     = ( abs(DataSize-1)//ChunkSize) + 1
 
     if (RegType == IR_REG): 
         StartIRShift()
     elif (RegType == DR_REG): 
         StartDRShift()
     
+    Recv=0 # Received Data
     for i in range(nChunks):
         #print("nchunks loop = %i" % i)
         if (DataSize > ChunkSize*i):
@@ -124,20 +173,4 @@ def IOExchange(Send, DataSize, RegType):
         ExitIRShift()
     else: 
         ExitDRShift()
-    #print(Recv)
     return (Recv)
-
-def StartIRShift():
-    StartIRShiftLPTJTAG()
-
-def StartDRShift():
-    StartDRShiftLPTJTAG()
-
-def ExitIRShift():
-    ExitIRShiftLPTJTAG()
-
-def ExitDRShift(): 
-    ExitDRShiftLPTJTAG()
-
-
-
