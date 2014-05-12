@@ -43,8 +43,11 @@ SNwrite1        = 0x1D
 SNreset         = 0x1E
 Bypass          = 0x1F
 
+################################################################################
 # Array of the Sizes of Virtex Register Locations
 # Used by WriteRegister and ReadRegister
+################################################################################
+
 RegSz = {
     0x00: 40,   # IDRead        
     0x01: 384,  # HCMaskRead    
@@ -131,7 +134,11 @@ arJTAGChains = [0x1, 0x0, 0x5, 0x4]
 MAX_DELAY_GROUPS            = 7
 MAX_DELAY_CHIPS_IN_GROUP    = 6
 MAX_NUM_AFEB                = 42
-parlen  = None
+parlen                      = None
+
+################################################################################
+# Threshold Read/Write Stuff
+################################################################################
 
 ADC_REF = 1.225 # ADC Reference Voltage
 ThreshToler = 4 # Threshold Tolerance (discrepancy is ok within +- ThreshToler)
@@ -148,6 +155,9 @@ mapGroupMask = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 0, 0,
                 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 
                 5, 5, 6, 6, 6, 4, 4, 4, 5, 5, 5, 6, 6, 6]
 
+################################################################################
+# Container for ADC Voltage Measurement
+################################################################################
 arVoltages = [ MutableNamedTuple() for i in range(4)] 
 
 arVoltages[0].ref       = '1.8v'
@@ -232,42 +242,47 @@ ME3_2   = 6 # ME3/2
 ME4_1   = 7 # ME4/1
 ME4_2   = 8 # ME4/2
 
-#PWR_SPLY
-V18_PWR_SPLY = 0        # Power Supply 1.8V
-V33_PWR_SPLY = 1        # Power Supply 3.3V
-V55_1_PWR_SPLY = 2      # Power Supply 5.5V (1)
-V55_2_PWR_SPLY = 3      # Power Supply 5.5V (2)
+################################################################################
+# Power Supply Enumeration
+################################################################################
+V18_PWR_SPLY   = 0        # Power Supply 1.8V
+V33_PWR_SPLY   = 1        # Power Supply 3.3V
+V55_1_PWR_SPLY = 2        # Power Supply 5.5V (1)
+V55_2_PWR_SPLY = 3        # Power Supply 5.5V (2)
 
-
+################################################################################
 # Array of Tuples to hold Properties of Different Board Types
+################################################################################
 alct = [ MutableNamedTuple() for i in range(3)] 
 
-alct[0].name          = 'ALCT288'
-alct[0].alct          = ALCT288
-alct[0].channels      = 288
-alct[0].groups        = 3
-alct[0].chips         = 6
-alct[0].delaylines    = 16
-alct[0].pwrchans      = 3
+#ALCT288 = 0
+alct[0].name          = 'ALCT288'   # Name 
+alct[0].channels      = 288         # Number of channels on board
+alct[0].groups        = 3           # Number of Delay Chip Groups
+alct[0].chips         = 6           # Number of Delay Chips per Group
+alct[0].delaylines    = 16          # Number of Channels Per Delay Chip
+alct[0].pwrchans      = 3           # Number of Power Inputs
 
+#ALCT288 = 1
 alct[1].name          = 'ALCT384'
-alct[1].alct          = ALCT384
 alct[1].channels      = 384
 alct[1].groups        = 4
 alct[1].chips         = 6
 alct[1].delaylines    = 16
 alct[1].pwrchans      = 4
 
+#ALCT288 = 2
 alct[2].name          = 'ALCT672'
-alct[2].alct          = ALCT672
 alct[2].channels      = 672
 alct[2].groups        = 7
 alct[2].chips         = 6
 alct[2].delaylines    = 16
 alct[2].pwrchans      = 4
 
+################################################################################
 # Array of Tuples to hold properties of Different Chamber Types
-# Not used by anything that I know of..?
+# Unused at the moment... consider to remove.. 
+################################################################################
 chamb_table = [ MutableNamedTuple() for i in range(9)]
 
 chamb_table[0].name         = 'ME1/1'
@@ -334,233 +349,211 @@ chamb_table[8].afebs_on551  = 12
 chamb_table[8].afebs_on552  = 12
 
 
-ALCTSTATUS = [
-        1: "EALCT_SUCCESS",   	# Successful completion
-        2: "EALCT_FILEOPEN",    # Filename could not be opened
-        3: "EALCT_FILEDEFECT", 	# Configuration file inconsistency
-        4: "EALCT_PORT", 	# JTAG Device problem
-        5: "EALCT_CHAMBER", 	# Bad chamber_type number
-        6: "EALCT_ARG", 	# Argument Out Of Range
-        7: "EALCT_TESTFAIL"]    # Test failure
+################################################################################
+# ALCT Status Codes... Unused? 
+################################################################################
+#ALCTSTATUS = {
+#        1: "EALCT_SUCCESS",   	# Successful completion
+#        2: "EALCT_FILEOPEN",    # Filename could not be opened
+#        3: "EALCT_FILEDEFECT", 	# Configuration file inconsistency
+#        4: "EALCT_PORT", 	# JTAG Device problem
+#        5: "EALCT_CHAMBER", 	# Bad chamber_type number
+#        6: "EALCT_ARG", 	# Argument Out Of Range
+#        7: "EALCT_TESTFAIL"}    # Test failure
 
 alct_idreg  = MutableNamedTuple()   #ALCT ID Register
 sc_idreg    = MutableNamedTuple()   #Slow Control ID Register
 v_idreg     = MutableNamedTuple() 
 
-#more constants
+################################################################################
+# more constants.. should move with the rest
+################################################################################
 FIFO_RESET = 0xC
 FIFO_READ  = 0xA
 FIFO_WRITE = 0x9
 
-IDReadReg       = MutableNamedTuple() 
-IDReadReg.val   = 0x00
-IDReadReg.len   = 40
+IDReadReg          = MutableNamedTuple() 
+IDReadReg.val      = 0x00
+IDReadReg.length   = 40
 
-RdDataReg       = MutableNamedTuple()  
-RdDataReg.val   = 0x01 
-RdDataReg.len   = 16
-
-RdCntReg        = MutableNamedTuple()  
-RdCntReg.val    = 0x02 
-RdCntReg.len    = 128
+RdDataReg          = MutableNamedTuple()  
+RdDataReg.val      = 0x01 
+RdDataReg.length   = 16
 
 WrDatF 	        = MutableNamedTuple()  
 WrDatF.val      = 0x04 
-WrDatF.len      = 16
+WrDatF.length      = 16
 
 WrAddF 	        = MutableNamedTuple()  
 WrAddF.val      = 0x06 
-WrAddF.len      = 10
+WrAddF.length      = 10
 
 WrParamF        = MutableNamedTuple()  
 WrParamF.val    = 0x08 
-WrParamF.len    = 4
+WrParamF.length    = 4
 
-WrFIFO	        = MutableNamedTuple()  
-WrFIFO.val      = 0x0A 
-WrFIFO.len      = 1
-
-WrDlyF	        = MutableNamedTuple()  
-WrDlyF.val      = 0x0B 
-WrDlyF.len      = 8
-
-ALCTWdly        = MutableNamedTuple()  
-ALCTWdly.val    = 0x0D 
-ALCTWdly.len    = 120
-
-ALCTRdly        = MutableNamedTuple()  
-ALCTRdly.val    = 0x0E 
-ALCTRdly.len    = 120
-
-RdParamDly      = MutableNamedTuple()  
-RdParamDly.val  = 0x15 
-RdParamDly.len  = 6 # !! Change for Different Boards
-
-WrParamDly      = MutableNamedTuple()  
-WrParamDly.val  = 0x16 
-WrParamDly.len  = 6 # !! Change for Different Boards
 
 CRfld = [ MutableNamedTuple() for i in range(26)] 
 
 
 # unused ? 
-CRfld[0].name       ='trig_mode'
-CRfld[0].mask       =3
-CRfld[0].bit        =0
-CRfld[0].default    =0
-
-CRfld[1].name       ='ext_trig_en'
-CRfld[1].mask       =1
-CRfld[1].bit        =2
-CRfld[1].default    =0
-
-CRfld[2].name       ='pretrig_halt'
-CRfld[2].mask       =1
-CRfld[2].bit        =3
-CRfld[2].default    =0
-
-CRfld[3].name       ='inject'
-CRfld[3].mask       =1
-CRfld[3].bit        =4
-CRfld[3].default    =0
-
-CRfld[4].name       ='inject_mode'
-CRfld[4].mask       =1
-CRfld[4].bit        =5
-CRfld[4].default    =0
-
-CRfld[5].name       ='inject_mask'
-CRfld[5].mask       =0x7f
-CRfld[5].bit        =6
-CRfld[5].default    =0x7f
-
-CRfld[6].name       ='nph_thresh'
-CRfld[6].mask       =7
-CRfld[6].bit        =13
-CRfld[6].default    =2
-
-CRfld[7].name       ='nph_pattern'
-CRfld[7].mask       =7
-CRfld[7].bit        =16
-CRfld[7].default    =4
-
-CRfld[8].name       ='drift_delay'
-CRfld[8].mask       =3
-CRfld[8].bit        =19
-CRfld[8].default    =3
-
-CRfld[9].name       ='fifo_tbins'
-CRfld[9].mask       =0x1f
-CRfld[9].bit        =21
-CRfld[9].default    =7
-
-CRfld[10].name       ='fifo_pretrig'
-CRfld[10].mask       =0x1f
-CRfld[10].bit        =26
-CRfld[10].default    =1
-
-CRfld[11].name       ='fifo_mode'
-CRfld[11].mask       =3
-CRfld[11].bit        =31
-CRfld[11].default    =1
-
-CRfld[12].name       ='fifo_lastlct'
-CRfld[12].mask       =7
-CRfld[12].bit        =33
-CRfld[12].default    =3
-
-CRfld[13].name       ='l1a_delay'
-CRfld[13].mask       =0xff
-CRfld[13].bit        =36
-CRfld[13].default    =0x78
-
-CRfld[14].name       ='l1a_window'
-CRfld[14].mask       =0xf
-CRfld[14].bit        =44
-CRfld[14].default    =3
-
-CRfld[15].name       ='l1a_offset'
-CRfld[15].mask       =0xf
-CRfld[15].bit        =48
-CRfld[15].default    =0
-
-CRfld[16].name       ='l1a_internal'
-CRfld[16].mask       =1
-CRfld[16].bit        =52
-CRfld[16].default    =0
-
-CRfld[17].name       ='board_id'
-CRfld[17].mask       =7
-CRfld[17].bit        =53
-CRfld[17].default    =5
-
-CRfld[18].name       ='bxn_offset'
-CRfld[18].mask       =0xf
-CRfld[18].bit        =56
-CRfld[18].default    =0
-
-CRfld[19].name       ='ccb_enable'
-CRfld[19].mask       =1
-CRfld[19].bit        =60
-CRfld[19].default    =0
-
-CRfld[20].name       ='alct_jtag_ds'
-CRfld[20].mask       =1
-CRfld[20].bit        =61
-CRfld[20].default    =1
-
-CRfld[21].name       ='alct_tmode'
-CRfld[21].mask       =3
-CRfld[21].bit        =62
-CRfld[21].default    =0
-
-CRfld[22].name       ='alct_amode'
-CRfld[22].mask       =3
-CRfld[22].bit        =64
-CRfld[22].default    =0
-
-CRfld[23].name       ='alct_mask_all'
-CRfld[23].mask       =1
-CRfld[23].bit        =66
-CRfld[23].default    =0
-
-CRfld[24].name       ='trig_info_en'
-CRfld[24].mask       =1
-CRfld[24].bit        =67
-CRfld[24].default    =0
-
-CRfld[25].name       ='sn_select'
-CRfld[25].mask       =1
-CRfld[25].bit        =68
-CRfld[25].default    =0
+#CRfld[0].name       ='trig_mode'
+#CRfld[0].mask       =3
+#CRfld[0].bit        =0
+#CRfld[0].default    =0
+#
+#CRfld[1].name       ='ext_trig_en'
+#CRfld[1].mask       =1
+#CRfld[1].bit        =2
+#CRfld[1].default    =0
+#
+#CRfld[2].name       ='pretrig_halt'
+#CRfld[2].mask       =1
+#CRfld[2].bit        =3
+#CRfld[2].default    =0
+#
+#CRfld[3].name       ='inject'
+#CRfld[3].mask       =1
+#CRfld[3].bit        =4
+#CRfld[3].default    =0
+#
+#CRfld[4].name       ='inject_mode'
+#CRfld[4].mask       =1
+#CRfld[4].bit        =5
+#CRfld[4].default    =0
+#
+#CRfld[5].name       ='inject_mask'
+#CRfld[5].mask       =0x7f
+#CRfld[5].bit        =6
+#CRfld[5].default    =0x7f
+#
+#CRfld[6].name       ='nph_thresh'
+#CRfld[6].mask       =7
+#CRfld[6].bit        =13
+#CRfld[6].default    =2
+#
+#CRfld[7].name       ='nph_pattern'
+#CRfld[7].mask       =7
+#CRfld[7].bit        =16
+#CRfld[7].default    =4
+#
+#CRfld[8].name       ='drift_delay'
+#CRfld[8].mask       =3
+#CRfld[8].bit        =19
+#CRfld[8].default    =3
+#
+#CRfld[9].name       ='fifo_tbins'
+#CRfld[9].mask       =0x1f
+#CRfld[9].bit        =21
+#CRfld[9].default    =7
+#
+#CRfld[10].name       ='fifo_pretrig'
+#CRfld[10].mask       =0x1f
+#CRfld[10].bit        =26
+#CRfld[10].default    =1
+#
+#CRfld[11].name       ='fifo_mode'
+#CRfld[11].mask       =3
+#CRfld[11].bit        =31
+#CRfld[11].default    =1
+#
+#CRfld[12].name       ='fifo_lastlct'
+#CRfld[12].mask       =7
+#CRfld[12].bit        =33
+#CRfld[12].default    =3
+#
+#CRfld[13].name       ='l1a_delay'
+#CRfld[13].mask       =0xff
+#CRfld[13].bit        =36
+#CRfld[13].default    =0x78
+#
+#CRfld[14].name       ='l1a_window'
+#CRfld[14].mask       =0xf
+#CRfld[14].bit        =44
+#CRfld[14].default    =3
+#
+#CRfld[15].name       ='l1a_offset'
+#CRfld[15].mask       =0xf
+#CRfld[15].bit        =48
+#CRfld[15].default    =0
+#
+#CRfld[16].name       ='l1a_internal'
+#CRfld[16].mask       =1
+#CRfld[16].bit        =52
+#CRfld[16].default    =0
+#
+#CRfld[17].name       ='board_id'
+#CRfld[17].mask       =7
+#CRfld[17].bit        =53
+#CRfld[17].default    =5
+#
+#CRfld[18].name       ='bxn_offset'
+#CRfld[18].mask       =0xf
+#CRfld[18].bit        =56
+#CRfld[18].default    =0
+#
+#CRfld[19].name       ='ccb_enable'
+#CRfld[19].mask       =1
+#CRfld[19].bit        =60
+#CRfld[19].default    =0
+#
+#CRfld[20].name       ='alct_jtag_ds'
+#CRfld[20].mask       =1
+#CRfld[20].bit        =61
+#CRfld[20].default    =1
+#
+#CRfld[21].name       ='alct_tmode'
+#CRfld[21].mask       =3
+#CRfld[21].bit        =62
+#CRfld[21].default    =0
+#
+#CRfld[22].name       ='alct_amode'
+#CRfld[22].mask       =3
+#CRfld[22].bit        =64
+#CRfld[22].default    =0
+#
+#CRfld[23].name       ='alct_mask_all'
+#CRfld[23].mask       =1
+#CRfld[23].bit        =66
+#CRfld[23].default    =0
+#
+#CRfld[24].name       ='trig_info_en'
+#CRfld[24].mask       =1
+#CRfld[24].bit        =67
+#CRfld[24].default    =0
+#
+#CRfld[25].name       ='sn_select'
+#CRfld[25].mask       =1
+#CRfld[25].bit        =68
+#CRfld[25].default    =0
 
 # Unused ? 
-CRdescr = [
-            'Virtex Trigger Mode',
-            'External Trigger Enable',
-            'Pre-Trigger and Halt Mode',
-            'Inject Test Pattern',
-            'Injector Repeat Mode (requires Inject Test Pattern = 1)',
-            'Injector LCT Chip Mask [6..0]. Bit n maps to LCT chip n',
-            'Number of Planes Hit Threshold for Pre-Trigger',
-            'Pattern hits required after drift delay to allow an LCT-trigger',
-            'Drift delay after pre-trigger (25ns steps)',
-            'Total number of FIFO time bins per wire group',
-            'FIFO time bins before per-trigger (included in total)',
-            'FIFO Mode',
-            'FIFO: Last LCT chip to be read out',
-            'Level 1 Accept delay after pre-trigger',
-            'Level 1 Accept window width (25ns steps)',
-            'Level 1 Accept counter Pre-Load value (arbitrary value)',
-            'L1A generated internally during L1A window',
-            'ALCT2001 circuit board ID (arbitrary value)',
-            'Bunch Crossing Counter Offset (set to match Cathode LCT bxn)',
-            'CCB Disable (Ignores CCb signals l1A, BXn, BxReset)',
-            'ALCT-bus Enable (affects all LCT chips)',
-            'ALCT Test Pattern Mode (affects all LCT chips if ALCT-bus Enable = 1)',
-            'ALCT Accelerator Muon Mode (affects all LCT chips)',
-            'Mask All Wire Group inputs to LCT chips (affects all LCT chips)',
-            'ALCT-bus spare signals (not currently used, set to be 0)' ]
+#CRdescr = [
+#            'Virtex Trigger Mode',
+#            'External Trigger Enable',
+#            'Pre-Trigger and Halt Mode',
+#            'Inject Test Pattern',
+#            'Injector Repeat Mode (requires Inject Test Pattern = 1)',
+#            'Injector LCT Chip Mask [6..0]. Bit n maps to LCT chip n',
+#            'Number of Planes Hit Threshold for Pre-Trigger',
+#            'Pattern hits required after drift delay to allow an LCT-trigger',
+#            'Drift delay after pre-trigger (25ns steps)',
+#            'Total number of FIFO time bins per wire group',
+#            'FIFO time bins before per-trigger (included in total)',
+#            'FIFO Mode',
+#            'FIFO: Last LCT chip to be read out',
+#            'Level 1 Accept delay after pre-trigger',
+#            'Level 1 Accept window width (25ns steps)',
+#            'Level 1 Accept counter Pre-Load value (arbitrary value)',
+#            'L1A generated internally during L1A window',
+#            'ALCT2001 circuit board ID (arbitrary value)',
+#            'Bunch Crossing Counter Offset (set to match Cathode LCT bxn)',
+#            'CCB Disable (Ignores CCb signals l1A, BXn, BxReset)',
+#            'ALCT-bus Enable (affects all LCT chips)',
+#            'ALCT Test Pattern Mode (affects all LCT chips if ALCT-bus Enable = 1)',
+#            'ALCT Accelerator Muon Mode (affects all LCT chips)',
+#            'Mask All Wire Group inputs to LCT chips (affects all LCT chips)',
+#            'ALCT-bus spare signals (not currently used, set to be 0)' ]
 
 # Unused ? 
 OperDescr = [
@@ -888,168 +881,6 @@ def FlipDR(data,length):
     for i in range(1,length):
         result = result | (((data >> i) & 0x1) << (10-i))
     return(result)
-
-#def WriteToFile(BeginTime_Min, DeltaBeginTime, DelayTime, Average, BoardNum, PathStrin):
-#var
-#    TxtFile : TextFile
-#    DataBuffer1, DataBuffer2: string
-#    chip, channel, i: integer
-#    //Create a file with the given path and the ALCT Board Number
-#    AssignFile(TxtFile, PathString)
-#    try
-#        Rewrite(TxtFile)
-#
-#        writeln(TxtFile, '**********************************')
-#        writeln(TxtFile, 'Delay Test Results' + #9 + 'Board# ' + BoardNum)
-#        writeln(TxtFile, '**********************************')
-#        writeln(TxtFile, '')
-#        DataBuffer1 := ''
-#        for i:=0 to 15 do
-#            DataBuffer1 := DataBuffer1 + inttostr(i) + #9
-#        writeln(TxtFile, #9 +#9 +#9 + 'Channel #')
-#        writeln(TxtFile, #9 +#9 +#9 + DataBuffer1)
-#
-#        for chip:= 0 to NUM_AFEB-1 do
-#            writeln(TxtFile, 'Chip #' + inttostr(chip))
-#            writeln(TxtFile, 'Begin time: ' + CurrToStr(BeginTime_Min[chip]))
-#            DataBuffer1 := ''
-#            DataBuffer2 := ''
-#            for channel := 0 to 15 do
-#                DataBuffer1 := DataBuffer1 + CurrToStr(DeltaBeginTime[chip][channel]) + #9
-#                DataBuffer2 := DataBuffer2 + CurrToStr(DelayTime[chip][channel]) + #9
-#
-#            writeln(TxtFile, 'Delta Begin Times:' + #9 + DataBuffer1)
-#            writeln(TxtFile, 'Delay Times:' + #9 + #9 + DataBuffer2)
-#            writeln(TxtFile, 'Average: ' + CurrToStr(Average[chip]))
-#            writeln(TxtFile, '')
-#    finally
-#        CloseFile(TxtFile)
-#
-#
-#
-#
-#{
-#def FindStartDlyR(var StartDlyR_f: integer StartDly: integer value: integer; ch: integer; alct_dly: integer; num: integer): boolean
-#var
-#    size, i, num_dly_ch, ChannelsCntr, tb_dly, StartDlyR: integer
-#    cntrs : array of byte
-#    vals : array of word
-#    SetLength(vals, num)
-#    SetLength(cntrs, 16)
-#    tb_dly := 0
-#    for i:=0 to 15 do
-#        if ((value and (1 shl i))>0) 
-#            Inc(num_dly_ch)
-#
-#        for StartDlyR := StartDly-1 downto 2 do
-#            //Access board
-#            SetTestBoardFIFO(value, ch, 1, StartDlyR, alct_dly, tb_dly)
-#            SetFIFOReadWrite
-#            ReadFIFO(vals,num,cntrs)
-#
-#            //Check counters and increment
-#            ChannelsCntr := 0
-#            for i:=0 to 15 do
-#                if (cntrs[i] = 0) and ((value and (1 shl i))>0) 
-#                    Inc(ChannelsCntr)
-#
-#                //Check if time bin is found
-#                if(ChannelsCntr = num_dly_ch) 
-#                    StartDlyR_f := StartDlyR
-#                    break
-#
-#            if(ChannelsCntr = num_dly_ch) 
-#                Result := True
-#            else
-#                Result := False
-#
-#
-#def FindStartDlyF_tmp(var StartDlyF_f: integer StartDly: integer value: integer; ch: integer; alct_dly: integer; num: integer): boolean
-#var
-#    size, i, num_dly_ch, ChannelsCntr, tb_dly, StartDlyF: integer
-#    cntrs : array of byte
-#    vals : array of word
-#    SetLength(vals, num)
-#    SetLength(cntrs, 16)
-#    tb_dly := 0
-#    for i:=0 to 15 do
-#        if ((value and (1 shl i))>0) 
-#            Inc(num_dly_ch)
-#
-#        for StartDlyF := StartDly+1 to 15 do
-#            //Access board
-#            SetTestBoardFIFO(value, ch, 1, StartDlyF, alct_dly, tb_dly)
-#            SetFIFOReadWrite
-#            ReadFIFO(vals,num,cntrs)
-#
-#            //Check counters and increment
-#            ChannelsCntr := 0
-#            for i:=0 to 15 do
-#                if (cntrs[i] = 0) and ((value and (1 shl i))>0) 
-#                    Inc(ChannelsCntr)
-#
-#                //Check if time bin is found
-#                if(ChannelsCntr = num_dly_ch) 
-#                    StartDlyF_f := StartDlyF
-#                    break
-#
-#            if(ChannelsCntr = num_dly_ch) 
-#                Result := True
-#            else
-#                Result := False
-#
-#
-#def FindStartDlyF(var StartDlyF_f: integer value: integer ch: integer; alct_dly: integer; num: integer): boolean
-#var
-#    size, i, num_dly_ch, ChannelsCntr, tb_dly, StartDlyF: integer
-#    cntrs : array of byte
-#    vals : array of word
-#    SetLength(vals, num)
-#    SetLength(cntrs, 16)
-#    ChannelsCntr := 0
-#    tb_dly := 0
-#    for i:=0 to 15 do
-#        if ((value and (1 shl i))>0) 
-#            Inc(num_dly_ch)
-#
-#        for StartDlyF := StartDlyF_f-1 downto 2 do
-#            //Access board
-#            SetTestBoardFIFO(value, ch, 1, StartDlyF, alct_dly, tb_dly)
-#            SetFIFOReadWrite
-#            ReadFIFO(vals,num,cntrs)
-#
-#            //Check counters and increment
-#            ChannelsCntr := 0
-#            for i:=0 to 15 do
-#                if (cntrs[i] <> 0) and ((value and (1 shl i))>0) 
-#                    Inc(ChannelsCntr)
-#
-#                //Check if time bin is found
-#                if(ChannelsCntr = num_dly_ch) 
-#                    StartDlyF_f := StartDlyF
-#                    break
-#
-#            if(ChannelsCntr = num_dly_ch) 
-#                Result := True
-#            else
-#                Result := False
-#        }
-
-#def SetALCTType(alct_type):
-#    name        = alct[alct_type].name         
-#    alct        = alct[alct_type].alct         
-#    channels    = alct[alct_type].channels     
-#    groups      = alct[alct_type].groups       
-#    chips       = alct[alct_type].chips        
-#    delaylines  = alct[alct_type].delaylines   
-#    pwrchans    = alct[alct_type].pwrchans     
-#
-#    global NUM_AFEB
-#    NUM_AFEB = chips * groups
-#    global Wires
-#    Wires    = channels
-#    global PwrChans
-#    PwrChans = pwrchans
 
 # Detect Mezzanine Type -- Works with only V600E or V1000E... 
 # Need to update for Spartan
