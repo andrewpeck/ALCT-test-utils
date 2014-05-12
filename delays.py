@@ -1,20 +1,47 @@
+################################################################################
+# delays.py -- Functions and tests for checking delay ASIC Pattern read/write
+################################################################################
+
 from ALCT import *
 from time import sleep
 
-from common import Now
-from common import Day
-from common import Printer
+from Common import Now
+from Common import Day
+from Common import Printer
 
 import random
 import sys
 import os
 
-# Write Delay Chips
+# converts 1D array[number of chips on board] 
+#     into 2D array[number of groups][number of chips in group]
+def ConvertArray1Dto2D(array,alcttype): 
+    ngroups = alct[alcttype].groups
+    nchips  = 6*ngroups
+    out = [[0 for j in range(6)] for i in range(ngroups)]
+    for i in range(ngroups): 
+        for j in range(6): 
+            out[i][j] = array[i*6 + j]
+    return(out)
+
+# converts 2D array[number of groups][number of chips in group]
+#     into 1D array[number of chips on board] 
+def ConvertArray2Dto1D(array,alcttype): 
+    ngroups = alct[alcttype].groups
+    nchips  = 6*ngroups
+    out     = [0] * nchips
+    for i in range(ngroups): 
+        for j in range(6): 
+            array[i*6 + j] =  out[i][j]
+    return(out)
+
+# Write Patterns and Delays to Delay Chip
+# Patterns and Delays are both stored in array of format
+# array[group][chip-in-group]
 def SetDelayLines(cs, patterns, delays, alcttype): 
     # cs = chip select bitmask
     # patterns = array of patterns to write
     # delays = array of delay values to write
-
     SetChain(VIRTEX_CONTROL)
     PinMapOnRead = True
     parlen = alct[alcttype].groups + 2  # Length of Data to Write
