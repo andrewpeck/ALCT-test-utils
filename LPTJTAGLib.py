@@ -1,9 +1,14 @@
+################################################################################
+# LPT JTAG Driver Built around inpout32.dll
+################################################################################
 import ctypes
 
+# LPT Addresses
 base_adr    = 0x378
 status_adr  = base_adr + 0x1
 ctrl_adr    = base_adr + 0x2
 
+# JTAG-to-LPT Pin Mapping
 TDI         = 0x01
 TCK         = 0x02
 TMS         = 0x04
@@ -15,24 +20,30 @@ TRST        = 0x04
 STRB        = 0x01
 
 
+# Reads Byte off LPT Port
 def GetPortByte(adr):
     return(ctypes.windll.inpout32.Inp32(adr))
 
+# Writes Byte to LPT Port
 def SetPortByte(adr,data):
     ctypes.windll.inpout32.Out32(adr, data)
 
+# Legacy function
 def openLPTJTAG():
     return(0)
 
+# Legacy function
 def closeLPTJTAG():
     return(-1)
 
+# Set JTAG Chain
 def setchainLPTJTAG(Chain):
     SetPortByte(base_adr, Chain)
     SetPortByte(ctrl_adr, 11)
     SetPortByte(ctrl_adr, 0)
     SetPortByte(base_adr, 0)
 
+# Send JTAG Test Logic Reset
 def resetLPTJTAG():  
     SetPortByte(base_adr, 0)
     SetPortByte(ctrl_adr, STRB | TRST)  # Strobe with TRST high
@@ -44,11 +55,13 @@ def enableLPTJTAG():
     status = GetPortByte(ctrl_adr)
     SetPortByte(ctrl_adr, status | 0x02)
 
+# Writes a 1 to TMS
 def TMSHighLPTJTAG(): 
     SetPortByte(base_adr, TMS)
-    SetPortByte(base_adr, TCKTMS)
+    SetPortByte(base_adr, TCK | TMS)
     SetPortByte(base_adr, TMS)
 
+# Writes a 0 to TMS
 def TMSLowLPTJTAG(): 
     SetPortByte(base_adr, 0)
     SetPortByte(base_adr, TCK)
@@ -58,59 +71,49 @@ def idleLPTJTAG():
     for i in range(5):
         TMSHighLPTJTAG()
 
+# Writes a TMS and TDI value, returns TDO
 def jtagioLPTJTAG(TMSvalue, TDIvalue):
-
+    # Read Current Port Data
     sendbit = GetPortByte(base_adr)
    
+    # choose TDI Bit
     if (TDIvalue>0):
         sendbit = sendbit | TDI
     else:
         sendbit = sendbit & ~TDI
 
+    # choose TMS Bit
     if (TMSvalue>0):
         sendbit = sendbit | TMS
     else: 
         sendbit = sendbit & ~TMS
 
+    # Don't Change TDO bit
     sendbit = sendbit | TDO
+
+    # Write data to port
     SetPortByte(base_adr, sendbit)
 
-    # Clock Rise
+    # Clock rise
     sendbit = sendbit | TCK
     SetPortByte(base_adr, sendbit)
 
-    # Read TDO Bit
+    # Read data from port
     rcvbit  = GetPortByte(status_adr)
+
+    # Extract TDO Bit
     rcvbit  = rcvbit & TDO
     rcvbit  = not rcvbit
     rcvbit  = rcvbit & 0xFF
+    TDOvalue = not rcvbit
 
-    # Clock Fall
+    # Clock fall
     sendbit = sendbit & (~TCK)
     SetPortByte(base_adr, sendbit)
-    
-    #if (rcvbit == TDO):
-    #    TDOvalue = 0
-    #else:
-    #TDOvalue = 1
-    #
-    TDOvalue = not rcvbit
-    #print(rcvbit)
         
     return(TDOvalue)
 
-#def ShiftDataLPTJTAG(Data, DataSize, sendtms):
-#    if (DataSize > 32):
-#        result = 0
-#    else:
-#        tmp = 0
-#        for i in range(DataSize): 
-#            tdo = jtagioLPTJTAG ( (DataSize & sendtms), (Data & 0x01))
-#            tmp = tmp | (( tdo & 0x01) << i )
-#            Data = Data >> 1
-#    result = tmp
-#    return(result)
-
+# Starts an Instruction Register Shift
 def StartIRShiftLPTJTAG():
     tdo=jtagioLPTJTAG(0, 0)
     tdo=jtagioLPTJTAG(1, 0)
@@ -118,24 +121,21 @@ def StartIRShiftLPTJTAG():
     tdo=jtagioLPTJTAG(0, 0)
     tdo=jtagioLPTJTAG(0, 0)
 
-def StartDRShiftLPTJTAG():
-    tdo=jtagioLPTJTAG(0, 0)
-    tdo=jtagioLPTJTAG(1, 0)
-    tdo=jtagioLPTJTAG(0, 0)
-    tdo=jtagioLPTJTAG(0, 0)
-
+# Finishes an Instruction Register Shift
 def ExitIRShiftLPTJTAG():
     tdo=jtagioLPTJTAG(1, 0)
     tdo=jtagioLPTJTAG(0, 0)
     tdo=jtagioLPTJTAG(0, 0)
     tdo=jtagioLPTJTAG(0, 0)
 
-def ExitDRShiftLPTJTAG():
+# Starts a Data Register Shift
+def StartDRShiftLPTJTAG():
+    tdo=jtagioLPTJTAG(0, 0)
     tdo=jtagioLPTJTAG(1, 0)
     tdo=jtagioLPTJTAG(0, 0)
     tdo=jtagioLPTJTAG(0, 0)
-    tdo=jtagioLPTJTAG(0, 0)
 
+# Finishes a Data Register Shift
 def ExitDRShiftLPTJTAG():
     tdo=jtagioLPTJTAG(1, 0)
     tdo=jtagioLPTJTAG(0, 0)
