@@ -1,12 +1,14 @@
 import time
+
 from JTAGLib     import *
 from LPTJTAGLib  import *
 from ALCT        import *
-from common     import Now
-from common     import Printer
+from Common      import Now
+from Common      import Printer
+
 import sys
 
-#done
+# Read Slow Control or Mezzanine FPGA ID Codes
 def ReadIDCode (alct_ctl): 
     if (alct_ctl == SLOW_CTL):
         SetChain(SLOW_CTL) # Slow Control Control Chain
@@ -19,7 +21,7 @@ def ReadIDCode (alct_ctl):
     else: 
         return(0)
 
-#done
+# Read Board Silicon Serial Numbers 
 def ReadBoardSN(board_type):
     SetChain(4) # Virtex Control Chain
     
@@ -72,6 +74,7 @@ def ReadBoardSN(board_type):
         result = result | bit << i
     return(result)
     
+# Generates tuple from idcode 
 def StrToIDCode(idstr): 
     id = alct_idreg()
     if (len(idstr) <= 64): 
@@ -82,7 +85,8 @@ def StrToIDCode(idstr):
         id.month    = 0xFF   & (idcode >> 32)
     return(id)
 
-#done
+# Set AFEB Threshold (value from 0-255)
+# Sets threshold in ADC counts
 def SetThreshold(ch, value):
     SetChain(0x0)
     DRlength  = 12
@@ -100,7 +104,8 @@ def SetThreshold(ch, value):
     WriteIR(0xFF & (0x8+(realch // 12)), SC_IR)
     WriteDR(data & 0xFFF, DRlength)
 
-#done
+# Returns AFEB Threshold on channel ch
+# Returns value in ADC Counts (0-1023)
 def ReadThreshold(ch):
     SetChain(SLOW_CTL)
     DRLength = 11
@@ -128,7 +133,8 @@ def ReadThreshold(ch):
     
     return(result)
 
-#done
+# Read ALCT board 12 bit voltage monitoring 
+# Returns value in ADC counts (0-1023)
 def ReadVoltageADC(chan):
     SetChain(SLOW_CTL)
     DRlength = 11
@@ -148,7 +154,8 @@ def ReadVoltageADC(chan):
     
     return(result)
 
-#done
+# Read ALCT board 12 bit current monitoring
+# Returns value in ADC counts (0-1023)
 def ReadCurrentADC(chan):
     SetChain(SLOW_CTL)
     DRlength = 11
@@ -165,7 +172,8 @@ def ReadCurrentADC(chan):
     
     return(result)
 
-#done
+# Read on board temperature sensor
+# Returns value in ADC counts (0-1023)
 def ReadTemperatureADC(): 
     DRlength = 11
     for i in range(3): 
@@ -175,13 +183,18 @@ def ReadTemperatureADC():
     result=FlipDR(read,DRlength)
     return(result)
 
-#done
+# Read on board temperature sensor
+# Returns value in degrees C
 def ReadTemperature(): 
     result = ReadTemperatureADC()*arTemperature.coef-50
     return(result)
 
-
-def CheckThresholds(NUM_AFEBS,depth): 
+# Checks All board Thresholds
+# Optional depth argument allows for a quick scan
+# Only the modulo of the depth will be checked
+# e.g. depth=1 checks all thresholds
+#      depth=17 will check 0,17,34,...etc
+def CheckThresholds(NUM_AFEBS,depth=1): 
     print("Checking AFEB Thresholds") 
     CurrErrs=0
     for afeb in range(NUM_AFEBS): 
@@ -197,7 +210,6 @@ def CheckThresholds(NUM_AFEBS,depth):
                     print("\nERROR in AFEB #%02i: Write=%03i Read=%03.0f" % (afeb,write,read) ) 
                     CurrErrs +=1
 
-    #sys.stdout.flush()
     if CurrErrs==0: 
         print('\n\t ====> Passed')
         return(0)
@@ -205,6 +217,7 @@ def CheckThresholds(NUM_AFEBS,depth):
         print('\t ====> Failed Thresholds Quick Test with %i Errors' % CurrErrs)
         return(1)
 
+# Checks ALCT-AFEB standby register
 def CheckStandbyRegister(): 
     print("Checking Standby Register")
     CurrErrs = 0
@@ -223,6 +236,7 @@ def CheckStandbyRegister():
         print('\t ====> Failed Standby Register Test with %i Errors' % CurrErrs)
         return(1)
 
+# Checks Test Pulse Down register
 def CheckTestPulsePowerDown(): 
     print('Checking Test Pulse Power Down')
     CurrErrs = 0
@@ -240,6 +254,7 @@ def CheckTestPulsePowerDown():
         print('\t ====> Failed Test Pulse Power Down Test with %i Errors' % CurrErrs)
         return(1)
 
+# Checks Test Pulse Up register
 def CheckTestPulsePowerUp(): 
     print('Checking Test Pulse Power Up')
     CurrErrs = 0
@@ -274,7 +289,6 @@ def CheckTestPulseWireGroupMask():
         print('\t ====> Failed Test Pulse Wire Group Mask Test with %i Errors' % CurrErrs)
         return(1)
 
-
 def CheckTestPulseStripLayerMask(): 
     print('Checking Test Pulse Strip Layer Mask')
     CurrErrs = 0
@@ -291,19 +305,23 @@ def CheckTestPulseStripLayerMask():
         print('\t ====> Failed Test Pulse Wire Group Mask Test with %i Errors' % CurrErrs)
         return(1)
 
-
-
+# Automatically checks all voltages for a given alct type
 def CheckVoltages(alcttype): 
     print('Checking Voltages')
     CurrErrs=0
     for i in range(alct[alcttype].pwrchans): 
         readval = ReadVoltageADC(i)
-        if not (abs(readval*arVoltages[i].coef-arVoltages[i].refval) < arVoltages[i].toler): 
+        voltage = readval * arVoltages[i].coef
+        toler   = arVoltages[i].toler
+        ref     = arVoltages[i].refval
+
+        if abs(voltage-ref) > toler: 
             CurrErrs+=1
             print("\t Fail", end='')
         else: 
             print("\t Pass ", end='')
-        print("\t %s \tread=%.03f expect=%.03f +- %0.03f" % (arVoltages[i].ref, readval*arVoltages[i].coef, arVoltages[i].refval, arVoltages[i].toler))
+
+        print("\t %s \tread=%.03f expect=%.03f +- %0.03f" % (arVoltages[i].ref, voltage, ref, toler))
 
     if CurrErrs==0: 
         print('\t ====> Passed')
@@ -312,12 +330,23 @@ def CheckVoltages(alcttype):
         print('\t ====> Failed Voltage Test with %i Errors' % CurrErrs)
         return(1)
 
+# Automatically checks all currents for a given alct type
 def CheckCurrents(alcttype): 
     print('Checking Currents')
     CurrErrs=0
     for i in range(alct[alcttype].pwrchans): 
         readval = ReadCurrentADC(i)
-        if not (abs(readval*arCurrents[i].coef-arCurrents[i].refval) < arCurrents[i].toler): 
+        current = readval * arCurrents[i].coef
+        toler   = arCurrents[i].toler
+
+        if alcttype==0:  # ALCT 288
+            ref = arCurrents[i].ref288
+        if alcttype==1:  # ALCT 384
+            ref = arCurrents[i].ref384
+        if alcttype==2:  # ALCT 672
+            ref = arCurrents[i].ref672
+
+        if abs(current-ref) > toler: 
             CurrErrs+=1
             print("\t Fail", end='')
         else: 
@@ -332,6 +361,7 @@ def CheckCurrents(alcttype):
         print('\t ====> Failed Current Test with %i Errors' % CurrErrs)
         return(1)
         
+# Checks temperature against reference (should be close to ambient)
 def CheckTemperature(): 
     print('Checking Temperature')
     CurrErrs=0
@@ -349,7 +379,9 @@ def CheckTemperature():
         print('\t ====> Failed Current Test with %i Errors' % CurrErrs)
         return(1)
         
-
+# Runs an automatic self-test of Slow Control Functions
+# Should have _Normal_ ALCT Firmware Installed for Test
+# Other firmwares will work but have different current/voltage requirements
 def SelfTest(alcttype):
     CurrErrs = 0
     Errs    = 0
@@ -359,7 +391,7 @@ def SelfTest(alcttype):
     Errs += CheckVoltages(alcttype)
     Errs += CheckCurrents(alcttype)
     Errs += CheckTemperature()
-    Errs += CheckThresholds(alct[alcttype].groups*alct[alcttype].chips,17)
+    Errs += CheckThresholds(alct[alcttype].groups*6,17)
     Errs += CheckStandbyRegister()
     Errs += CheckTestPulsePowerDown() 
     Errs += CheckTestPulsePowerUp() 

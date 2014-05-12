@@ -170,41 +170,58 @@ arVoltages[3].refval    = 5.65
 arVoltages[3].coef      = 0.005878
 arVoltages[3].toler     = 0.2
 
+################################################################################
+# Container for ADC Current Measurement
+################################################################################
 arCurrents = [ MutableNamedTuple() for i in range(4)] 
 
 arCurrents[0].ref       = '1.8v'      
-arCurrents[0].refval    = 0.667
+arCurrents[0].ref288    = 0.58
+arCurrents[0].ref384    = 0.94 # double check this
+arCurrents[0].ref672    = 0.94 # double check this
 arCurrents[0].coef      = 0.002987
 arCurrents[0].toler     = 0.1
 
 arCurrents[1].ref       = '3.3v'      
-arCurrents[1].refval    = 1.1
+arCurrents[1].ref288    = 1.28
+arCurrents[1].ref384    = 2.81 # double check this
+arCurrents[1].ref672    = 2.81 # double check this
 arCurrents[1].coef      = 0.002987
 arCurrents[1].toler     = 0.2
 
 arCurrents[2].ref       = '5.5v1'      
-arCurrents[2].refval    = 0.150
+arCurrents[2].ref288    = 0.15
+arCurrents[2].ref384    = 0.15 # double check this
+arCurrents[2].ref672    = 0.15 # double check this
 arCurrents[2].coef      = 0.002987
 arCurrents[2].toler     = 0.1
 
 arCurrents[3].ref       = '5.5v2'      
-arCurrents[3].refval    = 0.150
+arCurrents[3].ref288    = 0.00
+arCurrents[3].ref384    = 0.15  # double check this
+arCurrents[3].ref672    = 0.15  # double check this
 arCurrents[3].coef      = 0.002987
 arCurrents[3].toler     = 0.1
 
+################################################################################
+# Container for ADC Temperature Measurement
+################################################################################
 arTemperature = MutableNamedTuple()
-
 arTemperature.ref       = 'On Board Temperature' 
 arTemperature.refval    = 25.0
 arTemperature.coef      = 0.1197
 arTemperature.toler     = 5.0
 
-#ALCTTYPE
+################################################################################
+# ALCTTYPE Definitions
+################################################################################
 ALCT288 = 0 # ALCT 288 Channels
 ALCT384 = 1 # ALCT 384 Channels
 ALCT672 = 2 # ALCT 672 Channels
 
-#CHAMBER
+################################################################################
+# CHAMBER Definitions
+################################################################################
 ME1_1   = 0 # ME1/1
 ME1_2   = 1 # ME1/2
 ME1_3   = 2 # ME1/3
