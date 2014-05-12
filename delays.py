@@ -75,8 +75,8 @@ def SetDelayLines(cs, patterns, delays, alcttype):
             WriteIR(DelayCtrlWrite, V_IR)
             WriteDR(0x1FF, parlen)
 
+# Returns Array of  Delay Chip Patterns read from Board
 def ReadPatterns(pattern,alcttype):
-
     SendPtrns =[[0 for j in range(6)] for i in range(alct[alcttype].groups)]
     ReadPtrns =[[0 for j in range(6)] for i in range(alct[alcttype].groups)]
     SendValues=[[0 for j in range(6)] for i in range(alct[alcttype].groups)]
@@ -134,6 +134,7 @@ def ReadPatterns(pattern,alcttype):
             stringPat = stringPat[::-1]
             pattern[i][j]=int(stringPat,16)
 
+# Remaps pins according to some scheme..
 def PinRemap(i,j,pattern): 
     a = pattern & 0xFF00
     b = pattern & 0x00FF
@@ -163,6 +164,20 @@ def CheckPatterns(SendPtrns, ReadPtrns,alcttype):
                     Errs = Errs + 1
     return(Errs)
 
+# Make some nice output of sent/received patterns
+def PrintPatterns(alcttype, SendPtrns, ReadPtrns): 
+    sentstr = ''
+    readstr = ''
+    output  = ''
+    for i in range(alct[alcttype].groups): 
+        for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP): 
+            sentstr = ("%04X" % SendPtrns[i][j]) + ' ' + sentstr
+            readstr = ("%04X" % ReadPtrns[i][j]) + ' ' + readstr
+    output += ('\n\t ->Sent: %s' % sentstr)
+    output += ('\n\t <-Read: %s' % readstr)
+    print(output)
+
+# Sends a walking 1 pattern through the delay ASICs 
 def Walking1(alcttype): 
     SendPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
     ReadPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
@@ -205,18 +220,7 @@ def Walking1(alcttype):
     # Fini 
     print('\n\t ===> Walking 1 Test Finished with %i Errors ' % Errs)
 
-def PrintPatterns(alcttype, SendPtrns, ReadPtrns): 
-    sentstr = ''
-    readstr = ''
-    output  = ''
-    for i in range(alct[alcttype].groups): 
-        for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP): 
-            sentstr = ("%04X" % SendPtrns[i][j]) + ' ' + sentstr
-            readstr = ("%04X" % ReadPtrns[i][j]) + ' ' + readstr
-    output += ('\n\t ->Sent: %s' % sentstr)
-    output += ('\n\t <-Read: %s' % readstr)
-    print(output)
-
+# Sends a walking 1 pattern through the delay ASICs 
 def Walking0(alcttype):
     SendPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
     ReadPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
@@ -258,6 +262,7 @@ def Walking0(alcttype):
     # Fini 
     print('\n\t ===> Walking 0 Test Finished with %i Errors ' % Errs)
 
+# Fills delay ASICs with a Walking 1 
 def Filling1(alcttype): 
     SendPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
     ReadPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
@@ -305,6 +310,7 @@ def Filling1(alcttype):
     # Fini 
     print('\n\t ===> Filling by 1s Test Finished with %i Errors ' % Errs)
 
+# Unfills delay ASICs with a Walking 0
 def Filling0(alcttype): 
     SendPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
     ReadPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
@@ -353,6 +359,8 @@ def Filling0(alcttype):
     # Fini 
     print('\n\t ===> Filling by 0s Test Finished with %i Errors ' % Errs)
 
+# Shifts 5 and A through the delay asic... 0101010101 --> 10101010101.. 
+# Uses HIGH current.. maybe not a good test. 
 def Shifting5andA(alcttype):
     SendPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
     ReadPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
@@ -408,6 +416,7 @@ def Shifting5andA(alcttype):
     # Fini 
     print('\n\t ===> Shifting 5 and A Test Finished with %i Errors ' % Errs)
 
+# Sends random patterns into delay ASICs
 def RandomData(alcttype):
     SendPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
     ReadPtrns =[[0 for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP)] for i in range(alct[alcttype].groups)]
@@ -461,9 +470,6 @@ def RandomData(alcttype):
 
     # Fini 
     print('\n\t ===> Random Data Test Finished with %i Errors ' % Errs)
-
-
-
 
 #def GeneratePattern(): 
 #    begin
@@ -659,15 +665,7 @@ def SetDelayChips(alcttype):
     #SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
     ReadPatterns(ReadPtrns,alcttype)
 
-    sentstr = ''
-    readstr = ''
-    for i in range(alct[alcttype].groups): 
-        for j in range(NUM_OF_DELAY_CHIPS_IN_GROUP): 
-            sentstr = ("%04X" % SendPtrns[i][j]) + ' ' + sentstr
-            readstr = ("%04X" % ReadPtrns[i][j]) + ' ' + readstr
-
-    print('\t ->Sent: %s' % sentstr)
-    print('\n\t <-Read: %s' % readstr)
+    #PrintPatterns(alcttype, SendPtrns, ReadPtrns): 
 
     #pattern=[0x1111,0x2222,0x3333,0x4444,0x5555,0x6666]
     #value=[ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
