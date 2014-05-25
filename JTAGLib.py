@@ -57,7 +57,7 @@ def lights_jtag():
 def jtag_io(tms_, tdi_): 
     if os.name == 'nt': 
         tdo=LPTJTAGLib.jtagioLPTJTAG(tms_, tdi_)
-        return(tdoTMSLowLPTJTAG)
+        return(tdo)
 
 def StartIRShift():
     if os.name == 'nt': 
@@ -78,7 +78,7 @@ def ExitDRShift():
 # Write JTAG Instruction Register 
 def WriteIR(IR, IRSize):
 
-    if (DataSize is None) or (Data is None): 
+    if (IRSize is None) or (IR is None): 
         print("ERROR: Attempted to write invalid instruction register.")
         sys.exit()
 
@@ -87,7 +87,7 @@ def WriteIR(IR, IRSize):
 
 # Write JTAG Data Register
 def WriteDR(DR, DRSize):
-    if (DataSize is None) or (Data is None): 
+    if (DRSize is None) or (DR is None): 
         print("ERROR: Attempted to write invalid data register.")
         sys.exit()
 
@@ -96,7 +96,7 @@ def WriteDR(DR, DRSize):
 
 # Read JTAG Data Register
 def ReadDR(DR, DRSize):
-    if (DataSize is None) or (Data is None): 
+    if (DR is None) or (DRSize is None): 
         print("ERROR: Attempted to read invalid data register.")
         sys.exit()
 
