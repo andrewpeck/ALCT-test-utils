@@ -1,5 +1,5 @@
 ################################################################################
-# delays.py -- Functions and tests for checking delay ASIC Pattern read/write
+# Delays.py -- Functions and tests for checking delay ASIC Pattern read/write
 ################################################################################
 
 from ALCT import *

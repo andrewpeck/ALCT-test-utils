@@ -2,9 +2,10 @@ import SlowControl
 import SingleCable
 import TesterBoard
 from ALCT        import *
-from common import Now
-from common import Day
-import delays
+from Common import Now
+from Common import Day
+import Delays
+
 import random
 import datetime
 import time

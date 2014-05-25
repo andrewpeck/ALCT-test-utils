@@ -1,6 +1,7 @@
 ################################################################################
 # common.py Some general tools useful for the ALCT Test Software
 ################################################################################
+
 import time
 import datetime
 import sys
