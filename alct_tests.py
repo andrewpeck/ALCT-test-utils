@@ -30,7 +30,7 @@ def MainMenu():
         DetectMezzanineType()
         print("")
         print("\t 0 ALCT Automatic Full Test")
-        print("\t 1 Slow Control Self-Test")
+        print("\t 1 Slow Control Tests")
         print("\t 2 Thresholds Linearity Full Scan")
         print("\t 3 Delay ASICs Pattern Test")
         print("\t 4 Delay ASICs Delay Test")
@@ -49,7 +49,7 @@ def MainMenu():
         if k=="0":
             AutomaticFullTest()
         if k=="1":
-            SlowControl.SelfTest(alcttype)
+            SlowControl.SubtestMenu(alcttype)
         if k=="2":
             SlowControl.CheckThresholds(alct[alcttype].groups*alct[alcttype].chips,1)
         if k=="3":
