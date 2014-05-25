@@ -14,12 +14,10 @@ def main():
     ALCT384=1
     global  alcttype
     alcttype=ALCT384
-    #delays.SetDelayChips(ALCT384)
-    #k=input("delete me later")
     MainMenu()
     print("SIC TRANSIT GLORIA MUNDI")
     sleep(0.1)
-    
+
 def MainMenu():
     while True:
         os.system('cls')
@@ -41,7 +39,7 @@ def MainMenu():
         if not k: break
         os.system('cls')
 
-            
+
         ALCT384=1
         global  alcttype
         alcttype=ALCT384
@@ -59,11 +57,10 @@ def MainMenu():
         if k=="5":
             SingleCable.SubtestMenu(alcttype)
         if k=="8":
-            ChooseJTAGChain() 
-
+            ChooseJTAGChain()
 
 def ChooseJTAGChain():
-        while True: 
+        while True:
             os.system('cls')
             print("\n==========================")
             print(  " JTAG Chain Initialization")
@@ -78,11 +75,11 @@ def ChooseJTAGChain():
             print("")
             if not k: break
 
-            if k=="0": 
+            if k=="0":
                 SetChain(arJTAGChains[0])
-            if k=="1": 
+            if k=="1":
                 SetChain(arJTAGChains[1])
-            if k=="2": 
+            if k=="2":
                 SetChain(arJTAGChains[2])
             if k=="3":
                 SetChain(arJTAGChains[3])
@@ -92,47 +89,18 @@ def AutomaticFullTest():
     k=input("\nLoad Single Cable Firmware. Press s to skip, any key to Continue\n")
     if k!="s":
         SingleCable.SingleCableSelfTest()
-    
+
     k=input("\nLoad Test Firmware. Press s to skip, any key to Continue\n")
 
     k=input("\nLoad Normal Firmware. Press s to skip, any key to Continue\n")
     if k!="s":
-        SlowControl.SelfTest(alcttype)    
-
+        SlowControl.SelfTest(alcttype)
 
 def ReadIDCodes():
     print("\t Slow Control Firmware ID: 0x%X" % SlowControl.ReadIDCode(0))
     print("\t Fast Control Firmware ID: 0x%X" % SlowControl.ReadIDCode(1))
     print("\t Board Serial Number:      0x%X" % SlowControl.ReadBoardSN(0x2))
     print("\t Mezz. Serial Number:      0x%X" % SlowControl.ReadBoardSN(0x3))
-
-def ReadAllVoltages():
-    print("\n%s> Read Power Supply Voltages" % Now())
-    npwrchannels = alct[1].pwrchans
-    for i in range (alct[alcttype].pwrchans): 
-        ADC     = ReadVoltageADC(i)
-        voltage = ADC * arVoltages[i].coef
-        print ("\t  %s\tExpect=%.2fV   Read=%2.2fV  (ADC=0x%03X)" % (arVoltages[i].ref, arVoltages[i].refval, voltage, ADC))
-
-def ReadAllCurrents(): 
-    print("\n%s> Read Power Supply Currents" % Now())
-    for i in range (alct[alcttype].pwrchans): 
-        ADC     = ReadCurrentADC(i)
-        current = ADC * arCurrents[i].coef
-        print ("\t  %s\tExpect=%.2fA   Read=%2.2fA  (ADC=0x%03X)" % (arCurrents[i].ref, arCurrents[i].refval, current, ADC))
-    
-def ReadAllThresholds(): 
-    NUM_AFEB=24
-    print("\n%s> Read All Thresholds" % Now())
-    for j in range (NUM_AFEB): 
-        thresh = ReadThreshold(j)
-        print("\t  AFEB #%02i:  Threshold=%.3fV (ADC=0x%03X)" % (j, (ADC_REF/1023)*thresh, thresh))
-
-def WriteAllThresholds(thresh):
-    print("\n%s> Write All Thresholds to %i" % (Now(), thresh))
-    for i in range(NUM_AFEB): 
-        SetThreshold(i, thresh);
-    print("\t  All thresholds set to %i" % thresh)
 
 def CheckTemperature():
     print("\n%s> Check Board Temperature" % Now())
@@ -147,7 +115,6 @@ def Day():
     ts = time.time()
     st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
     return(st)
-
 
 if __name__ == "__main__":
     main()
