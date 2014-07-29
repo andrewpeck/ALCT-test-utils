@@ -1,31 +1,60 @@
-from ALCT import *
-import random
-from Common import Printer
-from Common import Now
+#!/usr/bin/env python3
+
+# ------------------------------------------------------------------------------
+# Functions for performing Single Cable Loopback Test. 
+# Data is sent from the mezzanine, out from the ALCT-TX (J5) Connector, and
+# received at each of the AFEB connectors. From there it passes through the
+# delay 18/24/42 delay ASICs, through the 9/12/21 Mux chips, and back to the
+# mezzanine. 
+# ------------------------------------------------------------------------------
+
+import alct
+import common
+
 import os
+import random
 
+TestNames = ['Custom Data', 'Walking 1', 'Walking 0', 'Filling 1', 'Filling 0', 'Shifting 5s and As', 'Random Data']
+
+# ------------------------------------------------------------------------------
+
+# test is an integer specifying which test to perform, i.e.: 
+#       0 = 'Custom Data'
+#       1 = 'Walking 1'
+#       2 = 'Walking 0'
+#       3 = 'Filling 1'
+#       4 = 'Filling 0'
+#       5 = 'Shifting 5s and As'
+#       6 = 'Random Data'
 def SingleCableTest(test,channel,npasses=50):
-    SetChain(arJTAGChains[3])
-    errcnt      = 0
-    CustomData  =0x1234
-    senddata    =0x0000
-    SuppressErrsSingleCable=True
-    StopOnErrorSingleCable=False
-    ErrCntSingleTest=50
+    alct.SetChain(alct.arJTAGChains[3])
+    errcnt                  = 0
+    CustomData              = 0x1234
+    senddata                = 0x0000
+    SuppressErrsSingleCable = True
+    StopOnErrorSingleCable  = False
+    ErrCntSingleTest        = 50
 
-    TestNames = ['Custom Data', 'Walking 1', 'Walking 0', 'Filling 1', 'Filling 0', 'Shifting 5s and As', 'Random Data']
 
     print('Running %s test on Channel %i' % (TestNames[test],channel))
+
+    # The multiple is a simple coefficient to accomodate for the fact that some
+    # tests require more loops than others... e.g. to do one pass of the single
+    # cable test, each bit has to be checked so we loop 16 times. Random data
+    # requires only one loop. Shifting 5s and As requires two loops (one for 5,
+    # one for A), etc... 
+
     if test==0: multiple = 1
     if test==1: multiple = 16
     if test==2: multiple = 16
     if test==3: multiple = 16
     if test==4:
         senddata    = 0xFFFF
-        multiple = 16
+        multiple    = 16
     if test==5: multiple = 2
     if test==6: multiple = 1
 
+    # Main test loop
     for cnt in range(npasses*multiple):
         if test==0:                                                         # 0 = Custom Data Test
             k=input("\nEnter Custom Data or <cr> for %04X" % CustomData)
@@ -43,23 +72,14 @@ def SingleCableTest(test,channel,npasses=50):
         if test==6: senddata = random.getrandbits(16)                       # 6 = Random Data
 
         # Select Channel
-        #WriteRegister(0x16,0x1FF & channel)
-        WriteIR(0x16,V_IR)
-        WriteDR(0x1FF & channel,9)
-
-        #ReadRegister(0x15)
-        WriteIR(0x15,V_IR)
-        ReadDR (0x0,9)
+        alct.WriteRegister(0x16,0x1FF & channel)
+        alct.ReadRegister(0x15)
 
         # Write Data
-        #WriteRegister(0x18,0xFFFF & senddata)
-        WriteIR(0x18,V_IR)
-        WriteDR(0xFFFF & senddata,16)
+        alct.WriteRegister(0x18,0xFFFF & senddata)
 
         # Read Back Data
-        #readdata= ReadRegister(0x17)
-        WriteIR(0x17,V_IR)
-        readdata = ReadDR(0x0,16)
+        readdata = alct.ReadRegister(0x17)
 
         if readdata != senddata:
             errcnt += 1
@@ -69,22 +89,16 @@ def SingleCableTest(test,channel,npasses=50):
                 return(0)
 
         # Select Channel
-        #WriteRegister(0x16,channel | 0x40)
-        WriteIR(0x16,V_IR)
-        WriteDR(0x1FF & (channel | 0x40),9)
+        alct.WriteRegister(0x16,channel | 0x40)
 
-        #WriteRegister(0x16,channel | 0x1FF)
-        WriteIR(0x16,V_IR)
-        WriteDR(0x1FF & channel,9)
+        # Read Data
+        alct.WriteRegister(0x16,channel | 0x1FF)
+        readdata = alct.ReadRegister(0x19)
 
-        #readdata = ReadRegister(0x19)
-        WriteIR(0x19,V_IR)
-        readdata = ReadDR(0x0,16)
+        status = ('\t Pass #%02i Read=0x%04X Expect=0x%04X' % (cnt//multiple+1,readdata,senddata))
+        common.Printer(status)
 
-        status = ('\t Pass #%02i Read=0x%04X Expect=0x%04X' % (cnt//multiple +1,readdata,senddata))
-        Printer(status)
-
-        if readdata != senddata :
+        if (readdata != senddata):
             errcnt += 1
             if ((not SuppressErrsSingleCable) or (SuppressErrsSingleCable and (errcnt <= ErrCntSingleTest))):
                 print('\n\t ERROR: Pass #%02i Read=0x%04X Expect=0x%04X' % (cnt,readdata,senddata))
@@ -93,25 +107,53 @@ def SingleCableTest(test,channel,npasses=50):
 
     if errcnt==0:
         print('\n\t ====> Passed')
-        return(0)
     else:
         print('\n\t ====> Failed Single Cable Test with %i Errors' % errcnt)
-        return(errcnt)
+    return (errcnt)
 
-def SingleCableSelfTest():
-    print("\n%s > Starting Single Cable Automatic Test\n" % Now())
-    NUM_OF_AFEBS=1
-    for (channel) in range (NUM_OF_AFEBS):
-        for i in range(7):
-            SingleCableTest(i,0,10)
+def SingleCableSelfTest(alcttype,logFile):
+    print("\n%s > Starting Single Cable Automatic Test\n" % common.Now())
+    errors = 0 
+
+    for (channel) in range (alct[alcttype].groups * alct[alcttype].chips):
+        k = input ("Please connect ALCT connector J5 to AFEB connector %i. s to skip, <cr> to continue" % channel)
+
+        # skip connector
+        if (k=="s" or k=="S"): 
+            errors += 1
+            continue
+
+        # perform all tests for this AFEB
+        else: 
+            for i in range(7):
+                fail = SingleCableTest(i,0,10)
+                if fail: 
+                    errors += fail
+                    logFile.write ("Failed %s Single Cable Test with %i Errors" % TestNames[i], fail)
+                else: 
+                    logFile.write ("Passed %s Single Cable Test" % TestNames[i])
+
+    # Tests Summary
+
+    print         ("Summary:")
+    logFile.write ("Summary:")
+
+    if errcnt==0:
+        print        ('\n\t ====> Passed')
+        logFile.write('\n\t ====> Passed')
+    else:
+        print        ('\n\t ====> Failed Single Cable Test with %i Total Errors' % errcnt)
+        logFile.write('\n\t ====> Failed Single Cable Test with %i Total Errors' % errcnt)
+
+    return (errors) 
 
 def SubtestMenu(alcttype):
     channel=0
     while True:
-        os.system('cls')
-        print("\n==========================")
-        print(  " Single Cable Test Submenu")
-        print(  "==========================\n")
+        common.ClearScreen()
+        print("\n================================================================================"  )
+        print(  " Single Cable Test Submenu"                                                        )
+        print(  "================================================================================\n")
         print("\t 0 Run All Tests")
         print("\t 1 Custom Data Test")
         print("\t 2 Walking 1 Test")
@@ -128,7 +170,7 @@ def SubtestMenu(alcttype):
         k=input("\nChannel (<cr> for ch=%i):" % channel)
         if k:
             channel = int(k,10)
-        os.system('cls')
+        common.ClearScreen()
         print("")
 
         if test==0:
@@ -138,4 +180,3 @@ def SubtestMenu(alcttype):
             SingleCableTest(test,channel,25)
 
         k=input("\n<cr> to return to menu: ")
-
