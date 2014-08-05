@@ -108,15 +108,12 @@ def ReadPatterns(pattern,alcttype):
     #       ABCD EFGH IJKL MNOP QRST UVWX YZ12 3456 7890 (truncated)
     #------------------------------------------------------------------------------
 
-    alct.WriteRegister(0x11, 0x4001, 16)  # Enable Patterns from DelayChips into 384 bits ALCT Register
+    alct.WriteRegister(0x11, 0x4001, 16)     # Enable Patterns from DelayChips into 384 bits ALCT Register
+    jtag.WriteIR(0x10,   alct.V_IR)          # Send 384 bits ALCT Register to PC via JTAG
+    DR = jtag.ReadDR(DR,Wires) & (2**384 -1) # Mask off 384 bits, just-in-case
 
-    jtag.WriteIR(0x10,   alct.V_IR)       # Send 384 bits ALCT Register to PC via JTAG
-    DR = jtag.ReadDR(DR,Wires)
-    DR=DR & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-
-    stringDR = hex(DR)              # Convert dataregister to a hexdecimal string
-    stringDR = stringDR[2:]         # Cut off 0x from the string
-    stringDR = stringDR.zfill(96)   # Pad the string to make sure it is 96 digits (keep leading zeroes)
+    #check this I changed it but haven't checked it!!
+    stringDR = format(DR, '096X')   # Convert to Hexdecimal string
     stringDR = stringDR[::-1]       # Invert the String
 
     for i in range(alct.alct[alcttype].groups):
@@ -137,6 +134,7 @@ def ReadPatterns(pattern,alcttype):
             pattern[i][j]=int(stringPat,16)
 
 # Remaps pins according to some scheme..
+# Please see notes accompanying ReadPatterns
 def PinRemap(i,j,pattern):
     a = pattern & 0xFF00
     b = pattern & 0x00FF
@@ -156,7 +154,7 @@ def PinRemap(i,j,pattern):
         pattern = tmp | b
     return (pattern)
 
-# Checks two patterns against eachother---returns number of Errors found
+# Checks two patterns arrays against eachother---returns number of Errors found
 def CheckPatterns(SendPtrns, ReadPtrns,alcttype):
     Errs = 0
     for i in range(alct.alct[alcttype].groups):
