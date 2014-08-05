@@ -11,319 +11,165 @@ from common import MutableNamedTuple
 #import common
 
 #-------------------------------------------------------------------------------
+
 debug=False
 
 #-------------------------------------------------------------------------------
 # Register Locations / Sizes
 #-------------------------------------------------------------------------------
-#RdCntReg    = {'val': 0x02, 'length': 128}
-#WrFIFO      = {'val': 0x0A, 'length': 1}
-#WrDlyF      = {'val': 0x0B, 'length': 8}
-#RdParamDly  = {'val': 0x15, 'length': 6}
-#WrParamDly  = {'val': 0x16, 'length': 6}
-#ALCTWdly    = {'val': 0x0D, 'length': 120}
-#ALCTRdly    = {'val': 0x0E, 'length': 120}
 
-#-------------------------------------------------------------------------------
-# Automatic Check of Delay ASIC delays
-#-------------------------------------------------------------------------------
-def TestboardDelaysCheck(alcttype):
-    NUM_AFEB = alct[alcttype].groups * 6
-    #ch, i, j, k, l, ErrMeasDly, count: integer
-    #MinDelay, MaxDelay, MaxDeltaDelay, MaxDeltaBegin: single
-    #DeltaDelay, PulseWidth: array[0..15] of Currency
-    #BeginTime_Min, AverageDelay_Time, DeltaDelay_Max, ErrorDeltaDelay: MeasDly
-    #DeltaBegin_Max: MeasDly
-    #DeltaBeginTime, Delay_Time: MeasDlyChan
-    #ErrDelayTest: boolean
-    #BoardNum: integer
-    #PathString, PinErrors: string//Zach
-    #RegMaskDone: array[0..41] of word
+RdDataReg           = 0x01
+RdCntReg            = 0x02
+WrDatF              = 0x04
+WrAddF              = 0x06
+WrParamF            = 0x08
+RdParamDly          = 0x15
+WrParamDly          = 0x16 # Change for Different Boards!!
+WrDlyF              = 0x0B
+ALCTWdly            = 0x0D
+ALCTRdly            = 0x0E
+WrFIFO              = 0x0A
 
-    alct.SetChain(alct.arJTAGChains[3])
-    ErrDelayTest    = False
-    MaxDeltaBegin   = 2
-    MaxDeltaDelay   = 2
-    MinDelay        = 25
-    MaxDelay        = 35
-    ErrMeasDly      = 0
-
-    # These are initializing 16 entry arrays of zeroes
-    TimeR_0             = [0]*16    # test board delays
-    TimeF_0             = [0]*16    # test board delays
-    TimeR_15            = [0]*16    # test board delays
-    TimeF_15            = [0]*16    # test board delays
-    PulseWidth_0        = [0]*16    # pulse widths
-    PulseWidth_15       = [0]*16    # pulse widths
-    DelayTimeR_0        = [0]*16    # pulse shifts
-    DelayTimeF_0        = [0]*16    # pulse shifts
-    DelayTimeR_15       = [0]*16    # pulse shifts
-    DelayTimeF_15       = [0]*16    # pulse shifts
-    DelayTimeR_50       = [0]*16    # pulse shifts
-    DelayTimeF_50       = [0]*16    # pulse shifts
-    Delay_Time          = [0]*16    # pulse shifts
-
-    # This is initializing a NUM_AFEB sized array of zeroes
-    ErrorDeltaDelay     = [0] * NUM_AFEB  
-    BeginTime_Min       = [0] * NUM_AFEB
-    AverageDelay_Time   = [0] * NUM_AFEB
-    BeginTime_Min       = [0] * NUM_AFEB
-    RegMaskDone         = [0] * NUM_AFEB
-    DeltaBegin_Max      = [0] * NUM_AFEB
-    DeltaDelay_Max      = [0] * NUM_AFEB
-    DeltaDelay          = [0] * NUM_AFEB
-    DeltaBegin_Min      = [0] * NUM_AFEB
-    PulseWidth          = [0] * 16
-
-    # Two dimensional arrays, 16xNUM_AFEB, filled with zeroes
-    DeltaBeginTime      = [[0 for i in range(16)] for j in range(NUM_AFEB)]
-    Delay_Time          = [[0 for i in range(16)] for j in range(NUM_AFEB)]
-
-    print('Make Sure Large Tester Board is Connected')
-    print('Make Sure Test Firmware is Loaded')
-
-    k = input("<cr> to continue when ready.")
-
-    print('\nRunning Delays Test on ALCT Board')
-
-    for chip in range(NUM_AFEB):
-        print("\t Measuring Delays for AFEB #%i" % chip)
-        count=0
-        ErrMeasDly = MeasureDelay(chip, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, AverageDelay_Time, RegMaskDone, alcttype)
-        DeltaBegin_Max[chip] = 0
-        DeltaDelay_Max[chip] = 0
-
-        for i in range(16):
-            if (DeltaBeginTime[chip][i] > DeltaBegin_Max[chip]):
-                DeltaBegin_Max[chip] = DeltaBeginTime[chip][i]
-
-            DeltaDelay[i] = abs(Delay_Time[chip][i] - AverageDelay_Time[chip])
-
-            if (DeltaDelay[i] > DeltaDelay_Max[chip]):
-                DeltaDelay_Max[chip] = DeltaDelay[i]
-
-        if (DeltaBegin_Max[chip] > MaxDeltaBegin):
-            ErrMeasDly = ErrMeasDly | 0x10
-        if (DeltaDelay_Max[chip] > MaxDeltaDelay):
-            ErrMeasDly = ErrMeasDly | 0x20
-
-        if (ErrMeasDly != 0):
-            ErrDelayTest = True
-            for i in range(6):
-                if (ErrMeasDly & (1 << i)) > 0:
-                    k = i
-                    #break
-                    if k==0:
-                        print('\t ERROR: Cannot find StartDly_0 on Chip #%i' % chip)
-                        ErrDelayTest+=1
-                        if (RegMaskDone[chip]==0):
-                            print('All Pins Failed')
-                        else:
-                            PinErrors  ='   Pin(s): '
-                            for j in range(16):
-                                if ((RegMaskDone[chip] & (1 << j))==0):
-                                    if (count==0):
-                                        PinErrors = PinErrors + str(j)
-                                    else:
-                                        PinErrors  = PinErrors + ', ' + str(j)
-                                    count  = count+1
-                            PinErrors  = PinErrors + ' bad'
-                            print(PinErrors)
-
-                    if k==1:
-                        print('\t ERROR: Cannot find StartDly_15 on Chip: %i' % chip)
-                        ErrDelayTest+=1
-                    if k==2:
-                        for l in range(16):
-                            if (PulseWidth[l] < 30):
-                                print('\t ERROR: Chip=%i Pin=%i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
-                                ErrDelayTest+=1
-                    if k==3:
-                        for l in range(16):
-                            if (PulseWidth[l] > 45):
-                                print('\t ERROR: Chip=%i Pin=%i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
-                                ErrDelayTest+=1
-
-                    if k==4:
-                        print('\t ERROR: Chip=%i DeltaBeginTime=%.02f ns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
-                        ErrDelayTest+=1
-                    if k==5:
-                        print('\t ERROR: Chip=%i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
-                        ErrDelayTest+=1
-
-        if (AverageDelay_Time[chip] < MinDelay) or (AverageDelay_Time[chip] > MaxDelay) :
-            ErrorDeltaDelay[chip] = AverageDelay_Time[chip]
-            if (AverageDelay_Time[chip] < MinDelay):
-                print('\t ERROR: Chip %02i Average Delay=%.2f ns is less than %.02f' % (chip,AverageDelay_Time[chip],MinDelay))
-                ErrDelayTest+=1
-            elif (AverageDelay_Time[chip] > MaxDelay):
-                print('\t ERROR: Chip %02i Average Delay=%.2f ns is more than %.02f' % (chip,AverageDelay_Time[chip],MaxDelay))
-                ErrDelayTest+=1
-        else:
-            print('\t Chip %i Average Delay=%.2f ns ref=%.02f' % (chip,AverageDelay_Time[chip],(MaxDelay+MinDelay)/2.0))
-
-    if (ErrDelayTest==0):
-        print('\t ===> Delays Test Passed without Error')
-    else:
-        print('\t ===> Delays Test Failed with %i Errors' % ErrDelayTest)
-
-    #with DelaysChart do
-    #    Title.Text.Clear
-    #    Title.Text.Add('Test of Delays for ALCT # '+IntToStr(ch))
-    #    RemoveAllSeries
-    #    BottomAxis.Minimum  = 0
-    #    BottomAxis.Maximum  = 20
-    #    LeftAxis.Minimum  = 0
-    #    LeftAxis.Maximum  = 50*(0.000000001)
-
-    #    AddSeries(TBarSeries.Create(self))
-    #    AddSeries(TLineSeries.Create(self))
-    #    AddSeries(TBarSeries.Create(self))
-    #    AddSeries(TLineSeries.Create(self))
-
-    #    Series[0].Title  = 'Error Delay'
-    #    Series[1].Title  = 'Min Delay'
-    #    Series[2].Title  = 'DelayAverage'
-    #    Series[3].Title  = 'Max Delay '
-
-    #    for i =0 to NUM_AFEB-1 do
-    #        Series[0].Add(ErrorDeltaDelay[i],'',clTeeColor)
-    #        Series[1].AddXY(i, MinDelay,'',clTeeColor)
-    #        Series[2].Add(AverageDelay_Time[i],'',clTeeColor)
-    #        Series[3].AddXY(i, MaxDelay,'',clTeeColor)
+LengthOf = {
+        0x01:  16, 
+        0x02: 128, 
+        0x04,  16, 
+        0x06,  10, 
+        0x08,   4, 
+        0x15,   6, 
+        0x16,   6, 
+        0x0B,   8, 
+        0x0D, 120, 
+        0x0E, 120, 
+        0x0A,   1}
 
 ################################################################################
-# Full scan of single delay ASIC
+# Low Level Test Board FIFO Functions
 ################################################################################
-def ChipDelayScan(chip, alcttype):
-    alct.SetChain(alct.arJTAGChains[3])
-    MinDelay            = 29
-    MaxDelay            = 35
-    num                 = 100       # number of words
-    FIFOvalue           = 0xFFFF    # FIFO Value
-    alct_dly            = 0
-    StartDly_R          = 0
-    StartDly_F          = 0
-    TimeR_0             = [0]*16    # test board delays
-    TimeF_0             = [0]*16    # test board delays
-    TimeR_15            = [0]*16    # test board delays
-    TimeF_15            = [0]*16    # test board delays
-    PulseWidth_0        = [0]*16    # pulse widths
-    PulseWidth_15       = [0]*16    # pulse widths
-    DelayTimeR_0        = [0]*16    # pulse shifts
-    DelayTimeF_0        = [0]*16    # pulse shifts
-    DelayTimeR_15       = [0]*16    # pulse shifts
-    DelayTimeF_15       = [0]*16    # pulse shifts
-    DelayTimeR_50       = [0]*16    # pulse shifts
-    DelayTimeF_50       = [0]*16    # pulse shifts
-    Delay_Time          = [0]*16    # pulse shifts
-    DeltaBeginTime      = [0]*16
-    ErrorDeltaDelay     = 0
 
-    print('========================================')
-    print('Running Chip Delay Scan on Chip %i'% chip)
-    print('Ensure Clock Select Switch is Set to 2/3')
-    print('Load test firmware')
-    print('Connect delays test board to ALCT')
-    print('========================================')
-    k = input("<cr> to continue when ready.")
+def SetFIFOChannel(ch,startdly):
+    alct.WriteRegister(WrAddF, ch | startdly << 6, LengthOf[WrAddF])
 
-    # Pinpoint rise/fall times for ALCT delay of 0
+def SetFIFOMode(mode):
+    alct.WriteRegister(WrParamF, (0x8 | mode) & 0xF, LengthOf[WrParamF])
 
-    alct_dly = 0
+def SetFIFOReset():
+    alct.WriteRegister(WrParamF,8,          LengthOf[WrParamF])
+    alct.WriteRegister(WrParamF,FIFO_RESET, LengthOf[WrParamF])
+    alct.WriteRegister(WrParamF,8,          LengthOf[WrParamF])
 
-    (FoundTimeBin, StartDly_R, StartDly_F) = FindStartDly(FIFOvalue, chip, alct_dly, num, alcttype)
+def SetFIFOWrite():
+    alct.WriteRegister(WrParamF,FIFO_WRITE, LengthOf[WrParamF])
 
-    if FoundTimeBin:
-        print('Found Start Delay Pulse on Chip #%i with alct delay of 0' % chip)
-        print('\t StartDly_R=%i StartDly_F=%i' % (StartDly_R,StartDly_F))
-        PinPointRiseTime(TimeR_0, FIFOvalue, chip, StartDly_R, alct_dly, num, alcttype)
-        PinPointFallTime(TimeF_0, FIFOvalue, chip, StartDly_F, alct_dly, num, alcttype)
-        print(TimeF_0)
-    else:
-        print('\t ERROR: With alct_dly=0, Cannot find StartDly pulse on Chip: %i' % chip)
+def SetFIFORead():
+    alct.WriteRegister(WrParamF,FIFO_READ, LengthOf[WrParamF])
 
+def SetFIFOReadWrite():
+    alct.WriteRegister(WrParamF,FIFO_WRITE | FIFO_READ, LengthOf[WrParamF])
 
-    MinDelayTimeR_0 = StartDly_R*25 + 255*0.25
+def FIFOClock():
+    alct.WriteRegister(WrFIFO,0x1, LengthOf[WrFIFO])
 
-    for i in range(16):
-        if (FIFOvalue & (1 << i)) > 0:
-            DelayTimeR_0[i]  = StartDly_R*25 + TimeR_0[i]*0.25
-            if MinDelayTimeR_0 > DelayTimeR_0[i]:
-                MinDelayTimeR_0 = DelayTimeR_0[i]
-    print('Rise times with ALCT_delay = 0 on Chip #%i = %.02f ns' % (chip, MinDelayTimeR_0))
+def ReadFIFOCounters():
+    jtag.WriteIR(RdCntReg, V_IR)
+    return(jtag.ReadDR(0x0,LengthOf[RdCntReg]))
 
-    for i in range(16):
-        DeltaBeginTime[i] = DelayTimeR_0[i] - MinDelayTimeR_0
-        print('\t chn #%02i DeltaBeginTime=%.02f ns DelayTime0=%.02f ns DelayTime50=%.02f ns)' %  (i,DeltaBeginTime[i],DelayTimeR_0[i],DelayTimeR_50[i]))
+def SetFIFOValue(val):
+    alct.WriteRegister(WrDatF,val, LengthOf[WrDatF])
 
-    print('Fall times with ALCT delay 0 on Chip #%i' % chip)
-    for i in range(16):
-        if ((FIFOvalue & (1 << i))>0):
-            DelayTimeF_0[i]  = (StartDly_F-1)*25 + TimeF_0[i]*0.25
-            if DelayTimeF_0[i] < 0: DelayTimeF_0[i]=0
-            print('\t chn #%02i = %.02f ns' % (i,  DelayTimeF_0[i]))
+def SetTestBoardDelay(delay):
+    alct.WriteRegister(WrParamF, FIFO_RESET,                         LengthOf[WrParamF])
+    alct.WriteRegister(WrDlyF,   0xFF & FlipByte((255-delay) & 0xFF, LengthOf[WrDlyF])
+    alct.WriteRegister(WrParamF, 0x8,                                LengthOf[WrParamF])
 
-    #Pinpoint rise/fall times for ALCT delay of 15
-    alct_dly = 15
-    (FoundTimeBin, StartDly_R, StartDly_F) = FindStartDly(FIFOvalue, chip, alct_dly, num,alcttype)
-    if FoundTimeBin:
-        print('Found Delay Pulse on Chip #%i with ALCT Delay=15' % chip)
-        print('\tStartDly_rise=%i StartDly_fall=%i' % (StartDly_R,StartDly_F))
+def SetALCTBoardDelay(ch, delay, alcttype):
+    #debug=True
+    DelayValue   = [0x0] * 6 # 6 delay chips in group
+    DelayPattern = [0x0] * 6 # 6 delay chips in group
+    DelayValue[ch % 6] = delay
+    if debug: print(DelayPattern)
+    if debug: print(DelayValue)
+    Write6DelayLines(DelayPattern, DelayValue, 1 << (ch // 6), alcttype)
 
-        PinPointRiseTime(TimeR_15, FIFOvalue, chip, StartDly_R, alct_dly, num, alcttype)
-        PinPointFallTime(TimeF_15, FIFOvalue, chip, StartDly_F, alct_dly, num, alcttype)
-    else:
-        print('With alct_dly=15, Cannot find StartDly pulse on Chip: %i' % chip)
+def SetTestBoardFIFO(fifoval, fifochan, numwords, startdelay, alctdelay, testboarddelay, alcttype):
+    numwords        = 1
+    startdelay      = 2
+    alctdelay       = 0
+    testboarddelay  = 0
 
-    print('Rise Times with ALCT delay=15 on Chip #%i' % chip)
-    for i in range(16):
-        if (FIFOvalue & (1 << i)) > 0:
-            DelayTimeR_15[i]  = StartDly_R*25 + TimeR_15[i]*0.25
-            print('\t chn #%02i = %.02f ns' % (i,  DelayTimeR_15[i]))
+    SetFIFOReset()
+    SetFIFOChannel(fifochan, startdelay)
+    SetFIFOValue(fifoval)
+    SetTestBoardDelay(testboarddelay)
+    SetALCTBoardDelay(fifochan, alctdelay, alcttype)
+    SetFIFOWrite
+    for i in range(1,numwords+1):
+        FIFOClock
 
-    print('Fall Times with ALCT delay=15 on Chip #%i' % chip)
-    for i in range(16):
-        if (FIFOvalue & (1 << i)) > 0:
-            DelayTimeF_15[i]  = StartDly_F*25 + TimeF_15[i]*0.25
-            print('\t chn #%02i = %.02f ns' % (i,  DelayTimeF_15[i]))
+def ReadFIFOValue():
+    jtag.WriteIR(RdDataReg, V_IR)
+    result = jtag.ReadDR(0,LengthOf[RdDataReg])
+    return(result)
 
-    print('Pulse widths with ALCT delay=15 on Chip #%i' % chip)
-    for i in range(16):
-        PulseWidth_0[i]  = DelayTimeF_0[i] - DelayTimeR_0[i]
-        if (PulseWidth_0[i]<0): PulseWidth_0[i]=0
-        print('\t chn #%02i = %.02f ns' % (i,  PulseWidth_0[i]))
+def ALCTEnableInput(alcttype):
+    parlen = alct[alcttype].groups + 2
 
-    print('Pulse shifts on Chip #%i' % chip)
-    for i in range(16):
-        Delay_Time[i]  = DelayTimeR_15[i] - DelayTimeR_0[i]
-        print('\t chn #%02i = %.02f ns' % (i,  Delay_Time[i]))
-        if ((Delay_Time[i] < MinDelay) or (Delay_Time[i] > MaxDelay)):
-            ErrorDeltaDelay = Delay_Time[i]
+    alct.WriteRegister(WrParamDly,0x1FD,parlen)
+    result = alct.ReadRegister(RdParamDly,0x1FD,parlen)
 
-    #with DelaysChart do
-    #    BottomAxis.Minimum  = 0
-    #    BottomAxis.Maximum  = 20
-    #    LeftAxis.Minimum  = 0
-    #    LeftAxis.Maximum  = 50*(0.000000001)
+    return(result)
 
-    #    PassCnt  =4
-    #    AddSeries(TBarSeries.Create(self))
-    #    AddSeries(TLineSeries.Create(self))
-    #    AddSeries(TBarSeries.Create(self))
-    #    AddSeries(TLineSeries.Create(self))
+def ALCTDisableInput(alcttype):
+    parlen = alct[alcttype].groups + 2
 
-    #    Series[0].Title  = 'Error shifts'
-    #    Series[1].Title  = 'Min shifts'
-    #    Series[2].Title  = 'Max shifts'
-    #    Series[3].Title  = 'Pulse shifts'
+    alct.WriteRegister(WrParamDly,0x1FF,parlen)
+    result = alct.ReadRegister(RdParamDly,0x1FD,parlen)
 
-    #    for i =0 to 15 do
-    #        Series[0].Add(ErrorDeltaDelay[i],'',clTeeColor)
-    #        Series[1].AddXY(i, MinDelay,'',clTeeColor)
-    #        Series[2].Add(Delay_Time[i],'',clTeeColor)
-    #        Series[3].AddXY(i, MaxDelay,'',clTeeColor)
+    return(result)
 
+def ReadFIFO(vals, numwords, cntrs, alcttype):
+    SetFIFOReset()
+    SetFIFOWrite()
+    FIFOClock()
+    SetFIFOReadWrite()
+    ALCTEnableInput(alcttype)
+
+    for i in range(numwords):
+        FIFOClock()                 # Clock FIFO
+        vals[i] = ReadFIFOValue()   # Read Bit from FIFO
+
+    cntstr=hex(ReadFIFOCounters())  # Convert int to string
+    cntstr = cntstr[2:]             # Cut off '0x'
+    cntstr = cntstr.zfill(32)       # Pad String with Zeroes
+    cntstr = cntstr[::-1]           # Reverse String
+
+    for i in range (16):
+        tmp = cntstr[:2]            # pick of first two hex digits
+        num = int(tmp,16)           # convert to int
+        cntstr = cntstr[2:]         # truncate string
+        cntrs[15-i] = num           # fill cntrs array
+
+def ReadFIFOfast(numwords, cntrs, alcttype):
+    SetFIFOReset()
+    SetFIFOWrite()
+    FIFOClock()
+    SetFIFOReadWrite()
+    ALCTEnableInput(alcttype)
+
+    jtag.WriteIR(WrFIFO,V_IR)        # FIFOClock
+    for i in range(numwords):
+        jtag.WriteDR(0x1,LengthOf[WrFIFO])     # FIFOClock
+
+    cntstr=hex(ReadFIFOCounters())  # Convert int to string
+    cntstr = cntstr[2:]             # Cut off '0x'
+    cntstr = cntstr.zfill(32)       # Pad String with Zeroes
+    cntstr = cntstr[::-1]           # Reverse String
+
+    for i in range (16):
+        tmp = cntstr[:2]            # pick of first two hex digits
+        num = int(tmp,16)           # convert to int
+        cntstr = cntstr[2:]         # truncate string
+        cntrs[15-i] = num           # fill cntrs array
 
 
 def SetDelayTest(fifoval, fifochan, startdelay=2, alctdelay=0x0000, testboarddelay=0, alcttype=0):
@@ -334,6 +180,9 @@ def SetDelayTest(fifoval, fifochan, startdelay=2, alctdelay=0x0000, testboarddel
     if debug: print('\t Writing delay=0x%04X to channel %i' %(alctdelay, fifochan))
     SetALCTBoardDelay(fifochan, alctdelay, alcttype)
 
+#-------------------------------------------------------------------------------
+# Tester Board Analysis Functions
+#-------------------------------------------------------------------------------
 
 def PinPointRiseTime(TimeR, FIFOvalue, ch, StartDly_R, alct_dly, num, alcttype):
     tb_dly              = 0
@@ -579,7 +428,7 @@ def FindStartDlyPin(FIFOvalue, ch, alct_dly, num, RegMaskDone, alcttype):
 def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, AverageDelay_Time, RegMaskDone, alcttype):
     MinWidth       = 30
     MaxWidth       = 45
-    FIFOvalue          = 0xFFFF
+    FIFOvalue      = 0xFFFF
     num            = 100
     ErrMeasDly     = 0
     PulseWidth_min = 0
@@ -656,182 +505,6 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
 
     return(ErrMeasDly)
 
-#------------------------------------------------------------------------------
-# Register Definitions
-#------------------------------------------------------------------------------
-
-RdDataReg           = MutableNamedTuple()
-RdDataReg.val       = 0x01
-RdDataReg.length    = 16
-
-RdCntReg            = MutableNamedTuple()
-RdCntReg.val        = 0x02
-RdCntReg.length     = 128
-
-WrDatF 	            = MutableNamedTuple()
-WrDatF.val          = 0x04
-WrDatF.length       = 16
-
-WrAddF 	            = MutableNamedTuple()
-WrAddF.val          = 0x06
-WrAddF.length       = 10
-
-WrParamF            = MutableNamedTuple()
-WrParamF.val        = 0x08
-WrParamF.length     = 4
-
-RdParamDly          = MutableNamedTuple()
-RdParamDly.val      = 0x15
-RdParamDly.length   = 6
-
-# Change for Different Boards!!
-WrParamDly          = MutableNamedTuple()
-WrParamDly.val      = 0x16
-WrParamDly.legnth   = 6
-
-WrDlyF              = MutableNamedTuple()
-WrDlyF.val          = 0x0B
-WrDlyF.length       = 8
-
-ALCTWdly            = MutableNamedTuple()
-ALCTWdly.val        = 0x0D
-ALCTWdly.length     = 120
-
-ALCTRdly            = MutableNamedTuple()
-ALCTRdly.val        = 0x0E
-ALCTRdly.length     = 120
-
-WrFIFO              = MutableNamedTuple()
-WrFIFO.val          = 0x0A
-WrFIFO.length       = 1
-
-################################################################################
-# Test Board FIFO Functions
-################################################################################
-
-def SetFIFOChannel(ch,startdly):
-    alct.WriteRegister(WrAddF.val, ch | startdly << 6, WrAddF.length)
-
-def SetFIFOMode(mode):
-    alct.WriteRegister(WrParamF.val, (0x8 | mode) & 0xF, WrParamF.length)
-
-def SetFIFOReset():
-    alct.WriteRegister(WrParamF.val,8,          WrParamF.length)
-    alct.WriteRegister(WrParamF.val,FIFO_RESET, WrParamF.length)
-    alct.WriteRegister(WrParamF.val,8,          WrParamF.length)
-
-def SetFIFOWrite():
-    alct.WriteRegister(WrParamF.val,FIFO_WRITE, WrParamF.length)
-
-def SetFIFORead():
-    alct.WriteRegister(WrParamF.val,FIFO_READ, WrParamF.length)
-
-def SetFIFOReadWrite():
-    alct.WriteRegister(WrParamF.val,FIFO_WRITE | FIFO_READ, WrParamF.length)
-
-def FIFOClock():
-    alct.WriteRegister(WrFIFO.val,0x1, WrFIFO.length)
-
-def ReadFIFOCounters():
-    jtag.WriteIR(RdCntReg.val, V_IR)
-    return(jtag.ReadDR(0x0,RdCntReg.length))
-
-def SetFIFOValue(val):
-    alct.WriteRegister(WrDatF.val,val, WrDatF.length)
-
-def SetTestBoardDelay(delay):
-    alct.WriteRegister(WrParamF.val, FIFO_RESET,                         WrParamF.length)
-    alct.WriteRegister(WrDlyF.val,   0xFF & FlipByte((255-delay) & 0xFF, WrDlyF.length)
-    alct.WriteRegister(WrParamF.val, 0x8,                                WrParamF.length)
-
-def SetALCTBoardDelay(ch, delay, alcttype):
-    #debug=True
-    DelayValue   = [0x0] * 6 # 6 delay chips in group
-    DelayPattern = [0x0] * 6 # 6 delay chips in group
-    DelayValue[ch % 6] = delay
-    if debug: print(DelayPattern)
-    if debug: print(DelayValue)
-    Write6DelayLines(DelayPattern, DelayValue, 1 << (ch // 6), alcttype)
-
-def SetTestBoardFIFO(fifoval, fifochan, numwords, startdelay, alctdelay, testboarddelay, alcttype):
-    numwords        = 1
-    startdelay      = 2
-    alctdelay       = 0
-    testboarddelay  = 0
-
-    SetFIFOReset()
-    SetFIFOChannel(fifochan, startdelay)
-    SetFIFOValue(fifoval)
-    SetTestBoardDelay(testboarddelay)
-    SetALCTBoardDelay(fifochan, alctdelay, alcttype)
-    SetFIFOWrite
-    for i in range(1,numwords+1):
-        FIFOClock
-
-def ReadFIFOValue():
-    jtag.WriteIR(RdDataReg.val, V_IR)
-    result = jtag.ReadDR(0,RdDataReg.length)
-    return(result)
-
-def ALCTEnableInput(alcttype):
-    parlen = alct[alcttype].groups + 2
-
-    alct.WriteRegister(WrParamDly.val,0x1FD,parlen)
-    result = alct.ReadRegister(RdParamDly.val,0x1FD,parlen)
-
-    return(result)
-
-def ALCTDisableInput(alcttype):
-    parlen = alct[alcttype].groups + 2
-
-    alct.WriteRegister(WrParamDly.val,0x1FF,parlen)
-    result = alct.ReadRegister(RdParamDly.val,0x1FD,parlen)
-
-    return(result)
-
-def ReadFIFO(vals, numwords, cntrs, alcttype):
-    SetFIFOReset()
-    SetFIFOWrite()
-    FIFOClock()
-    SetFIFOReadWrite()
-    ALCTEnableInput(alcttype)
-
-    for i in range(numwords):
-        FIFOClock()                 # Clock FIFO
-        vals[i] = ReadFIFOValue()   # Read Bit from FIFO
-
-    cntstr=hex(ReadFIFOCounters())  # Convert int to string
-    cntstr = cntstr[2:]             # Cut off '0x'
-    cntstr = cntstr.zfill(32)       # Pad String with Zeroes
-    cntstr = cntstr[::-1]           # Reverse String
-
-    for i in range (16):
-        tmp = cntstr[:2]            # pick of first two hex digits
-        num = int(tmp,16)           # convert to int
-        cntstr = cntstr[2:]         # truncate string
-        cntrs[15-i] = num           # fill cntrs array
-
-def ReadFIFOfast(numwords, cntrs, alcttype):
-    SetFIFOReset()
-    SetFIFOWrite()
-    FIFOClock()
-    SetFIFOReadWrite()
-    ALCTEnableInput(alcttype)
-
-    jtag.WriteIR(WrFIFO.val,V_IR)        # FIFOClock
-    for i in range(numwords):
-        jtag.WriteDR(0x1,WrFIFO.length)     # FIFOClock
-
-    cntstr=hex(ReadFIFOCounters())  # Convert int to string
-    cntstr = cntstr[2:]             # Cut off '0x'
-    cntstr = cntstr.zfill(32)       # Pad String with Zeroes
-    cntstr = cntstr[::-1]           # Reverse String
-
-    for i in range (16):
-        tmp = cntstr[:2]            # pick of first two hex digits
-        num = int(tmp,16)           # convert to int
-        cntstr = cntstr[2:]         # truncate string
-        cntrs[15-i] = num           # fill cntrs array
 
 #def PrepareDelayLinePatterns(dlys, image):
 #    for i in range (0,4):
@@ -865,6 +538,310 @@ def Write6DelayLines(DelayPattern, DelayValue, mask, alcttype):
 
     # Reset Delays 
     alct.WriteRegister(DelayCtrlWrite, 0x1FF, parlen)
+
+################################################################################
+# Full scan of single delay ASIC
+################################################################################
+def ChipDelayScan(chip, alcttype):
+    alct.SetChain(alct.arJTAGChains[3])
+    MinDelay            = 29
+    MaxDelay            = 35
+    num                 = 100       # number of words
+    FIFOvalue           = 0xFFFF    # FIFO Value
+    alct_dly            = 0
+    StartDly_R          = 0
+    StartDly_F          = 0
+    TimeR_0             = [0]*16    # test board delays
+    TimeF_0             = [0]*16    # test board delays
+    TimeR_15            = [0]*16    # test board delays
+    TimeF_15            = [0]*16    # test board delays
+    PulseWidth_0        = [0]*16    # pulse widths
+    PulseWidth_15       = [0]*16    # pulse widths
+    DelayTimeR_0        = [0]*16    # pulse shifts
+    DelayTimeF_0        = [0]*16    # pulse shifts
+    DelayTimeR_15       = [0]*16    # pulse shifts
+    DelayTimeF_15       = [0]*16    # pulse shifts
+    DelayTimeR_50       = [0]*16    # pulse shifts
+    DelayTimeF_50       = [0]*16    # pulse shifts
+    Delay_Time          = [0]*16    # pulse shifts
+    DeltaBeginTime      = [0]*16
+    ErrorDeltaDelay     = 0
+
+    print('========================================')
+    print('Running Chip Delay Scan on Chip %i'% chip)
+    print('Ensure Clock Select Switch is Set to 2/3')
+    print('Load test firmware')
+    print('Connect delays test board to ALCT')
+    print('========================================')
+    k = input("<cr> to continue when ready.")
+
+    # Pinpoint rise/fall times for ALCT delay of 0
+
+    alct_dly = 0
+
+    (FoundTimeBin, StartDly_R, StartDly_F) = FindStartDly(FIFOvalue, chip, alct_dly, num, alcttype)
+
+    if FoundTimeBin:
+        print('Found Start Delay Pulse on Chip #%i with alct delay of 0' % chip)
+        print('\t StartDly_R=%i StartDly_F=%i' % (StartDly_R,StartDly_F))
+        PinPointRiseTime(TimeR_0, FIFOvalue, chip, StartDly_R, alct_dly, num, alcttype)
+        PinPointFallTime(TimeF_0, FIFOvalue, chip, StartDly_F, alct_dly, num, alcttype)
+        print(TimeF_0)
+    else:
+        print('\t ERROR: With alct_dly=0, Cannot find StartDly pulse on Chip: %i' % chip)
+
+
+    MinDelayTimeR_0 = StartDly_R*25 + 255*0.25
+
+    for i in range(16):
+        if (FIFOvalue & (1 << i)) > 0:
+            DelayTimeR_0[i]  = StartDly_R*25 + TimeR_0[i]*0.25
+            if MinDelayTimeR_0 > DelayTimeR_0[i]:
+                MinDelayTimeR_0 = DelayTimeR_0[i]
+    print('Rise times with ALCT_delay = 0 on Chip #%i = %.02f ns' % (chip, MinDelayTimeR_0))
+
+    for i in range(16):
+        DeltaBeginTime[i] = DelayTimeR_0[i] - MinDelayTimeR_0
+        print('\t chn #%02i DeltaBeginTime=%.02f ns DelayTime0=%.02f ns DelayTime50=%.02f ns)' %  (i,DeltaBeginTime[i],DelayTimeR_0[i],DelayTimeR_50[i]))
+
+    print('Fall times with ALCT delay 0 on Chip #%i' % chip)
+    for i in range(16):
+        if ((FIFOvalue & (1 << i))>0):
+            DelayTimeF_0[i]  = (StartDly_F-1)*25 + TimeF_0[i]*0.25
+            if DelayTimeF_0[i] < 0: DelayTimeF_0[i]=0
+            print('\t chn #%02i = %.02f ns' % (i,  DelayTimeF_0[i]))
+
+    #Pinpoint rise/fall times for ALCT delay of 15
+    alct_dly = 15
+    (FoundTimeBin, StartDly_R, StartDly_F) = FindStartDly(FIFOvalue, chip, alct_dly, num,alcttype)
+    if FoundTimeBin:
+        print('Found Delay Pulse on Chip #%i with ALCT Delay=15' % chip)
+        print('\tStartDly_rise=%i StartDly_fall=%i' % (StartDly_R,StartDly_F))
+
+        PinPointRiseTime(TimeR_15, FIFOvalue, chip, StartDly_R, alct_dly, num, alcttype)
+        PinPointFallTime(TimeF_15, FIFOvalue, chip, StartDly_F, alct_dly, num, alcttype)
+    else:
+        print('With alct_dly=15, Cannot find StartDly pulse on Chip: %i' % chip)
+
+    print('Rise Times with ALCT delay=15 on Chip #%i' % chip)
+    for i in range(16):
+        if (FIFOvalue & (1 << i)) > 0:
+            DelayTimeR_15[i]  = StartDly_R*25 + TimeR_15[i]*0.25
+            print('\t chn #%02i = %.02f ns' % (i,  DelayTimeR_15[i]))
+
+    print('Fall Times with ALCT delay=15 on Chip #%i' % chip)
+    for i in range(16):
+        if (FIFOvalue & (1 << i)) > 0:
+            DelayTimeF_15[i]  = StartDly_F*25 + TimeF_15[i]*0.25
+            print('\t chn #%02i = %.02f ns' % (i,  DelayTimeF_15[i]))
+
+    print('Pulse widths with ALCT delay=15 on Chip #%i' % chip)
+    for i in range(16):
+        PulseWidth_0[i]  = DelayTimeF_0[i] - DelayTimeR_0[i]
+        if (PulseWidth_0[i]<0): PulseWidth_0[i]=0
+        print('\t chn #%02i = %.02f ns' % (i,  PulseWidth_0[i]))
+
+    print('Pulse shifts on Chip #%i' % chip)
+    for i in range(16):
+        Delay_Time[i]  = DelayTimeR_15[i] - DelayTimeR_0[i]
+        print('\t chn #%02i = %.02f ns' % (i,  Delay_Time[i]))
+        if ((Delay_Time[i] < MinDelay) or (Delay_Time[i] > MaxDelay)):
+            ErrorDeltaDelay = Delay_Time[i]
+
+    #with DelaysChart do
+    #    BottomAxis.Minimum  = 0
+    #    BottomAxis.Maximum  = 20
+    #    LeftAxis.Minimum  = 0
+    #    LeftAxis.Maximum  = 50*(0.000000001)
+
+    #    PassCnt  =4
+    #    AddSeries(TBarSeries.Create(self))
+    #    AddSeries(TLineSeries.Create(self))
+    #    AddSeries(TBarSeries.Create(self))
+    #    AddSeries(TLineSeries.Create(self))
+
+    #    Series[0].Title  = 'Error shifts'
+    #    Series[1].Title  = 'Min shifts'
+    #    Series[2].Title  = 'Max shifts'
+    #    Series[3].Title  = 'Pulse shifts'
+
+    #    for i =0 to 15 do
+    #        Series[0].Add(ErrorDeltaDelay[i],'',clTeeColor)
+    #        Series[1].AddXY(i, MinDelay,'',clTeeColor)
+    #        Series[2].Add(Delay_Time[i],'',clTeeColor)
+    #        Series[3].AddXY(i, MaxDelay,'',clTeeColor)
+
+
+
+
+#-------------------------------------------------------------------------------
+# Automatic Check of Delay ASIC delays
+#-------------------------------------------------------------------------------
+def TestboardDelaysCheck(alcttype):
+    NUM_AFEB = alct[alcttype].groups * 6
+    #ch, i, j, k, l, ErrMeasDly, count: integer
+    #MinDelay, MaxDelay, MaxDeltaDelay, MaxDeltaBegin: single
+    #DeltaDelay, PulseWidth: array[0..15] of Currency
+    #BeginTime_Min, AverageDelay_Time, DeltaDelay_Max, ErrorDeltaDelay: MeasDly
+    #DeltaBegin_Max: MeasDly
+    #DeltaBeginTime, Delay_Time: MeasDlyChan
+    #ErrDelayTest: boolean
+    #BoardNum: integer
+    #PathString, PinErrors: string//Zach
+    #RegMaskDone: array[0..41] of word
+
+    alct.SetChain(alct.arJTAGChains[3])
+    ErrDelayTest    = False
+    MaxDeltaBegin   = 2
+    MaxDeltaDelay   = 2
+    MinDelay        = 25
+    MaxDelay        = 35
+    ErrMeasDly      = 0
+
+    # These are initializing 16 entry arrays of zeroes
+    TimeR_0             = [0]*16    # test board delays
+    TimeF_0             = [0]*16    # test board delays
+    TimeR_15            = [0]*16    # test board delays
+    TimeF_15            = [0]*16    # test board delays
+    PulseWidth_0        = [0]*16    # pulse widths
+    PulseWidth_15       = [0]*16    # pulse widths
+    DelayTimeR_0        = [0]*16    # pulse shifts
+    DelayTimeF_0        = [0]*16    # pulse shifts
+    DelayTimeR_15       = [0]*16    # pulse shifts
+    DelayTimeF_15       = [0]*16    # pulse shifts
+    DelayTimeR_50       = [0]*16    # pulse shifts
+    DelayTimeF_50       = [0]*16    # pulse shifts
+    Delay_Time          = [0]*16    # pulse shifts
+
+    # This is initializing a NUM_AFEB sized array of zeroes
+    ErrorDeltaDelay     = [0] * NUM_AFEB  
+    BeginTime_Min       = [0] * NUM_AFEB
+    AverageDelay_Time   = [0] * NUM_AFEB
+    BeginTime_Min       = [0] * NUM_AFEB
+    RegMaskDone         = [0] * NUM_AFEB
+    DeltaBegin_Max      = [0] * NUM_AFEB
+    DeltaDelay_Max      = [0] * NUM_AFEB
+    DeltaDelay          = [0] * NUM_AFEB
+    DeltaBegin_Min      = [0] * NUM_AFEB
+    PulseWidth          = [0] * 16
+
+    # Two dimensional arrays, 16xNUM_AFEB, filled with zeroes
+    DeltaBeginTime      = [[0 for i in range(16)] for j in range(NUM_AFEB)]
+    Delay_Time          = [[0 for i in range(16)] for j in range(NUM_AFEB)]
+
+    print('Make Sure Large Tester Board is Connected')
+    print('Make Sure Test Firmware is Loaded')
+
+    k = input("<cr> to continue when ready.")
+
+    print('\nRunning Delays Test on ALCT Board')
+
+    for chip in range(NUM_AFEB):
+        print("\t Measuring Delays for AFEB #%i" % chip)
+        count=0
+        ErrMeasDly = MeasureDelay(chip, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, AverageDelay_Time, RegMaskDone, alcttype)
+        DeltaBegin_Max[chip] = 0
+        DeltaDelay_Max[chip] = 0
+
+        for i in range(16):
+            if (DeltaBeginTime[chip][i] > DeltaBegin_Max[chip]):
+                DeltaBegin_Max[chip] = DeltaBeginTime[chip][i]
+
+            DeltaDelay[i] = abs(Delay_Time[chip][i] - AverageDelay_Time[chip])
+
+            if (DeltaDelay[i] > DeltaDelay_Max[chip]):
+                DeltaDelay_Max[chip] = DeltaDelay[i]
+
+        if (DeltaBegin_Max[chip] > MaxDeltaBegin):
+            ErrMeasDly = ErrMeasDly | 0x10
+        if (DeltaDelay_Max[chip] > MaxDeltaDelay):
+            ErrMeasDly = ErrMeasDly | 0x20
+
+        if (ErrMeasDly != 0):
+            ErrDelayTest = True
+            for i in range(6):
+                if (ErrMeasDly & (1 << i)) > 0:
+                    k = i
+                    #break
+                    if k==0:
+                        print('\t ERROR: Cannot find StartDly_0 on Chip #%i' % chip)
+                        ErrDelayTest+=1
+                        if (RegMaskDone[chip]==0):
+                            print('All Pins Failed')
+                        else:
+                            PinErrors  ='   Pin(s): '
+                            for j in range(16):
+                                if ((RegMaskDone[chip] & (1 << j))==0):
+                                    if (count==0):
+                                        PinErrors = PinErrors + str(j)
+                                    else:
+                                        PinErrors  = PinErrors + ', ' + str(j)
+                                    count  = count+1
+                            PinErrors  = PinErrors + ' bad'
+                            print(PinErrors)
+
+                    if k==1:
+                        print('\t ERROR: Cannot find StartDly_15 on Chip: %i' % chip)
+                        ErrDelayTest+=1
+                    if k==2:
+                        for l in range(16):
+                            if (PulseWidth[l] < 30):
+                                print('\t ERROR: Chip=%i Pin=%i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
+                                ErrDelayTest+=1
+                    if k==3:
+                        for l in range(16):
+                            if (PulseWidth[l] > 45):
+                                print('\t ERROR: Chip=%i Pin=%i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
+                                ErrDelayTest+=1
+
+                    if k==4:
+                        print('\t ERROR: Chip=%i DeltaBeginTime=%.02f ns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
+                        ErrDelayTest+=1
+                    if k==5:
+                        print('\t ERROR: Chip=%i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
+                        ErrDelayTest+=1
+
+        if (AverageDelay_Time[chip] < MinDelay) or (AverageDelay_Time[chip] > MaxDelay) :
+            ErrorDeltaDelay[chip] = AverageDelay_Time[chip]
+            if (AverageDelay_Time[chip] < MinDelay):
+                print('\t ERROR: Chip %02i Average Delay=%.2f ns is less than %.02f' % (chip,AverageDelay_Time[chip],MinDelay))
+                ErrDelayTest+=1
+            elif (AverageDelay_Time[chip] > MaxDelay):
+                print('\t ERROR: Chip %02i Average Delay=%.2f ns is more than %.02f' % (chip,AverageDelay_Time[chip],MaxDelay))
+                ErrDelayTest+=1
+        else:
+            print('\t Chip %i Average Delay=%.2f ns ref=%.02f' % (chip,AverageDelay_Time[chip],(MaxDelay+MinDelay)/2.0))
+
+    if (ErrDelayTest==0):
+        print('\t ===> Delays Test Passed without Error')
+    else:
+        print('\t ===> Delays Test Failed with %i Errors' % ErrDelayTest)
+
+    #with DelaysChart do
+    #    Title.Text.Clear
+    #    Title.Text.Add('Test of Delays for ALCT # '+IntToStr(ch))
+    #    RemoveAllSeries
+    #    BottomAxis.Minimum  = 0
+    #    BottomAxis.Maximum  = 20
+    #    LeftAxis.Minimum  = 0
+    #    LeftAxis.Maximum  = 50*(0.000000001)
+
+    #    AddSeries(TBarSeries.Create(self))
+    #    AddSeries(TLineSeries.Create(self))
+    #    AddSeries(TBarSeries.Create(self))
+    #    AddSeries(TLineSeries.Create(self))
+
+    #    Series[0].Title  = 'Error Delay'
+    #    Series[1].Title  = 'Min Delay'
+    #    Series[2].Title  = 'DelayAverage'
+    #    Series[3].Title  = 'Max Delay '
+
+    #    for i =0 to NUM_AFEB-1 do
+    #        Series[0].Add(ErrorDeltaDelay[i],'',clTeeColor)
+    #        Series[1].AddXY(i, MinDelay,'',clTeeColor)
+    #        Series[2].Add(AverageDelay_Time[i],'',clTeeColor)
+    #        Series[3].AddXY(i, MaxDelay,'',clTeeColor)
+
 
 #------------------------------------------------------------------------------
 # Subtest Menu
