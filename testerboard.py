@@ -710,54 +710,39 @@ WrFIFO.length       = 1
 ################################################################################
 
 def SetFIFOChannel(ch,startdly):
-    jtag.WriteIR(WrAddF.val, V_IR)
-    jtag.WriteDR( ch | startdly << 6, WrAddF.length)
+    alct.WriteRegister(WrAddF.val, ch | startdly << 6, WrAddF.length)
 
 def SetFIFOMode(mode):
-    jtag.WriteIR(WrParamF.val, V_IR)
-    jtag.WriteDR((0x8 | mode) & 0xF, WrParamF.length)
+    alct.WriteRegister(WrParamF.val, (0x8 | mode) & 0xF, WrParamF.length)
 
 def SetFIFOReset():
-    jtag.WriteIR(WrParamF.val, V_IR)
-    jtag.WriteDR(8,WrParamF.length)
-    jtag.WriteIR(WrParamF.val, V_IR)
-    jtag.WriteDR(FIFO_RESET,WrParamF.length)
-    jtag.WriteIR(WrParamF.val, V_IR)
-    jtag.WriteDR(8,WrParamF.length)
+    alct.WriteRegister(WrParamF.val,8,          WrParamF.length)
+    alct.WriteRegister(WrParamF.val,FIFO_RESET, WrParamF.length)
+    alct.WriteRegister(WrParamF.val,8,          WrParamF.length)
 
 def SetFIFOWrite():
-    jtag.WriteIR(WrParamF.val, V_IR)
-    jtag.WriteDR(FIFO_WRITE,WrParamF.length)
+    alct.WriteRegister(WrParamF.val,FIFO_WRITE, WrParamF.length)
 
 def SetFIFORead():
-    jtag.WriteIR(WrParamF.val, V_IR)
-    jtag.WriteDR(FIFO_READ,WrParamF.length)
+    alct.WriteRegister(WrParamF.val,FIFO_READ, WrParamF.length)
 
 def SetFIFOReadWrite():
-    jtag.WriteIR(WrParamF.val, V_IR)
-    jtag.WriteDR(FIFO_WRITE | FIFO_READ,WrParamF.length)
+    alct.WriteRegister(WrParamF.val,FIFO_WRITE | FIFO_READ, WrParamF.length)
 
 def FIFOClock():
-    jtag.WriteIR(WrFIFO.val, V_IR)
-    jtag.WriteDR(0x1,WrFIFO.length)
+    alct.WriteRegister(WrFIFO.val,0x1, WrFIFO.length)
 
 def ReadFIFOCounters():
     jtag.WriteIR(RdCntReg.val, V_IR)
     return(jtag.ReadDR(0x0,RdCntReg.length))
 
 def SetFIFOValue(val):
-    jtag.WriteIR(WrDatF.val, V_IR)
-    jtag.WriteDR(val,WrDatF.length)
+    alct.WriteRegister(WrDatF.val,val, WrDatF.length)
 
 def SetTestBoardDelay(delay):
-    jtag.WriteIR(WrParamF.val, V_IR)
-    jtag.WriteDR(FIFO_RESET,WrParamF.length)
-
-    jtag.WriteIR(WrDlyF.val, V_IR)
-    jtag.WriteDR(0xFF & FlipByte((255-delay) & 0xFF), WrDlyF.length)
-
-    jtag.WriteIR(WrParamF.val, V_IR)
-    jtag.WriteDR(0x8,WrParamF.length)
+    alct.WriteRegister(WrParamF.val, FIFO_RESET,                         WrParamF.length)
+    alct.WriteRegister(WrDlyF.val,   0xFF & FlipByte((255-delay) & 0xFF, WrDlyF.length)
+    alct.WriteRegister(WrParamF.val, 0x8,                                WrParamF.length)
 
 def SetALCTBoardDelay(ch, delay, alcttype):
     #debug=True
@@ -790,18 +775,18 @@ def ReadFIFOValue():
 
 def ALCTEnableInput(alcttype):
     parlen = alct[alcttype].groups + 2
-    jtag.WriteIR(WrParamDly.val, V_IR)
-    jtag.WriteDR(0x1FD,parlen)
-    jtag.WriteIR(RdParamDly.val, V_IR)
-    result = jtag.ReadDR(0, parlen)
+
+    alct.WriteRegister(WrParamDly.val,0x1FD,parlen)
+    result = alct.ReadRegister(RdParamDly.val,0x1FD,parlen)
+
     return(result)
 
 def ALCTDisableInput(alcttype):
     parlen = alct[alcttype].groups + 2
-    jtag.WriteIR(WrParamDly.val, V_IR)
-    jtag.WriteDR(0x1FF,parlen)
-    jtag.WriteIR(RdParamDly.val, V_IR)
-    result = jtag.ReadDR(0, parlen)
+
+    alct.WriteRegister(WrParamDly.val,0x1FF,parlen)
+    result = alct.ReadRegister(RdParamDly.val,0x1FD,parlen)
+
     return(result)
 
 def ReadFIFO(vals, numwords, cntrs, alcttype):
@@ -863,26 +848,23 @@ def Write6DelayLines(DelayPattern, DelayValue, mask, alcttype):
     alct.SetChain(VIRTEX_CONTROL)
     parlen = alct[alcttype].groups + 2
 
-    jtag.WriteIR(DelayCtrlWrite, V_IR)
-    jtag.WriteDR(0x1FF & (~(mask << 2)), parlen)
+    # Reset Delays 
+    alct.WriteRegister(DelayCtrlWrite, 0x1FF & (~(mask << 2)), parlen)
+    alct.ReadRegister (DelayCtrlRead, parlen)
 
-    jtag.WriteIR(DelayCtrlRead, V_IR)
-    jtag.ReadDR(0x0, parlen)
-
+    # Start JTAG data shift to write Delay Batterns
     jtag.WriteIR(Wdly, V_IR)
-
     jtag.StartDRShift()
-
     for i in range(6):
         ShiftData(FlipHalfByte(DelayValue[i]), 4, False)
         if i==5:
             ShiftData(DelayPattern[i], 16, True)
         else:
             ShiftData(DelayPattern[i], 16, False)
-
     jtag.ExitDRShift()
-    jtag.WriteIR(DelayCtrlWrite, V_IR)
-    jtag.WriteDR(0x1FF, parlen)
+
+    # Reset Delays 
+    alct.WriteRegister(DelayCtrlWrite, 0x1FF, parlen)
 
 #------------------------------------------------------------------------------
 # Subtest Menu
