@@ -15,11 +15,11 @@ import lptjtaglib
 IR_REG = 0
 DR_REG = 1
 
-def open_jtag():
-    lptjtaglib.openLPTJTAG()
-
-def close_jtag():
-    lptjtaglib.closeLPTJTAG()
+#def open_jtag():
+#    lptjtaglib.openLPTJTAG()
+#
+#def close_jtag():
+#    lptjtaglib.closeLPTJTAG()
 
 def set_chain(Chan):
     lptjtaglib.setchainLPTJTAG(Chan)
@@ -91,7 +91,7 @@ def ReadDR(DR, DRSize):
     DR = IOExchange(DR, DRSize, DR_REG)
     return(DR)
 
-# Shift Data into JTAG Register
+# Shift Data into JTAG Register, bit-by-bit
 def ShiftData(Data, DataSize, sendtms):
     result = 0
 
@@ -102,25 +102,28 @@ def ShiftData(Data, DataSize, sendtms):
 
     # Quit if data is too large
     if (DataSize < 0 or DataSize >32):
-        print("ERROR: Attempted to shift invalid sized data.")
+        print("ERROR: Attempted to shift too large of data (>32 bits at a time).")
         sys.exit()
 
     for i in range(1,DataSize+1):
 
-        #set TMS value
+        # TMS should get HIGH on the last bit of the last byte of an instruction
+        # Otherwise it should be LOW
         if (sendtms) and (i==DataSize):
-           tms = 0x1
+            tms = 0x1
         else:
-            tms = 0x00
+            tms = 0x0
+
         #set TDI value
         tdi = Data & (0x1)
 
         #write data
         tdo=jtag_io(tms, tdi)
 
-        #Shift out one bit
+        #Throw out that bit
         Data = Data >> 1
 
+        #Read in TDO
         result = result | ((tdo & 0x01) << (i-1))
 
     return(result)
@@ -131,15 +134,17 @@ def ShiftData(Data, DataSize, sendtms):
 #-------------------------------------------------------------------------------
 def IOExchange(Send, DataSize, RegType):
     if (DataSize is None) or (Send is None):
-        print("ERROR: Invalid data. Error reading or board disconnected!")
+        print("ERROR: attempting to write nothing to IOExchange")
         sys.exit()
 
-    # We shift in 8 bit words
+    # We can write 8 bits at a time
     ChunkSize   = 8
 
     # Number of words needed to shift entire data
-    nChunks     = ( abs(DataSize-1)//ChunkSize) + 1
+    nChunks     = (abs(DataSize-1)//ChunkSize) + 1
 
+    # instruction register or data register? 
+    # initiate data shift
     if (RegType == IR_REG):
         StartIRShift()
     elif (RegType == DR_REG):
@@ -147,18 +152,30 @@ def IOExchange(Send, DataSize, RegType):
 
     Recv=0 # Received Data (reconstructed Full-packet)
     tdo =0 # Test data out (byte-by-byte)
+
+    # this whole loop can be simplified a lot.. e.g. this seems it should have the same behavior 
+    # but need to test to be sure
+    #for i in range(nChunks):
+    #    if i==nChunks-1: 
+    #        tdo = 0xFF & ShiftData(0xFF & (Send >> 8*i), DataSize - ChunkSize*i, True)
+    #    else: 
+    #        tdo = 0xFF & ShiftData(0xFF & (Send >> 8*i), ChunkSize,              False)
+    #    Recv = Recv | tdo << (8*i)
+
     for i in range(nChunks):
-        #print("nchunks loop = %i" % i)
-        if (DataSize > ChunkSize*i):
+        if (DataSize > ChunkSize*i):  # i don't think this "if" is needed
+            # not the last byte sent
             if (DataSize - ChunkSize*i) > ChunkSize:
-                tdo = 0xFF & ShiftData(0xFF & (Send >> 8*i), ChunkSize, False)
+                tdo = 0xFF & ShiftData(0xFF & (Send >> 8*i), ChunkSize,              False)
+            # the last byte sent needs to have a TMS sent with it
             else:
                 tdo = 0xFF & ShiftData(0xFF & (Send >> 8*i), DataSize - ChunkSize*i, True)
 
         Recv = Recv | tdo << (8*i)
 
-    if RegType == IR_REG:
+    if   (RegType == IR_REG):
         ExitIRShift()
-    else:
+    elif (RegType == DR_REG):
         ExitDRShift()
+
     return (Recv)

@@ -48,12 +48,11 @@ def SetDelayLines(cs, patterns, delays, alcttype):
 
     for group in range (alct.alct[alcttype].groups):
         if ((cs & 0x7F) & (0x1 << group)) > 0:
-            dr = 0x1FF & (~((cs & (0x1 << group)) << 2) )
+            data = 0x1FF & (~((cs & (0x1 << group)) << 2) )
 
-            jtag.WriteIR(alct.DelayCtrlWrite, V_IR)
-            jtag.WriteDR(dr, parlen)
+            alct.WriteRegister(alct.DelayCtrlWrite,data,parlen)
+            jtag.WriteIR(alct.Wdly, alct.V_IR)
 
-            jtag.WriteIR(alct.Wdly, V_IR)
             jtag.StartDRShift()
 
             for j in range(6):
@@ -72,8 +71,7 @@ def SetDelayLines(cs, patterns, delays, alcttype):
 
             jtag.ExitDRShift()
 
-            jtag.WriteIR(alct.DelayCtrlWrite, V_IR)
-            jtag.WriteDR(0x1FF, parlen)
+            alct.WriteRegister(alct.DelayCtrlWrite,0x1FF,parlen)
 
 # Returns Array of  Delay Chip Patterns read from Board
 def ReadPatterns(pattern,alcttype):
@@ -110,10 +108,9 @@ def ReadPatterns(pattern,alcttype):
     #       ABCD EFGH IJKL MNOP QRST UVWX YZ12 3456 7890 (truncated)
     #------------------------------------------------------------------------------
 
-    jtag.WriteIR(0x11,   V_IR)
-    jtag.WriteDR(0x4001, 16)         # Enable Patterns from DelayChips into 384 bits ALCT Register
+    alct.WriteRegister(0x11, 0x4001, 16)  # Enable Patterns from DelayChips into 384 bits ALCT Register
 
-    jtag.WriteIR(0x10,   V_IR)       # Send 384 bits ALCT Register to PC via JTAG
+    jtag.WriteIR(0x10,   alct.V_IR)       # Send 384 bits ALCT Register to PC via JTAG
     DR = jtag.ReadDR(DR,Wires)
     DR=DR & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
@@ -199,11 +196,7 @@ def Walking1(alcttype):
     alct.SetChain(alct.VIRTEX_CONTROL)
 
     for bit in range(Wires):
-        output = "\t Checking bit %i of %i" % (bit, Wires)
-        common.Printer(output)
-
-        jtag.WriteIR(0x11,   V_IR)
-        jtag.WriteDR(0x4000, 16)
+        alct.WriteRegister(0x11,0x4000,16)
 
         for i in range(alct.alct[alcttype].groups):
             for j in range(alct.alct[alcttype].chips):
@@ -218,8 +211,7 @@ def Walking1(alcttype):
         ErrOnePass = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
         Errs = Errs + ErrOnePass
         if (ErrOnePass > 0):
-            print("\n\t Test found %i errors!" % (ErrOnePass))
-            print("\t Possibly problem with Chip #%i Channel %i" % (bit//16+1, bit+1))
+            print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
         #PrintPatterns(alcttype, SendPtrns, ReadPtrns)
 
     # Fini
@@ -241,11 +233,7 @@ def Walking0(alcttype):
     alct.SetChain(alct.VIRTEX_CONTROL)
 
     for bit in range (Wires):
-        output = "\t Checking bit %i of %i" % (bit+1, Wires)
-        common.Printer(output)
-
-        jtag.WriteIR(0x11,   V_IR)
-        jtag.WriteDR(0x4000, 16)
+        alct.WriteRegister(0x11,0x4000,0x16)
 
         for i in range (alct.alct[alcttype].groups):
             for j in range(alct.alct[alcttype].chips):
@@ -260,9 +248,8 @@ def Walking0(alcttype):
 
         ErrOnePass  = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
         Errs        = Errs + ErrOnePass
-        if ErrOnePass > 0:
-            print("\n\t Test found %i errors!" % (ErrOnePass))
-            print("\t Possibly problem with Chip #%i Channel %i" % ((bit//16)+1, bit+1))
+        if (ErrOnePass > 0):
+            print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
 
     # Fini
     print('\n\t ===> Walking 0 Test Finished with %i Errors ' % Errs)
@@ -291,11 +278,7 @@ def Filling1(alcttype):
     SetDelayLines(0xF,SendPtrns,SendValues,alcttype)
 
     for bit in range (Wires):
-        jtag.WriteIR(0x11    , V_IR)
-        jtag.WriteDR(0x4000  , 16)
-
-        output = "\tChecking bit %i of %i" % (bit, Wires)
-        common.Printer(output)
+        alct.WriteRegister(0x11,0x4000,0x16)
 
         for i in range(alct.alct[alcttype].groups):
             for j in range(alct.alct[alcttype].chips):
@@ -309,9 +292,8 @@ def Filling1(alcttype):
 
         ErrOnePass = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
         Errs       = Errs + ErrOnePass
-        if ErrOnePass > 0:
-            print("\n\t Test found %i errors!" % (ErrOnePass))
-            print("\t Possibly problem with Chip #%i Channel %i" % (bit//16+1, bit+1))
+        if (ErrOnePass > 0):
+            print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
     # Fini
     print('\n\t ===> Filling by 1s Test Finished with %i Errors ' % Errs)
 
@@ -339,11 +321,7 @@ def Filling0(alcttype):
     SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
 
     for bit in range(Wires):
-        output = "\t Checking bit %i of %i" % (bit+1, Wires)
-        common.Printer(output)
-
-        jtag.WriteIR(0x11, V_IR)
-        jtag.WriteDR(0x4000, 16)
+        alct.WriteRegister(0x11,0x4000,0x16)
 
         for i in range(alct.alct[alcttype].groups):
             for j in range(alct.alct[alcttype].chips):
@@ -357,9 +335,8 @@ def Filling0(alcttype):
 
         ErrOnePass = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
         Errs       = Errs + ErrOnePass
-        if ErrOnePass > 0:
-            print("\n\t Test found %i errors!" % (ErrOnePass))
-            print("\t Possibly problem with Chip #%i Channel %i" % (bit//16+1, bit+1))
+        if (ErrOnePass > 0):
+            print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
 
     # Fini
     print('\n\t ===> Filling by 0s Test Finished with %i Errors ' % Errs)
@@ -379,37 +356,43 @@ def Shifting5andA(alcttype):
 
     print('Shifting 5 and A Test')
 
-    alct.SetChain(VIRTEX_CONTROL)
+    alct.SetChain(alct.VIRTEX_CONTROL)
     for p in range(npasses):
         time.sleep(.2)  # DO NOT TAKE THIS SLEEP OUT
                         # The delay chips cannot handle Shifting too fast
                         # (causes overcurrent on the board, esp. ALCT-672)
 
-        output = "\tPass %i of %i" % (p+1, npasses)
-        common.Printer(output)
+        print ("\t Pass %2i of %2i" % (p+1, npasses))
 
-        jtag.WriteIR(0x11    , V_IR)
-        jtag.WriteDR(0x4000  , 16)
+        alct.WriteRegister(0x11,0x4000,0x16)
 
         for i in range(alct.alct[alcttype].groups):
             for j in range(alct.alct[alcttype].chips):
-                SendValues[i][j]        = 0
+                SendValues[i][j]        = 0     # delay value to set
                 if ((p+1) % 2)==1:
-                    SendPtrns[i][j] = 0x5555
+                    SendPtrns[i][j] = 0x5555    # delay pattern to set even/odd
                 else:
-                    SendPtrns[i][j] = 0xAAAA
+                    SendPtrns[i][j] = 0xAAAA    # delay pattern to set even/odd
 
-                ReadValues[i][j]        = 0
-                ReadPtrns[i][j]         = 0
+                ReadValues[i][j]        = 0     # reset read value
+                ReadPtrns[i][j]         = 0     # reset read pattern
 
-            SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
-            ReadPatterns(ReadPtrns,alcttype)
+            SetDelayLines(0xF, SendPtrns, SendValues, alcttype) # write delay patterns/values
+            ReadPatterns(ReadPtrns,alcttype)             # read delay patterns
             ErrOnePass      = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
             Errs            = Errs + ErrOnePass
-            if ErrOnePass > 0:
-                print("\n\t Test found %i errors!" % (ErrOnePass))
-                #print("\t Possibly problem with Chip #%i of Group %i" % (j, i))
 
+            # Generate a hexdecimal formatted string of the read/write patterns
+            read = "0x"
+            send = "0x"
+            for j in range(alct.alct[alcttype].chips): 
+                read = read + format(ReadPtrns[i][j],'04X')
+                send = send + format(SendPtrns[i][j],'04X')
+
+            if ErrOnePass > 0:
+                print("\t\t Error in group %i: Write=%s, Read=%s " % (i, send, read))
+            else: 
+                print("\t\t ====> Pass") 
 
     # Reset Delay Chips (returns Current to normal values
     for i in range(alct.alct[alcttype].groups):
@@ -437,17 +420,15 @@ def RandomData(alcttype):
 
     print('Random Data Test')
 
-    alct.SetChain(VIRTEX_CONTROL)
+    alct.SetChain(alct.VIRTEX_CONTROL)
 
     random.seed()
 
     for p in range(npasses):
         time.sleep(0.1)
-        output = "\t Pass %i of %i" % (p+1, npasses)
-        common.Printer(output)
+        print ("\t Pass %i of %i" % (p+1, npasses))
 
-        jtag.WriteIR(0x11  , V_IR)
-        jtag.WriteDR(0x4000, 16)
+        alct.WriteRegister(0x11,0x4000,0x16)
 
         for i in range(alct.alct[alcttype].groups):
             for j in range(alct.alct[alcttype].chips):
@@ -461,9 +442,20 @@ def RandomData(alcttype):
         ReadPatterns(ReadPtrns,alcttype)
         ErrOnePass = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
         Errs       = Errs + ErrOnePass
+
+        # Generate a hexdecimal formatted string of the read/write patterns
+        read = "0x"
+        send = "0x"
+        for j in range(alct.alct[alcttype].chips): 
+            read = read + format(ReadPtrns[i][j],'04X')
+            send = send + format(SendPtrns[i][j],'04X')
+
+        # If error, print pattern
         if ErrOnePass > 0:
-            print("\n\t Test found %i errors!" % (ErrOnePass))
-            #print("\t Possibly problem with Chip #%i Channel %i" % (bit//16 + 1, bit+1))
+            print("\t\t Error in group %i: Write=%s, Read=%s " % (i, send, read))
+        else: 
+            print("\t\t ====> Pass") 
+
 
     # Reset Delay Chips (returns Current to normal values
     for i in range(alct.alct[alcttype].groups):
@@ -517,8 +509,7 @@ def RandomData(alcttype):
 #    0..3:  if not (FTestForm.FindComponent('DG'+IntToStr(p div (alct.alct[alcttype].chips * ALCTBoard.delaylines))) as TCheckBox).Checked then
 #            continue
 #
-#    jtag.WriteIR('11', V_IR)
-#    WRiteDR('4000', 16)
+#    alct.WriteRegister(0x11,0x4000,0x16)
 #
 #        for i = 0 to alct.alct[alcttype].groups - 1 do
 #        begin
@@ -582,13 +573,13 @@ def RandomData(alcttype):
 #{                    if ReadPtrns[gr][ch] <> SendPtrns[gr][ch] then
 #                    begin
 #                      FTestForm.Log.Lines.Add('    Group #'+ IntToStr(gr+1) + ':-> Chip #' + IntToStr(ch+1) + ' Read 0x'+IntToHex(ReadPtrns[gr][ch], 4) + ' Expected 0x' + IntToHex(SendPtrns[gr][ch], 4))
-#                      jtag.WriteIR('0A', V_IR)
+#                      jtag.WriteIR('0A', alct.V_IR)
 #                      jtag.WriteDR(IntToHex((gr*6+ch) div 2,4),16)
 #
-#                      jtag.WriteIR('11', V_IR)
+#                      jtag.WriteIR('11', alct.V_IR)
 #                      jtag.WriteDR('4000',16)
 #
-#                      jtag.WriteIR('11', V_IR)
+#                      jtag.WriteIR('11', alct.V_IR)
 #                      if Boolean (ch mod 2) then
 #                        jtag.WriteDR('4000',16)
 #                      else
@@ -658,8 +649,7 @@ def SetDelayChips(alcttype):
             ReadValues[i][j] = 0
             ReadPtrns [i][j] = 0
 
-    jtag.WriteIR(0x11    , V_IR)
-    jtag.WriteDR(0x4000  , 16)
+    alct.WriteRegister(0x11,0x4000,0x16)
 
     for i in range(alct.alct[alcttype].groups):
         for j in range(alct.alct[alcttype].chips):
@@ -692,10 +682,10 @@ def SetDelayChips(alcttype):
 
 
     #if fOddConnector:
-    #    jtag.WriteIR(0x11, V_IR)
+    #    jtag.WriteIR(0x11, alct.V_IR)
     #    jtag.WriteDR(0xa000, 16)
     #else:
-    #    jtag.WriteIR(0x11, V_IR)
+    #    jtag.WriteIR(0x11, alct.V_IR)
     #    jtag.WriteDR(0x4000, 16)
 
     #dr  = 0x1FF & (~(cs << 2))
@@ -748,7 +738,7 @@ def SetDelayChips(alcttype):
     #jtag.WriteIR(alct.DelayCtrlRead, V_IR)
     #jtag.ReadDR(0x0, parlen)
 
-    #jtag.WriteIR(0x11, V_IR)
+    #jtag.WriteIR(0x11, alct.V_IR)
     #jtag.WriteDR(0x0001, 16)
 
     #print('> === Delay Chip Patterns are set  ===')

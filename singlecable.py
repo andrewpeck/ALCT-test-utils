@@ -10,11 +10,18 @@
 
 import alct
 import common
-
 import os
 import random
+from config import logFile
 
-TestNames = ['Custom Data', 'Walking 1', 'Walking 0', 'Filling 1', 'Filling 0', 'Shifting 5s and As', 'Random Data']
+TestNames = ['',                #Dummy entry to number from 1
+             'Custom Data ',
+             'Walking 1   ', 
+             'Walking 0   ', 
+             'Filling 1   ', 
+             'Filling 0   ', 
+             'Shifting 5/A', 
+             'Random Data ']
 
 # ------------------------------------------------------------------------------
 
@@ -34,6 +41,7 @@ def SingleCableTest(test,channel,npasses=50):
     SuppressErrsSingleCable = True
     StopOnErrorSingleCable  = False
     ErrCntSingleTest        = 50
+    test                   -= 1             # we enumerate from zero inside code, but from 1 in the interface
 
 
     print('Running %s test on Channel %i' % (TestNames[test],channel))
@@ -55,55 +63,61 @@ def SingleCableTest(test,channel,npasses=50):
     if test==6: multiple = 1
 
     # Main test loop
-    for cnt in range(npasses*multiple):
-        if test==0:                                                         # 0 = Custom Data Test
-            k=input("\nEnter Custom Data or <cr> for %04X" % CustomData)
-        if test==1: senddata = 0x0000   |   (0xFFFF & (1 << (cnt % 16)))    # 1 = Walking 1 Test
-        if test==2: senddata = 0xFFFF   & (~(0xFFFF & (1 << (cnt % 16))))   # 2 = Walking 0 Test
-        if test==3:                                                         # 3 = Filling 1 Test
-            if cnt%16==0: senddata=0x0001
-            else: senddata = senddata | (0xFFFF & (1 << (cnt % 16)))
-        if test==4:                                                         # 4 = Filling 0 Test
-            if cnt%16 == 0: senddata=0xFFFE
-            else: senddata = senddata & (~(0xFFFF & (1 << (cnt % 16))))
-        if test==5:                                                         # 5 = Shifting 5 and A
-            if    ((cnt+1) % 2)==1: senddata = 0x5555
-            else:                   senddata = 0xAAAA
-        if test==6: senddata = random.getrandbits(16)                       # 6 = Random Data
+    for npass in range(npasses):
+        for bit in range(multiple): 
 
-        # Select Channel
-        alct.WriteRegister(0x16,0x1FF & channel)
-        alct.ReadRegister(0x15)
+            if (test==0 and npass==0 and bit==0):                               # 0 = Custom Data Test
+                k=input("\nEnter Custom Data or <cr> for %04X" % CustomData)
+                senddata=CustomData 
+            if test==1: senddata = 0x0000   |   (0xFFFF & (1 << (bit % 16)))    # 1 = Walking 1 Test
+            if test==2: senddata = 0xFFFF   & (~(0xFFFF & (1 << (bit % 16))))   # 2 = Walking 0 Test
+            if test==3:                                                         # 3 = Filling 1 Test
+                if bit%16==0: senddata=0x0001
+                else: senddata = senddata | (0xFFFF & (1 << (bit % 16)))
+            if test==4:                                                         # 4 = Filling 0 Test
+                if bit%16 == 0: senddata=0xFFFE
+                else: senddata = senddata & (~(0xFFFF & (1 << (bit % 16))))
+            if test==5:                                                         # 5 = Shifting 5 and A
+                if    ((bit+1) % 2)==1: senddata = 0x5555
+                else:                   senddata = 0xAAAA
+            if test==6: senddata = random.getrandbits(16)                       # 6 = Random Data
 
-        # Write Data
-        alct.WriteRegister(0x18,0xFFFF & senddata)
+            if bit==0: print ('\t Pass %2i' % (npass+1))
 
-        # Read Back Data
-        readdata = alct.ReadRegister(0x17)
+            # Select Channel
+            alct.WriteRegister(alct.DelayCtrlWrite,0x1FF & channel,9)
+            alct.ReadRegister(alct.DelayCtrlRead,9)
 
-        if readdata != senddata:
-            errcnt += 1
-            #if ((not SuppressErrsSingleCable) or (SuppressErrsSingleCable and (errcnt <= ErrCntSingleTest))):
-                #print('\t ERROR: Pass #%02i Set Mask Register to 0x%04X Readback 0x%04X' % (cnt,senddata,readdata))
-            if StopOnErrorSingleCable:
-                return(0)
+            # Write Data
+            alct.WriteRegister(0x18,0xFFFF & senddata,16)
 
-        # Select Channel
-        alct.WriteRegister(0x16,channel | 0x40)
+            # Read Back Data
+            readdata = alct.ReadRegister(0x17,16)
 
-        # Read Data
-        alct.WriteRegister(0x16,channel | 0x1FF)
-        readdata = alct.ReadRegister(0x19)
+            #if readdata != senddata:
+            #    errcnt += 1
+            #    #if ((not SuppressErrsSingleCable) or (SuppressErrsSingleCable and (errcnt <= ErrCntSingleTest))):
+            #    print('\t ERROR: Set Mask Register to 0x%04X Readback 0x%04X' % (senddata,readdata))
 
-        status = ('\t Pass #%02i Read=0x%04X Expect=0x%04X' % (cnt//multiple+1,readdata,senddata))
-        common.Printer(status)
+            #    if StopOnErrorSingleCable:
+            #        return(0)
 
-        if (readdata != senddata):
-            errcnt += 1
-            if ((not SuppressErrsSingleCable) or (SuppressErrsSingleCable and (errcnt <= ErrCntSingleTest))):
-                print('\n\t ERROR: Pass #%02i Read=0x%04X Expect=0x%04X' % (cnt,readdata,senddata))
-            if StopOnErrorSingleCable:
-                return(0)
+            # Select Channel
+            alct.WriteRegister(alct.DelayCtrlWrite, channel | 0x40, 9)
+
+            # Read Data
+            alct.WriteRegister(alct.DelayCtrlWrite, channel | 0x1FF, 9)
+            readdata = alct.ReadRegister(0x19, 16)
+
+            if (readdata != senddata):
+                errcnt += 1
+                print("\t\t ====> Fail: ", end="")
+                if StopOnErrorSingleCable:
+                    return(0)
+            else: 
+                print("\t\t ====> Pass: ", end="")
+
+            print('Read=0x%04X Expect=0x%04X' % (readdata,senddata))
 
     if errcnt==0:
         print('\n\t ====> Passed')
@@ -113,39 +127,41 @@ def SingleCableTest(test,channel,npasses=50):
 
 def SingleCableSelfTest(alcttype,logFile):
     print("\n%s > Starting Single Cable Automatic Test\n" % common.Now())
-    errors = 0 
+    errcnt = 0 
 
-    for (channel) in range (alct[alcttype].groups * alct[alcttype].chips):
+    logFile.write("\nStarting Single Cable Self Test:")
+    for (channel) in range (alct.alct[alcttype].groups * alct.alct[alcttype].chips):
         k = input ("Please connect ALCT connector J5 to AFEB connector %i. s to skip, <cr> to continue" % channel)
 
         # skip connector
         if (k=="s" or k=="S"): 
-            errors += 1
+            errcnt += 1
             continue
 
         # perform all tests for this AFEB
         else: 
-            for i in range(7):
+            logFile.write("\n\tSingle Cable Test on Channel %i" % channel)
+            for i in range(1,7): #prefer NOT to do custom data test for the Self-Test 
                 fail = SingleCableTest(i,0,10)
                 if fail: 
-                    errors += fail
-                    logFile.write ("Failed %s Single Cable Test with %i Errors" % TestNames[i], fail)
+                    errcnt += fail
+                    logFile.write("\n\t\t ====> Failed %s with %3i Errors" % (TestNames[i], fail))
                 else: 
-                    logFile.write ("Passed %s Single Cable Test" % TestNames[i])
+                    logFile.write("\n\t\t ====> Passed %s " % TestNames[i])
 
     # Tests Summary
 
-    print         ("Summary:")
-    logFile.write ("Summary:")
+    print        ("Summary:")
+    logFile.write("\n\tSummary:")
 
     if errcnt==0:
         print        ('\n\t ====> Passed')
-        logFile.write('\n\t ====> Passed')
+        logFile.write('\n\t\t ====> Passed Single Cable Test')
     else:
         print        ('\n\t ====> Failed Single Cable Test with %i Total Errors' % errcnt)
-        logFile.write('\n\t ====> Failed Single Cable Test with %i Total Errors' % errcnt)
+        logFile.write('\n\t\t ====> Failed Single Cable Test with %i Total Errors' % errcnt)
 
-    return (errors) 
+    return (errcnt) 
 
 def SubtestMenu(alcttype):
     channel=0

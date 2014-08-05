@@ -3,12 +3,15 @@
 ################################################################################
 # Functions for testing the Slow Control Circuits
 ################################################################################
-import time
 
 import jtaglib as jtag
 import common
+from common import MutableNamedTuple
 import alct
 
+#-------------------------------------------------------------------------------
+
+import time
 import sys
 
 #-------------------------------------------------------------------------------
@@ -115,17 +118,103 @@ WTpd   =  0x26  # Write Test Pulse Power Down
 RTpd   =  0x27  # Read Test Pulse Power Down
 Bypass =  0x3F  # Bypass Scan
 
+#-------------------------------------------------------------------------------
+# Threshold Read/Write Stuff
+#-------------------------------------------------------------------------------
+
+ADC_REF = 1.225 # ADC Reference Voltage
+ThreshToler = 4 # Threshold Tolerance (discrepancy is ok within +- ThreshToler)
+
+arADCChannel = [ 1, 0, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 10,
+                 9, 8,  7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2,  3,
+                 4, 5,  6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7,  8 ]
+
+arADCChip    = [ 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3,
+                 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4 ]
+
+mapGroupMask = [ 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 0, 0,
+                 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5,
+                 5, 5, 6, 6, 6, 4, 4, 4, 5, 5, 5, 6, 6, 6 ]
+
+#-------------------------------------------------------------------------------
+# Container for ADC Voltage Measurement
+#-------------------------------------------------------------------------------
+arVoltages = [ MutableNamedTuple() for i in range(4)]
+
+arVoltages[0].ref       = '1.8v'
+arVoltages[0].refval    = 1.8
+arVoltages[0].coef      = 0.005878
+arVoltages[0].toler     = 0.1
+
+arVoltages[1].ref       = '3.3v'
+arVoltages[1].refval    = 3.3
+arVoltages[1].coef      = 0.005878
+arVoltages[1].toler     = 0.2
+
+arVoltages[2].ref       = '5.5v1'
+arVoltages[2].refval    = 5.65
+arVoltages[2].coef      = 0.005878
+arVoltages[2].toler     = 0.2
+
+arVoltages[3].ref       = '5.5v2'
+arVoltages[3].refval    = 5.65
+arVoltages[3].coef      = 0.005878
+arVoltages[3].toler     = 0.2
+
+#-------------------------------------------------------------------------------
+# Container for ADC Current Measurement
+#-------------------------------------------------------------------------------
+arCurrents = [ MutableNamedTuple() for i in range(4)]
+
+arCurrents[0].ref       = '1.8v'
+arCurrents[0].ref288    = 0.58
+arCurrents[0].ref384    = 0.94 # double check this
+arCurrents[0].ref672    = 0.94 # double check this
+arCurrents[0].coef      = 0.002987
+arCurrents[0].toler     = 0.1
+
+arCurrents[1].ref       = '3.3v'
+arCurrents[1].ref288    = 1.28
+arCurrents[1].ref384    = 2.81 # double check this
+arCurrents[1].ref672    = 2.81 # double check this
+arCurrents[1].coef      = 0.002987
+arCurrents[1].toler     = 0.2
+
+arCurrents[2].ref       = '5.5v1'
+arCurrents[2].ref288    = 0.15
+arCurrents[2].ref384    = 0.15 # double check this
+arCurrents[2].ref672    = 0.15 # double check this
+arCurrents[2].coef      = 0.002987
+arCurrents[2].toler     = 0.1
+
+arCurrents[3].ref       = '5.5v2'
+arCurrents[3].ref288    = 0.00
+arCurrents[3].ref384    = 0.15  # double check this
+arCurrents[3].ref672    = 0.15  # double check this
+arCurrents[3].coef      = 0.002987
+arCurrents[3].toler     = 0.1
+
+#-------------------------------------------------------------------------------
+# Container for ADC Temperature Measurement
+#-------------------------------------------------------------------------------
+arTemperature           = MutableNamedTuple()
+
+arTemperature.ref       = 'On Board Temperature'
+arTemperature.refval    = 25.0
+arTemperature.coef      = 0.1197
+arTemperature.toler     = 5.0
 #------------------------------------------------------------------------------
 # Slow Control Control
 #------------------------------------------------------------------------------
 def WriteRegister(reg, value): 
     length = RegSz[reg]             # length of register
     mask   = 2**(length)-1          # Bitmask of 1s to mask the register
-    jtag.WriteIR(reg, SC_IR)             
+    jtag.WriteIR(reg, alct.SC_IR)             
     return(jtag.WriteDR(value & mask,length))
 
 def ReadRegister(reg): 
-    jtag.WriteIR(reg, SC_IR)
+    jtag.WriteIR(reg, alct.SC_IR)
     result = jtag.ReadDR(0x0,RegSz[reg])
     return (result)
 
@@ -147,7 +236,7 @@ def SetGroupStandbyReg(group, value):
 
 # Read Standby Register for a Particular Group
 def ReadGroupStandbyReg(group):
-    alct.SetChain(SLOW_CTL)
+    alct.SetChain(alct.SLOW_CTL)
     wgroups = 7
     data    = ReadStandbyReg()
     if (group >=0) and (group < wgroups):
@@ -156,11 +245,11 @@ def ReadGroupStandbyReg(group):
         print("Problem with Read Group Standby Reg")
 
 def SetStandbyReg(value):
-    alct.SetChain(SLOW_CTL)
+    alct.SetChain(alct.SLOW_CTL)
     return (WriteRegister(WSbr,value))
 
 def ReadStandbyReg():
-    alct.SetChain(SLOW_CTL)
+    alct.SetChain(alct.SLOW_CTL)
     return (ReadRegister(RSbr)) 
 
 def SetStandbyForChan(chan, onoff):
@@ -210,13 +299,13 @@ def SetThreshold(ch, value):
     for i in range(DRlength):
         data = data | (((value >> i)  & 0x1) << (11-i))
 
-    jtag.WriteIR(0xFF & (0x8+(realch // 12)), SC_IR)
+    jtag.WriteIR(0xFF & (0x8+(realch // 12)), alct.SC_IR)
     jtag.WriteDR(data & 0xFFF, DRlength)
 
 # Returns AFEB Threshold on channel ch
 # Returns value in ADC Counts (0-1023)
 def ReadThreshold(ch):
-    alct.SetChain(SLOW_CTL)
+    alct.SetChain(alct.SLOW_CTL)
     DRLength = 11
     result = 0
     adr = 0
@@ -230,12 +319,12 @@ def ReadThreshold(ch):
 
     time.sleep(0.01)     #sleep 10 ms
 
-    jtag.WriteIR(chip, SC_IR)
+    jtag.WriteIR(chip, alct.SC_IR)
     jtag.WriteDR(adr,  DRLength)
 
     #time.sleep(0.1)     #sleep 10 ms
 
-    jtag.WriteIR(chip, SC_IR)
+    jtag.WriteIR(chip, alct.SC_IR)
     read = jtag.ReadDR(adr,DRLength)
 
     result=common.FlipDR(read,DRLength)
@@ -245,7 +334,7 @@ def ReadThreshold(ch):
 # Read ALCT board 12 bit voltage monitoring
 # Returns value in ADC counts (0-1023)
 def ReadVoltageADC(chan):
-    alct.SetChain(SLOW_CTL)
+    alct.SetChain(alct.SLOW_CTL)
     DRlength = 11
     result = 0
     adr = 0
@@ -259,7 +348,7 @@ def ReadVoltageADC(chan):
 
     # Poll ADC
     for i in range(3):
-        jtag.WriteIR(0x12, SC_IR)
+        jtag.WriteIR(0x12, alct.SC_IR)
         read = jtag.ReadDR(adr, DRlength)
 
     # Flip Bits (change endianess)
@@ -268,7 +357,7 @@ def ReadVoltageADC(chan):
 # Read ALCT board 12 bit current monitoring
 # Returns value in ADC counts (0-1023)
 def ReadCurrentADC(chan):
-    alct.SetChain(SLOW_CTL)
+    alct.SetChain(alct.SLOW_CTL)
     DRlength = 11
     adr = 0
 
@@ -276,7 +365,7 @@ def ReadCurrentADC(chan):
         adr = adr | ((((chan+2) >> i) & 0x1) << (3-i))
 
     for i in range(0,3):
-        jtag.WriteIR(0x12, SC_IR)
+        jtag.WriteIR(0x12, alct.SC_IR)
         read = jtag.ReadDR(adr, DRlength)
 
     return (common.FlipDR(read,DRlength))
@@ -286,7 +375,7 @@ def ReadCurrentADC(chan):
 def ReadTemperatureADC():
     DRlength = 11
     for i in range(3):
-        jtag.WriteIR(0x12, SC_IR)
+        jtag.WriteIR(0x12, alct.SC_IR)
         read = jtag.ReadDR(0x5, DRlength)
 
     return (common.FlipDR(read,DRlength))
@@ -301,27 +390,39 @@ def ReadTemperature():
 # Only the modulo of the depth will be checked
 # e.g. depth=1 checks all thresholds
 #      depth=17 will check 0,17,34,...etc
-def CheckThresholds(NUM_AFEBS,depth=1):
+def CheckThresholds(first, last, depth=1):
     print("Checking AFEB Thresholds")
+    ErrMatrix = [0]*(42)
+
     Errs=0
-    for afeb in range(NUM_AFEBS):
+    if (first==last): last+=1
+    for afeb in range(first, last):
+        afebErrs = 0
+        print("\n\tTesting AFEB #%2i" % afeb)
         if afeb !=0: print("")
         for thresh in range(256):
             if thresh%depth == 0:
                 write=thresh
                 SetThreshold(afeb,write)
                 read = ReadThreshold(afeb)/4.0
-                output=("\t AFEB #%02i: Write=%03i Read=%03.0f" % (afeb,write,read) )
-                common.Printer(output)
                 if abs(write - read) > ThreshToler:
-                    print("\nERROR in AFEB #%02i: Write=%03i Read=%03.0f" % (afeb,write,read) )
-                    Errs +=1
+                    print("\t\tERROR: Write=%3i Read=%3.0f" % (write,read) )
+                    afebErrs +=1
+        Errs+=afebErrs
+        ErrMatrix[afeb]=afebErrs
+
+    print("\t Summary: ")
+    for afeb in range(first, last):
+        if (ErrMatrix[afeb] > 0): 
+            print("\t\t ====> AFEB #%2i Failed with %i Errors" % (afeb, ErrMatrix[afeb]))
+        else:
+            print("\t\t ====> AFEB #%2i Passed!" %(afeb))
 
     if Errs==0:
-        print('\n\t ====> Passed')
+        print('\t\t ====> Passed')
         return(0)
     else:
-        print('\t ====> Failed Thresholds Quick Test with %i Errors' % Errs)
+        print('\t\t ====> Failed Thresholds Test with %i Total Errors' % Errs)
         return(Errs)
 
 # Checks ALCT-AFEB standby register
@@ -416,7 +517,7 @@ def CheckTestPulseStripLayerMask():
 def CheckVoltages(alcttype):
     print('Checking Voltages')
     Errs=0
-    for i in range(alct[alcttype].pwrchans):
+    for i in range(alct.alct[alcttype].pwrchans):
         readval = ReadVoltageADC(i)
         voltage = readval * arVoltages[i].coef
         toler   = arVoltages[i].toler
@@ -441,7 +542,7 @@ def CheckVoltages(alcttype):
 def CheckCurrents(alcttype):
     print('Checking Currents')
     Errs=0
-    for i in range(alct[alcttype].pwrchans):
+    for i in range(alct.alct[alcttype].pwrchans):
         readval = ReadCurrentADC(i)
         current = readval * arCurrents[i].coef
         toler   = arCurrents[i].toler
@@ -504,88 +605,86 @@ def WriteAllThresholds(thresh):
 # Runs an automatic self-test of Slow Control Functions
 # Should have _Normal_ ALCT Firmware Installed for Test
 # Other firmwares will work but have different current/voltage requirements
-def SelfTest(alcttype):
+def SelfTest(alcttype,logFile):
     Errs = 0
-    alct.SetChain(SLOW_CTL)
+    alct.SetChain(alct.SLOW_CTL)
 
     print("\n%s> Start Slow Control Self Test\n" % common.Now())
-    logFile.write("\n%s> Start Slow Control Self Test\n" % common.Now())
+    logFile.write("\n\nStarting Slow Control Self Test")
 
     #--------------------------------------------------------------------------
     fail = CheckVoltages(alcttype)
     if (fail): 
         Errs += fail
-        logFile.write("Fail: Voltages Check")
+        logFile.write("\n\t ====> Fail Voltages Check")
     else: 
-        logFile.write("Pass: Voltages Check")
+        logFile.write("\n\t ====> Pass Voltages Check")
 
     #--------------------------------------------------------------------------
     fail = CheckCurrents(alcttype)
     if (fail):
         Errs += fail
-        logFile.write("Fail: Currents Check")
+        logFile.write("\n\t ====> Fail Currents Check")
     else: 
-        logFile.write("Pass: Currents Check")
+        logFile.write("\n\t ====> Pass Currents Check")
 
     #--------------------------------------------------------------------------
     fail = CheckTemperature()
     if (fail):
         Errs += fail
-        logFile.write("Fail: Temperature Check")
+        logFile.write("\n\t ====> Fail Temperature Check")
     else: 
-        logFile.write("Pass: Temperature Check")
+        logFile.write("\n\t ====> Pass Temperature Check")
 
     #--------------------------------------------------------------------------
-    fail = CheckThresholds(alct[alcttype].groups*6,17)
+    fail = CheckThresholds(0,alct.alct[alcttype].groups*6,17)
     if (fail):
         Errs += fail
-        logFile.write("Fail: Thresholds Check with %i Errors" % Fail)
+        logFile.write("\n\t ====> Fail Thresholds Check with %i Errors" % fail)
     else: 
-        logFile.write("Pass: Thresholds Check")
+        logFile.write("\n\t ====> Pass Thresholds Check")
 
     #--------------------------------------------------------------------------
     fail = CheckStandbyRegister()
     if (fail):
         Errs += fail
-        logFile.write("Fail: Standby Register Check with %i Errors" % Fail)
+        logFile.write("\n\t ====> Fail Standby Register Check with %i Errors" % fail)
     else: 
-        logFile.write("Pass: Standby Register Check")
+        logFile.write("\n\t ====> Pass Standby Register Check")
 
     #--------------------------------------------------------------------------
     fail = CheckTestPulsePowerDown()
     if (fail):
         Errs += fail
-        logFile.write("Fail: Test Pulse Power Down with %i Errors" % Fail)
+        logFile.write("\n\t ====> Fail Test Pulse Power Down with %i Errors" % fail)
     else: 
-        logFile.write("Pass: Test Pulse Power Down")
+        logFile.write("\n\t ====> Pass Test Pulse Power Down")
         
     #--------------------------------------------------------------------------
     fail = CheckTestPulsePowerUp()
     if (fail):
         Errs += fail
-        logFile.write("Fail: Test Pulse Power Up with %i Errors" % Fail)
-    else: 
-        logFile.write("Pass: Test Pulse Power Up")
+        logFile.write("\n\t ====> Fail Test Pulse Power Up with %i Errors" % fail)
+    else:                    
+        logFile.write("\n\t ====> Pass Test Pulse Power Up")
 
     #--------------------------------------------------------------------------
     fail = CheckTestPulseWireGroupMask()
     if (fail):
         Errs += fail
-        logFile.write("Fail: Test Pulse Wire Group Mask Failed with %i Errors" % Fail)
+        logFile.write("\n\t ====> Fail Test Pulse Wire Group Mask Failed with %i Errors" % fail)
     else: 
-        logFile.write("Pass: Test Pulse Wire Group Mask")
+        logFile.write("\n\t ====> Pass Test Pulse Wire Group Mask")
 
     #After finishing tests, turn off AFEBS to reduce power
     SetStandbyReg(0) #Turn Off All AFEBs
 
     if Errs>0:
-        print('\nSlow Control Self Test Failed with %i Failed Subtests' % Errs)
+        print('\nSlow Control Self Test Failed with %i Errors' % Errs)
     else:
         print('\nSlow Control Self Test Finished Without Errors')
 
-    k=input("\n<cr> to return to menu: ")
-    if not k: 
-        return (Errs)
+    return (Errs)
 
 #------------------------------------------------------------------------------
 # Subtest Menu
@@ -599,7 +698,7 @@ def SubtestMenu(alcttype):
         print(  " Slow Control Test Submenu")
         print(  "================================================================================\n")
         print("\t 0 Slow Control Automatic Self Test")
-        print("\t 1 Thresholds Linearity Full Scan")
+        print("\t 1 Thresholds Linearity Test")
         print("\t 2 Read Voltages")
         print("\t 3 Read Currents")
         print("\t 4 Read Temperature")
@@ -613,7 +712,19 @@ def SubtestMenu(alcttype):
         if test==0:
             SelfTest(alcttype)
         if test==1:
-            CheckThresholds(alct[alcttype].groups*alct[alcttype].chips,1)
+            while True: 
+                k=input("\nEnter channel to test (0-23), or <q> for a quick scan, or <cr> for a Full Scan (slow)")
+                if (not k): 
+                    CheckThresholds(0,alct.alct[alcttype].groups*alct.alct[alcttype].chips,1)
+                    break
+                elif (k=="q"): 
+                    CheckThresholds(0,alct.alct[alcttype].groups*6,17)
+                    break
+                elif (int(k) >=0 and int(k) < 24): 
+                    CheckThresholds(int(k),int(k),1)
+                    break
+                else: 
+                    print("Invalid choice!")
         if test==2:
             CheckVoltages(alcttype)
         if test==3:

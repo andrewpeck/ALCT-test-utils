@@ -2,7 +2,7 @@
 
 ################################################################################
 # LPT JTAG Driver Built around inpout32.dll
-# Windoze only ! Sorry. 
+# Windows only ! Sorry. But it DOES supposedly work with windows 7 
 ################################################################################
 import ctypes
 import os
@@ -29,7 +29,8 @@ def GetPortByte(adr):
     if os.name == 'nt':
         return(ctypes.windll.inpout32.Inp32(adr))
     else: 
-        return(0x0)
+        # return BS for non-windows
+        return(0xFF)
 
 # Writes Byte to LPT Port
 def SetPortByte(adr,data):
@@ -37,12 +38,12 @@ def SetPortByte(adr,data):
         ctypes.windll.inpout32.Out32(adr, data)
 
 # Legacy function
-def openLPTJTAG():
-    return(0)
+#def openLPTJTAG():
+#    return(0)
 
 # Legacy function
-def closeLPTJTAG():
-    return(-1)
+#def closeLPTJTAG():
+#    return(-1)
 
 # Set JTAG Chain
 def setchainLPTJTAG(Chain):

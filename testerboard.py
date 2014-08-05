@@ -5,9 +5,10 @@
 ################################################################################
 
 import alct
-import jtagutils as jtag
+import jtaglib as jtag
 import os
-import common
+from common import MutableNamedTuple
+#import common
 
 #-------------------------------------------------------------------------------
 debug=False

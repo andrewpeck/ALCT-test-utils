@@ -7,6 +7,7 @@ import testerboard
 import common
 import delays
 import alct
+from config import logFile
 
 #generic python includes
 import random
@@ -36,7 +37,7 @@ def MainMenu():
         print("")
         print("\t 0 ALCT Automatic Full Test")
         print("\t 1 Slow Control Tests")
-        print("\t 2 Thresholds Linearity Full Scan")
+        print("\t 2                    ")
         print("\t 3 Delay ASICs Pattern Test")
         print("\t 4 Delay ASICs Delay Test")
         print("\t 5 Single Cable Test")
@@ -48,13 +49,13 @@ def MainMenu():
 
         if k=="0": AutomaticFullTest()
         if k=="1": slowcontrol.SubtestMenu(alcttype)
-        if k=="2": slowcontrol.CheckThresholds(alct.alct[alcttype].groups*alct.alct[alcttype].chips,1)
         if k=="3": delays.SubtestMenu(alcttype)
         if k=="4": testerboard.SubtestMenu(alcttype)
         if k=="5": singlecable.SubtestMenu(alcttype)
         if k=="7": ChooseALCTType()
         if k=="8": ChooseJTAGChain()
 
+# Menu to change type of ALCT 
 def ChooseALCTType():
     while True:
         common.ClearScreen()
@@ -115,6 +116,7 @@ def AutomaticFullTest():
         logFileDir = os.path.join(os.path.dirname(__file__),"testlogs/")
         if not os.path.exists(logFileDir):
             os.makedirs(logFileDir)
+
         logFile = open(os.path.join(logFileDir,logFileName), 'w')
     # Send logging to Null elsewise
     else:
@@ -122,6 +124,7 @@ def AutomaticFullTest():
 
     logFile.write('ID Codes Detected: ')
     logFile.write("\n %s" % PrintIDCodes())
+    logFile.write("\n")
 
     # error accumulator
     errors = 0
@@ -130,7 +133,6 @@ def AutomaticFullTest():
     # connectivity of Delay Chips, connectivity of ALCT mezzanine tx (J5)
     k=input("\nPlease load Single Cable Firmware. Press s to skip, any key to Continue\n")
     if k!="s":
-        logFile.write("Running Single Cable Test..")
         errors += singlecable.SingleCableSelfTest(alcttype,logFile)
 
     # Special board tests:
@@ -147,7 +149,7 @@ def AutomaticFullTest():
     # Checks functioning of slow control features
     k=input("\nPlease load Normal Firmware. Press s to skip, any key to Continue\n")
     if k!="s":
-        errors += slowcontrol.SelfTest(alcttype)
+        errors += slowcontrol.SelfTest(alcttype,logFile)
 
     # Manual check of Test Pulse
     # need to implement this..
@@ -158,17 +160,25 @@ def AutomaticFullTest():
     print("\t ALCT-384: SW1 to position 2/3")
     print("\t ALCT-672: SW2 to position 2/3")
 
-    k=input("\nPress any key when finished\n")
+    logFile.write("\n")
+
+    while True: 
+        k=input("\n<y> to confirm: ")
+        if k=="y": break
+    logFile.write("\nUser confirmed that Clock source shunts are set to correct position")
 
     # Manual check of crystal oscillator
     print("Verify that the crystal oscillator is removed")
-    k=input("\nPress any key when finished\n")
+    while True: 
+        k=input("\n<y> to confirm: ")
+        if k=="y": break
+    logFile.write("\nUser confirmed that crystal oscillator is removed")
 
     #Pass? Fail? Summary.
-    if errors == 0:
-        print ("PASS: ALCT %s with mezzanine %s passed all tests" % baseboardSN, mezzanine SN)
+    if (errors == 0):
+        print ("PASS: ALCT %s with mezzanine %s passed all tests" % (baseboardSN, mezzanineSN))
     else:
-        print ("FAIL: ALCT %s with mezzanine %s failed with %i errors" % baseboardSN, mezzanine SN, errors)
+        print ("FAIL: ALCT %s with mezzanine %s failed with %i errors" % (baseboardSN, mezzanineSN, errors))
 
 def PrintIDCodes():
     idcodestr  = ("\t Slow Control Firmware ID: 0x%X\n" % alct.ReadIDCode (0x0))
