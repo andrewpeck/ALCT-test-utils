@@ -7,7 +7,6 @@ import testerboard
 import common
 import delays
 import alct
-from config import logFile
 
 #generic python includes
 import random

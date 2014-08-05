@@ -18,10 +18,6 @@ import sys
 # Slow Control JTAG Instruction OP-Codes
 #-------------------------------------------------------------------------------
 
-FIFO_RESET = 0xC
-FIFO_READ  = 0xA
-FIFO_WRITE = 0x9
-
 
 # | Binary  | Hex  | Oct | OpCode | Description             | Chip Select    | Register   | Length |
 # |---------+------+-----+--------+-------------------------+----------------+------------+--------|
@@ -266,7 +262,6 @@ def ReadTestPulsePower():
 
 def SetTestPulsePowerAmp(value):
     temp = 0
-    # WHAT THE FUCK IS THIS FOR
     for i in range(0,len-1):
         temp = temp | (((value >> i) & 0x1) << (7-i))
     WriteRegister(WTp,temp)
