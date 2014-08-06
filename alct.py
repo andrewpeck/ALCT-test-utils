@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 # ------------------------------------------------------------------------------
-# ALCT.py -- Generic Tools for ALCT I/O, Register Definitions
+# ALCT.py
+# Generic Tools for ALCT I/O, Register Definitions, Baseboard Properties
 # ------------------------------------------------------------------------------
 
 import jtaglib as jtag
