@@ -1,27 +1,34 @@
 #!/usr/bin/env python3
 
-# ------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # Functions for performing Single Cable Loopback Test.
 # Data is sent from the mezzanine, out from the ALCT-TX (J5) Connector, and
 # received at each of the AFEB connectors. From there it passes through the
 # delay 18/24/42 delay ASICs, through the 9/12/21 Mux chips, and back to the
 # mezzanine.
-# ------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 
+################################################################################
+#-ALCT Specific Includes--------------------------------------------------------
 import alct
 import common
+#-Generic Python Includes-------------------------------------------------------
 import os
 import random
 import sys
+#-Logging-----------------------------------------------------------------------
+import logging
+logging.getLogger()
+################################################################################
 
 TestNames = ['',                #Dummy entry to number from 1
-             'Custom Data ',
-             'Walking 1   ',
-             'Walking 0   ',
-             'Filling 1   ',
-             'Filling 0   ',
+             'Custom Data',
+             'Walking 1',
+             'Walking 0',
+             'Filling 1',
+             'Filling 0',
              'Shifting 5/A',
-             'Random Data ']
+             'Random Data']
 
 # ------------------------------------------------------------------------------
 
@@ -42,7 +49,7 @@ def SingleCableTest(test,channel,npasses=50):
     StopOnErrorSingleCable  = False
     ErrCntSingleTest        = 50
 
-    print('Running %s test on Channel %i' % (TestNames[test],channel))
+    print('Running %s test on Channel %2i' % (TestNames[test],channel))
 
     test                   -= 1             # we enumerate from zero inside code, but from 1 in the interface
 
@@ -54,7 +61,6 @@ def SingleCableTest(test,channel,npasses=50):
     # requires only one loop. Shifting 5s and As requires two loops (one for 5,
     # one for A), etc...
 
-    print (test)
     if   test==0: multiple = 1
     elif test==1: multiple = 16
     elif test==2: multiple = 16
@@ -131,11 +137,11 @@ def SingleCableTest(test,channel,npasses=50):
         print('\n\t ====> Failed Single Cable Test with %i Errors' % errcnt)
     return (errcnt)
 
-def SingleCableSelfTest(alcttype,logFile):
-    print("\n%s > Starting Single Cable Automatic Test\n" % common.Now())
+def SingleCableSelfTest(alcttype):
+    print("\nStarting Single Cable Automatic Test\n")
     errcnt = 0
 
-    logFile.write("\nStarting Single Cable Self Test:")
+    logging.info("\nStarting Single Cable Self Test:")
     for (channel) in range (alct.alct[alcttype].groups * alct.alct[alcttype].chips):
         k = input ("Please connect ALCT connector J5 to AFEB connector %i. s to skip, <cr> to continue" % channel)
 
@@ -146,26 +152,26 @@ def SingleCableSelfTest(alcttype,logFile):
 
         # perform all tests for this AFEB
         else:
-            logFile.write("\n\tSingle Cable Test on Channel %i" % channel)
-            for i in range(1,7): #prefer NOT to do custom data test for the Self-Test
+            logging.info("\tSingle Cable Test on Channel %2i" % channel)
+            for i in range(2,8): #prefer NOT to do custom data test for the Self-Test
                 fail = SingleCableTest(i,0,10)
                 if fail:
                     errcnt += fail
-                    logFile.write("\n\t\t ====> Failed %s with %3i Errors" % (TestNames[i], fail))
+                    logging.info("\t\t FAIL: %-12s with %3i Errors" % (TestNames[i], fail))
                 else:
-                    logFile.write("\n\t\t ====> Passed %s " % TestNames[i])
+                    logging.info("\t\t PASS: %-12s " % TestNames[i])
 
     # Tests Summary
 
-    print        ("Summary:")
-    logFile.write("\n\tSummary:")
+    print        ("Single Cable Self-Test Summary:")
+    logging.info ("\tSingle Cable Self-Test Summary:")
 
     if errcnt==0:
         print        ('\n\t ====> Passed')
-        logFile.write('\n\t\t ====> Passed Single Cable Test')
+        logging.info ('\t\t ====> PASS: Single Cable Test')
     else:
         print        ('\n\t ====> Failed Single Cable Test with %i Total Errors' % errcnt)
-        logFile.write('\n\t\t ====> Failed Single Cable Test with %i Total Errors' % errcnt)
+        logging.info ('\t\t ====> FAIL: Single Cable Test with %i Total Errors' % errcnt)
 
     return (errcnt)
 

@@ -4,15 +4,18 @@
 # Functions for testing the Slow Control Circuits
 ################################################################################
 
+#-------------------------------------------------------------------------------
 import jtaglib as jtag
 import common
 from common import MutableNamedTuple
 import alct
-
 #-------------------------------------------------------------------------------
-
+import logging
+logging.getLogger()
+#-------------------------------------------------------------------------------
 import time
 import sys
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 # Slow Control JTAG Instruction OP-Codes
@@ -600,76 +603,76 @@ def WriteAllThresholds(thresh):
 # Runs an automatic self-test of Slow Control Functions
 # Should have _Normal_ ALCT Firmware Installed for Test
 # Other firmwares will work but have different current/voltage requirements
-def SelfTest(alcttype,logFile):
+def SelfTest(alcttype):
     Errs = 0
     alct.SetChain(alct.SLOW_CTL)
 
     print("\n%s> Start Slow Control Self Test\n" % common.Now())
-    logFile.write("\n\nStarting Slow Control Self Test")
+    logging.info("\nSlow Control Self Test:")
 
     #--------------------------------------------------------------------------
     fail = CheckVoltages(alcttype)
     if (fail): 
         Errs += fail
-        logFile.write("\n\t ====> Fail Voltages Check")
+        logging.info("\t FAIL: Voltages Check")
     else: 
-        logFile.write("\n\t ====> Pass Voltages Check")
+        logging.info("\t PASS: Voltages Check")
 
     #--------------------------------------------------------------------------
     fail = CheckCurrents(alcttype)
     if (fail):
         Errs += fail
-        logFile.write("\n\t ====> Fail Currents Check")
+        logging.info("\t FAIL: Currents Check")
     else: 
-        logFile.write("\n\t ====> Pass Currents Check")
+        logging.info("\t PASS: Currents Check")
 
     #--------------------------------------------------------------------------
     fail = CheckTemperature()
     if (fail):
         Errs += fail
-        logFile.write("\n\t ====> Fail Temperature Check")
+        logging.info("\t FAIL: Temperature Check")
     else: 
-        logFile.write("\n\t ====> Pass Temperature Check")
+        logging.info("\t PASS: Temperature Check")
 
     #--------------------------------------------------------------------------
     fail = CheckThresholds(0,alct.alct[alcttype].groups*6,17)
     if (fail):
         Errs += fail
-        logFile.write("\n\t ====> Fail Thresholds Check with %i Errors" % fail)
+        logging.info("\t FAIL: Thresholds Check with %i Errors" % fail)
     else: 
-        logFile.write("\n\t ====> Pass Thresholds Check")
+        logging.info("\t PASS: Thresholds Check")
 
     #--------------------------------------------------------------------------
     fail = CheckStandbyRegister()
     if (fail):
         Errs += fail
-        logFile.write("\n\t ====> Fail Standby Register Check with %i Errors" % fail)
+        logging.info("\t FAIL: Standby Register Check with %i Errors" % fail)
     else: 
-        logFile.write("\n\t ====> Pass Standby Register Check")
+        logging.info("\t PASS: Standby Register Check")
 
     #--------------------------------------------------------------------------
     fail = CheckTestPulsePowerDown()
     if (fail):
         Errs += fail
-        logFile.write("\n\t ====> Fail Test Pulse Power Down with %i Errors" % fail)
+        logging.info("\t FAIL: Test Pulse Power Down with %i Errors" % fail)
     else: 
-        logFile.write("\n\t ====> Pass Test Pulse Power Down")
+        logging.info("\t PASS: Test Pulse Power Down")
         
     #--------------------------------------------------------------------------
     fail = CheckTestPulsePowerUp()
     if (fail):
         Errs += fail
-        logFile.write("\n\t ====> Fail Test Pulse Power Up with %i Errors" % fail)
+        logging.info("\t FAIL: Test Pulse Power Up with %i Errors" % fail)
     else:                    
-        logFile.write("\n\t ====> Pass Test Pulse Power Up")
+        logging.info("\t PASS: Test Pulse Power Up")
 
     #--------------------------------------------------------------------------
     fail = CheckTestPulseWireGroupMask()
     if (fail):
         Errs += fail
-        logFile.write("\n\t ====> Fail Test Pulse Wire Group Mask Failed with %i Errors" % fail)
+        logging.info("\t FAIL: Test Pulse Wire Group Mask Failed with %i Errors" % fail)
     else: 
-        logFile.write("\n\t ====> Pass Test Pulse Wire Group Mask")
+        logging.info("\t PASS: Test Pulse Wire Group Mask")
 
     #After finishing tests, turn off AFEBS to reduce power
     SetStandbyReg(0) #Turn Off All AFEBs
@@ -677,7 +680,7 @@ def SelfTest(alcttype,logFile):
     if Errs>0:
         print('\nSlow Control Self Test Failed with %i Errors' % Errs)
     else:
-        print('\nSlow Control Self Test Finished Without Errors')
+        print('\nSlow Control Self Test Passed Without Errors')
 
     return (Errs)
 
@@ -728,3 +731,8 @@ def SubtestMenu(alcttype):
             CheckTemperature()
 
         k=input("\n<cr> to return to menu: ")
+
+#def TestPulseManualCheck(): 
+#    SetTestPulsePowerAmp(value):
+#    SetTestPulsePower(sendval):
+

@@ -4,11 +4,15 @@
 # Tools for Verifying ASIC delays using the large external test board
 ################################################################################
 
+#-------------------------------------------------------------------------------
 import alct
 import jtaglib as jtag
-import os
 import common
-
+#-------------------------------------------------------------------------------
+import logging
+logging.getLogger()
+#-------------------------------------------------------------------------------
+import os
 #-------------------------------------------------------------------------------
 
 debug=False
@@ -723,7 +727,7 @@ def TestboardDelaysCheck(alcttype):
     DeltaBeginTime      = [[0 for i in range(16)] for j in range(NUM_AFEB)]
     Delay_Time          = [[0 for i in range(16)] for j in range(NUM_AFEB)]
 
-    print("================================================================================")
+    print("\n================================================================================")
     print('Running Chip Delay Scan on Full Board')
     print('\t* Ensure Clock Select Switch is Set to Position 2/3')
     print('\t* Load test firmware')
@@ -731,12 +735,10 @@ def TestboardDelaysCheck(alcttype):
     print("================================================================================\n")
     k = input("<cr> to continue when ready.")
 
-    k = input("<cr> to continue when ready.")
-
     print('\nRunning Delays Test on ALCT Board')
+    logging.info ("\n Delay ASICs Delay Test:")
 
     for chip in range(NUM_AFEB):
-        print("\t Measuring Delays for AFEB #%i" % chip)
         count=0
         ErrMeasDly = MeasureDelay(chip, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, AverageDelay_Time, RegMaskDone, alcttype)
         DeltaBegin_Max[chip] = 0
@@ -763,10 +765,13 @@ def TestboardDelaysCheck(alcttype):
                     k = i
                     #break
                     if k==0:
-                        print('\t\t ERROR: Cannot find StartDly_0 on Chip #%i' % chip)
+                        print       ('\t FAIL: Cannot find StartDly_0 on Chip #%i' % chip)
+                        logging.info('\t FAIL: Cannot find StartDly_0 on Chip #%i' % chip)
+
                         ErrDelayTest+=1
                         if (RegMaskDone[chip]==0):
-                            print('All Pins Failed')
+                            print       ('\t All Pins Failed')
+                            logging.info('\t All Pins Failed')
                         else:
                             PinErrors  ='   Pin(s): '
                             for j in range(16):
@@ -780,41 +785,51 @@ def TestboardDelaysCheck(alcttype):
                             print(PinErrors)
 
                     if k==1:
-                        print('\t\t ERROR: Cannot find StartDly_15 on Chip: %i' % chip)
+                        print        ('\t FAIL: Cannot find StartDly_15 on Chip: %i' % chip)
+                        logging.info ('\t FAIL: Cannot find StartDly_15 on Chip: %i' % chip)
                         ErrDelayTest+=1
                     if k==2:
                         for l in range(16):
                             if (PulseWidth[l] < 30):
-                                print('\t\t ERROR: Chip=%i Pin=%i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
+                                print        ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
+                                logging.info ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
                                 ErrDelayTest+=1
                     if k==3:
                         for l in range(16):
                             if (PulseWidth[l] > 45):
-                                print('\t\t ERROR: Chip=%i Pin=%i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
+                                print        ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
+                                logging.info ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
                                 ErrDelayTest+=1
 
                     if k==4:
-                        print('\t\t ERROR: Chip=%i DeltaBeginTime=%.02f ns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
+                        print        ('\t FAIL: Chip=%i DeltaBeginTime=%.02f ns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
+                        logging.info ('\t FAIL: Chip=%i DeltaBeginTime=%.02f ns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
                         ErrDelayTest+=1
                     if k==5:
-                        print('\t\t ERROR: Chip=%i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
+                        print        ('\t FAIL: Chip=%i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
+                        logging.info ('\t FAIL: Chip=%i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
                         ErrDelayTest+=1
 
         if (AverageDelay_Time[chip] < MinDelay) or (AverageDelay_Time[chip] > MaxDelay) :
             ErrorDeltaDelay[chip] = AverageDelay_Time[chip]
             if (AverageDelay_Time[chip] < MinDelay):
-                print('\t\t ERROR: Chip %02i Average Delay=%.2f ns is less than %.02f' % (chip,AverageDelay_Time[chip],MinDelay))
+                print        ('\t FAIL: Chip %02i Average Delay=%.2f ns is less than %.02f' % (chip,AverageDelay_Time[chip],MinDelay))
+                logging.info ('\t FAIL: Chip %02i Average Delay=%.2f ns is less than %.02f' % (chip,AverageDelay_Time[chip],MinDelay))
                 ErrDelayTest+=1
             elif (AverageDelay_Time[chip] > MaxDelay):
-                print('\t\t ERROR: Chip %02i Average Delay=%.2f ns is more than %.02f' % (chip,AverageDelay_Time[chip],MaxDelay))
+                print        ('\t FAIL: Chip %02i Average Delay=%.2f ns is more than %.02f' % (chip,AverageDelay_Time[chip],MaxDelay))
+                logging.info ('\t FAIL: Chip %02i Average Delay=%.2f ns is more than %.02f' % (chip,AverageDelay_Time[chip],MaxDelay))
                 ErrDelayTest+=1
         else:
-            print('\t Chip %i Average Delay=%.2f ns ref=%.02f' % (chip,AverageDelay_Time[chip],(MaxDelay+MinDelay)/2.0))
+            print        ('\t Chip %i Average Delay=%.2f ns ref=%.02f' % (chip,AverageDelay_Time[chip],(MaxDelay+MinDelay)/2.0))
+            logging.info ('\t Chip %i Average Delay=%.2f ns ref=%.02f' % (chip,AverageDelay_Time[chip],(MaxDelay+MinDelay)/2.0))
 
     if (ErrDelayTest==0):
         print('\t ===> Delays Test Passed without Error')
     else:
         print('\t ===> Delays Test Failed with %i Errors' % ErrDelayTest)
+
+    return (ErrDelayTest)
 
     #with DelaysChart do
     #    Title.Text.Clear

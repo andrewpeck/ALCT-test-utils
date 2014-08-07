@@ -3,15 +3,19 @@
 ################################################################################
 # delays.py -- Functions and tests for checking delay ASIC Pattern read/write
 ################################################################################
+#-------------------------------------------------------------------------------
 import random
 import sys
 import os
-
-#
+#-------------------------------------------------------------------------------
 import jtaglib as jtag
 import common
 import alct
 import time
+#-------------------------------------------------------------------------------
+import logging
+logging.getLogger()
+#-------------------------------------------------------------------------------
 
 # converts 1D array[number of chips on board]
 #     into 2D array[number of groups][number of chips in group]
@@ -213,7 +217,13 @@ def Walking1(alcttype):
         #PrintPatterns(alcttype, SendPtrns, ReadPtrns)
 
     # Fini
-    print('\n\t ===> Walking 1 Test Finished with %i Errors ' % Errs)
+    if (Errs == 0): 
+        print       ('\n\t ====> PASS: Walking 1 Test Finished with %i Errors ' % Errs)
+        logging.info('\t PASS: Walking 1 Test Finished with %i Errors ' % Errs)
+    else: 
+        print       ('\n\t ====> FAIL: Walking 1 Test Finished with %i Errors ' % Errs)
+        logging.info('\t FAIL: Walking 1 Test Finished with %i Errors ' % Errs)
+    return (Errs)
 
 # Sends a walking 1 pattern through the delay ASICs
 def Walking0(alcttype):
@@ -250,7 +260,13 @@ def Walking0(alcttype):
             print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
 
     # Fini
-    print('\n\t ===> Walking 0 Test Finished with %i Errors ' % Errs)
+    if (Errs == 0): 
+        print       ('\n\t ====> PASS: Walking 0 Test Finished with %i Errors ' % Errs)
+        logging.info('\t PASS: Walking 0 Test Finished with %i Errors ' % Errs)
+    else: 
+        print       ('\n\t ====> FAIL: Walking 0 Test Finished with %i Errors ' % Errs)
+        logging.info('\t FAIL: Walking 0 Test Finished with %i Errors ' % Errs)
+    return (Errs)
 
 # Fills delay ASICs with a Walking 1
 def Filling1(alcttype):
@@ -262,7 +278,8 @@ def Filling1(alcttype):
     Errs       = 0
     ErrOnePass = 0
     fStop      = False
-    print('Filling 1s Test')
+
+    print       ('Filling 1s Test')
 
     alct.SetChain(alct.VIRTEX_CONTROL)
 
@@ -293,7 +310,13 @@ def Filling1(alcttype):
         if (ErrOnePass > 0):
             print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
     # Fini
-    print('\n\t ===> Filling by 1s Test Finished with %i Errors ' % Errs)
+    if (Errs==0):
+        print       ('\n\t ====> PASS: Filling by 1s Test Finished with %i Errors ' % Errs)
+        logging.info('\t PASS: Filling by 1s Test Finished with %i Errors ' % Errs)
+    else: 
+        print       ('\n\t ====> FAIL: Filling by 1s Test Finished with %i Errors ' % Errs)
+        logging.info('\t FAIL: Filling by 1s Test Finished with %i Errors ' % Errs)
+    return (Errs)
 
 # Unfills delay ASICs with a Walking 0
 def Filling0(alcttype):
@@ -306,7 +329,7 @@ def Filling0(alcttype):
     ErrOnePass = 0
     fStop      = True
 
-    print('Filling 0s Test')
+    print        ('Filling 0s Test')
     alct.SetChain(alct.VIRTEX_CONTROL)
 
     for i in range(alct.alct[alcttype].groups):
@@ -337,7 +360,14 @@ def Filling0(alcttype):
             print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
 
     # Fini
-    print('\n\t ===> Filling by 0s Test Finished with %i Errors ' % Errs)
+    if (Errs == 0): 
+        print        ('\n\t ====> PASS: Filling by 0s Test Finished with %i Errors ' % Errs)
+        logging.info ('\t PASS: Filling by 0s Test Finished with %i Errors ' % Errs)
+    else: 
+        print        ('\n\t ====> FAIL: Filling by 0s Test Finished with %i Errors ' % Errs)
+        logging.info ('\t FAIL: Filling by 0s Test Finished with %i Errors ' % Errs)
+
+    return (Errs)
 
 # Shifts 5 and A through the delay asic... 0101010101 --> 10101010101..
 # Uses HIGH current.. maybe not a good test.
@@ -352,7 +382,7 @@ def Shifting5andA(alcttype):
     ErrOnePass = 0
     fStop = False
 
-    print('Shifting 5 and A Test')
+    print        ('Shifting 5 and A Test')
 
     alct.SetChain(alct.VIRTEX_CONTROL)
     for p in range(npasses):
@@ -402,7 +432,14 @@ def Shifting5andA(alcttype):
 
     SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
     # Fini
-    print('\n\t ===> Shifting 5 and A Test Finished with %i Errors ' % Errs)
+    if (Errs == 0): 
+        print        ('\n\t ====> PASS: Shifting 5 and A Test Finished with %i Errors ' % Errs)
+        logging.info ('\t PASS: Shifting 5 and A Test Finished with %i Errors ' % Errs)
+    else: 
+        print        ('\n\t ====> FAIL: Shifting 5 and A Test Finished with %i Errors ' % Errs)
+        logging.info ('\t FAIL: Shifting 5 and A Test Finished with %i Errors ' % Errs)
+
+    return (Errs)
 
 # Sends random patterns into delay ASICs
 def RandomData(alcttype):
@@ -416,7 +453,7 @@ def RandomData(alcttype):
     ErrOnePass = 0
     fStop      = False
 
-    print('Random Data Test')
+    print        ('Random Data Test')
 
     alct.SetChain(alct.VIRTEX_CONTROL)
 
@@ -466,7 +503,13 @@ def RandomData(alcttype):
     SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
 
     # Fini
-    print('\n\t ===> Random Data Test Finished with %i Errors ' % Errs)
+    if (Errs==0): 
+        print        ('\n\t ====> PASS: Random Data Test Finished with %i Errors ' % Errs)
+        logging.info ('\t PASS: Random Data Test Finished with %i Errors ' % Errs)
+    else: 
+        print        ('\n\t ====> FAIL: Random Data Test Finished with %i Errors ' % Errs)
+        logging.info ('\t FAIL: Random Data Test Finished with %i Errors ' % Errs)
+    return (Errs)
 
 #def GeneratePattern():
 #    begin
@@ -760,13 +803,7 @@ def SubtestMenu(alcttype):
         print("")
         if not k: break
 
-        if k=="0":
-            Walking1(alcttype)
-            Walking0(alcttype)
-            Filling1(alcttype)
-            Filling0(alcttype)
-            Shifting5andA(alcttype)
-            RandomData(alcttype)
+        if k=="0": DelayPatternSelfTest(alcttype)
         if k=="1": Walking1(alcttype)
         if k=="2": Walking0(alcttype)
         if k=="3": Filling1(alcttype)
@@ -776,3 +813,13 @@ def SubtestMenu(alcttype):
 
         k=input("\n<cr> to return to menu: ")
 
+def PatternsSelfTest(alcttype): 
+    logging.info ('\nDelay ASICs Pattern Test:')
+    Errs = 0 
+    Errs += Walking1(alcttype)
+    Errs += Walking0(alcttype)
+    Errs += Filling1(alcttype)
+    Errs += Filling0(alcttype)
+    Errs += Shifting5andA(alcttype)
+    Errs += RandomData(alcttype)
+    return (Errs)
