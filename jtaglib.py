@@ -70,8 +70,7 @@ if   BACKEND=="nativec":
         if (DataSize < 0 or DataSize >32):
             print("ERROR: Attempted to shift too large of data (>32 bits at a time).")
             sys.exit()
-        DR = _lptjtaglib.ShiftDR(DR, DRSize, DR_REG)
-        return(result)
+        return(lptjtaglib.ShiftData(Data, DataSize, sendtms))
 
     #-------------------------------------------------------------------------------
     # Sends and receives JTAG data... wrapper to to Start IR/DR Shift, Shift in data
@@ -119,7 +118,7 @@ elif BACKEND=="ctypes":
             print("ERROR: Attempted to write invalid instruction register.")
             sys.exit()
 
-        IR = lptjtaglib.IOExchange(IR, IRSize,IR_REG)
+        IR = IOExchange(IR, IRSize,IR_REG)
         return(IR)
 
     # Write JTAG Data Register
@@ -128,8 +127,7 @@ elif BACKEND=="ctypes":
             print("ERROR: Attempted to write invalid data register.")
             sys.exit()
 
-        DR = lptjtaglib.IOExchange(DR, DRSize, DR_REG)
-        return(DR)
+        return(IOExchange(DR, DRSize, DR_REG))
 
     # Read JTAG Data Register
     def ReadDR(DR, DRSize):
@@ -146,22 +144,66 @@ elif BACKEND=="ctypes":
         if (DataSize < 0 or DataSize >32):
             print("ERROR: Attempted to shift too large of data (>32 bits at a time).")
             sys.exit()
-        DR = lptjtaglib.ShiftDR(DR, DRSize, DR_REG)
-        return(result)
+        return(lptjtaglib.ShiftData(Data, DataSize, sendtms))
 
     #-------------------------------------------------------------------------------
     # Sends and receives JTAG data... wrapper to to Start IR/DR Shift, Shift in data
     # while reading from TDO.. exit IR/DR shift. Returns TDO data.
     #-------------------------------------------------------------------------------
     def IOExchange(Send, DataSize, RegType):
+        #if (DataSize is None) or (Send is None):
+        #    print("ERROR: attempting to write nothing to IOExchange")
+        #    sys.exit()
+        #return (lptjtaglib.IOExchange(Send, DataSize, RegType))
+
         if (DataSize is None) or (Send is None):
             print("ERROR: attempting to write nothing to IOExchange")
             sys.exit()
 
-        Recv = lptjtaglib.IOExchange(Send, DataSize, RegType)
+        # We can write 8 bits at a time
+        ChunkSize   = 8
+
+        # Number of words needed to shift entire data
+        nChunks     = (abs(DataSize-1)//ChunkSize) + 1
+
+        # instruction register or data register? 
+        # initiate data shift
+        if (RegType == IR_REG):
+            lptjtaglib.StartIRShift()
+        elif (RegType == DR_REG):
+            lptjtaglib.StartDRShift()
+
+        Recv=0 # Received Data (reconstructed Full-packet)
+        tdo =0 # Test data out (byte-by-byte)
+
+        # this whole loop can be simplified a lot.. e.g. this seems it should have the same behavior 
+        # but need to test to be sure
+        #for i in range(nChunks):
+        #    if i==nChunks-1: 
+        #        tdo = 0xFF & ShiftData(0xFF & (Send >> 8*i), DataSize - ChunkSize*i, True)
+        #    else: 
+        #        tdo = 0xFF & ShiftData(0xFF & (Send >> 8*i), ChunkSize,              False)
+        #    Recv = Recv | tdo << (8*i)
+
+        for i in range(nChunks):
+            if (DataSize > ChunkSize*i):  # i don't think this "if" is needed
+                # not the last byte sent
+                if (DataSize - ChunkSize*i) > ChunkSize:
+                    tdo = 0xFF & lptjtaglib.ShiftData(0xFF & (Send >> 8*i), ChunkSize,              False)
+                # the last byte sent needs to have a TMS sent with it
+                else:
+                    tdo = 0xFF & lptjtaglib.ShiftData(0xFF & (Send >> 8*i), DataSize - ChunkSize*i, True)
+
+            Recv = Recv | tdo << (8*i)
+
+        if   (RegType == IR_REG):
+            lptjtaglib.ExitIRShift()
+        elif (RegType == DR_REG):
+            lptjtaglib.ExitDRShift()
+
         return (Recv)
 
-elif backend == "python": 
+elif BACKEND == "python": 
     # system imports
     import sys
 

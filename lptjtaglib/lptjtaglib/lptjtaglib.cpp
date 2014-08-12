@@ -53,7 +53,7 @@ __declspec(dllexport) short jtagio ( short TMSvalue,  short TDIvalue)
     } 
     else 
     {
-        sendbit = sendbit & ~TDI; 
+        sendbit = sendbit & (~TDI); 
     }
 
     // choose TMS Bit
@@ -63,13 +63,12 @@ __declspec(dllexport) short jtagio ( short TMSvalue,  short TDIvalue)
     }
     else 
     {
-        sendbit = sendbit & ~TMS; 
+        sendbit = sendbit & (~TMS); 
     }
 
     // Don't Change TDO bit
-    sendbit = sendbit | TDO; 
-
     // Write data to port
+    sendbit = sendbit | TDO; 
     SetPortByte(BASE_ADR, sendbit); 
 
     // Clock rise
@@ -79,15 +78,17 @@ __declspec(dllexport) short jtagio ( short TMSvalue,  short TDIvalue)
     // Read data from port
     rcvbit  = GetPortByte(STATUS_ADR); 
 
-    // Extract TDO Bit
-    rcvbit   =  rcvbit & TDO; 
-    rcvbit   = ~rcvbit & 0x1; 
-    rcvbit   =  rcvbit & 0xFF; 
-    TDOvalue = ~rcvbit & 0x1; 
+	//Clock fall
+	sendbit = sendbit & (~TCK); 
+	SetPortByte(BASE_ADR, sendbit);
 
-    // Clock fall
-    sendbit = sendbit & (~TCK); 
-    SetPortByte(BASE_ADR, sendbit); 
+	// Mask Out TDO Bit
+    rcvbit   =  (~rcvbit) & TDO; 
+	
+	if (rcvbit == TDO)
+		TDOvalue = 0;
+	else 
+		TDOvalue = 1;
 
     return(TDOvalue); 
 }
@@ -221,25 +222,9 @@ __declspec(dllexport) int IOExchange(int Send, int DataSize, int RegType)
 __declspec(dllexport) short GetPortByte(short adr)
 {
 #ifdef _LINUX
-	return (0xFF); 
+	return (0xFF);  
 #else
-    //Open inpout32 library
-    //HMODULE hlib; 
-    //hlib = LoadLibrary("inpout32.dll");
-
-    //Inp32=GetProcAddress(hlib,"Inp32");
-    //short data = Inp32(adr);
-
-    //FreeLibrary(Inp32);
-    // Failed to Open Driver
-    //if (hlib == NULL) 
-    //{
-    //    return -1;
-    //}
-
-    return(Inp32(adr)); 
-    //return (data); 
-    return (0xFF); 
+    return(Inp32(adr));  
 #endif
 }
 
@@ -247,13 +232,8 @@ __declspec(dllexport) short GetPortByte(short adr)
 extern "C" void SetPortByte(short adr, short data)
 {
 #ifdef _LINUX
-
+	
 #else
-    //Open inpout32 library
-    //HMODULE hlib; 
-    //hlib = LoadLibrary("inpout32.dll");
-    //Out32 = GetProcAddress(hlib,"Out32");
     Out32(adr, data);
-    //FreeLibrary(Inp32);
 #endif
 }
