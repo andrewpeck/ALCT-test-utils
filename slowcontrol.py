@@ -396,31 +396,32 @@ def CheckThresholds(first, last, depth=1):
     if (first==last): last+=1
     for afeb in range(first, last):
         afebErrs = 0
-        print("\n\tTesting AFEB #%2i" % afeb)
-        if afeb !=0: print("")
+        print("\t Testing AFEB #%2i" % afeb)
         for thresh in range(256):
             if thresh%depth == 0:
                 write=thresh
                 SetThreshold(afeb,write)
                 read = ReadThreshold(afeb)/4.0
                 if abs(write - read) > ThreshToler:
-                    print("\t\tERROR: Write=%3i Read=%3.0f" % (write,read) )
+                    print("\t\t ERROR: Write=%3i Read=%3.0f" % (write,read) )
                     afebErrs +=1
         Errs+=afebErrs
         ErrMatrix[afeb]=afebErrs
 
-    print("\t Summary: ")
+    logging.info ("\t Summary: ")
     for afeb in range(first, last):
         if (ErrMatrix[afeb] > 0): 
-            print("\t\t ====> AFEB #%2i Failed with %i Errors" % (afeb, ErrMatrix[afeb]))
+            logging.info("\t\t FAIL: AFEB #%2i with %i Errors" % (afeb, ErrMatrix[afeb]))
         else:
-            print("\t\t ====> AFEB #%2i Passed!" %(afeb))
+            logging.info("\t\t PASS: AFEB #%2i" %(afeb))
 
     if Errs==0:
-        print('\t\t ====> Passed')
+        print        ('\t\t PASS: Thresholds Linearity Test')
+        logging.info ('\t\t PASS: Thresholds Linearity Test')
         return(0)
     else:
-        print('\t\t ====> Failed Thresholds Test with %i Total Errors' % Errs)
+        print        ('\t\t FAIL: Thresholds Test with %i Total Errors' % Errs)
+        logging.info ('\t\t FAIL: Thresholds Test with %i Total Errors' % Errs)
         return(Errs)
 
 # Checks ALCT-AFEB standby register
@@ -561,10 +562,12 @@ def CheckCurrents(alcttype):
         print("\t %s \tread=%.03f expect=%.03f +- %0.03f" % (arCurrents[i].ref, readval*arCurrents[i].coef, ref, arCurrents[i].toler))
 
     if Errs==0:
-        print('\t ====> Passed')
+        print        ('\t PASS: Currents Check')
+        logging.info ("\t FAIL: Currents Check")
         return(0)
     else:
-        print('\t ====> Failed Current Test with %i Errors' % Errs)
+        print        ('\t FAIL: Current Test with %i Errors' % Errs)
+        logging.info ('\t FAIL: Current Test with %i Errors' % Errs)
         return(Errs)
 
 # Checks temperature against reference (should be close to ambient)
@@ -618,15 +621,11 @@ def SelfTest(alcttype):
     else: 
         logging.info("\t PASS: Voltages Check")
 
-    #--------------------------------------------------------------------------
+    #-Check Currents-----------------------------------------------------------
     fail = CheckCurrents(alcttype)
-    if (fail):
-        Errs += fail
-        logging.info("\t FAIL: Currents Check")
-    else: 
-        logging.info("\t PASS: Currents Check")
+    Errs += fail
 
-    #--------------------------------------------------------------------------
+    #-Check On-board Temperature-----------------------------------------------
     fail = CheckTemperature()
     if (fail):
         Errs += fail
@@ -638,9 +637,6 @@ def SelfTest(alcttype):
     fail = CheckThresholds(0,alct.alct[alcttype].groups*6,17)
     if (fail):
         Errs += fail
-        logging.info("\t FAIL: Thresholds Check with %i Errors" % fail)
-    else: 
-        logging.info("\t PASS: Thresholds Check")
 
     #--------------------------------------------------------------------------
     fail = CheckStandbyRegister()
