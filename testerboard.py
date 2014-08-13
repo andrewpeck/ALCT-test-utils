@@ -175,6 +175,7 @@ def ReadFIFOfast(numwords, cntrs, alcttype):
         cntrs[15-i] = num           # fill cntrs array
 
 
+# Configure FIFO data, channel, delays, test board delays
 def SetDelayTest(fifoval, fifochan, startdelay=2, alctdelay=0x0000, testboarddelay=0, alcttype=0):
     #debug=True
     SetFIFOChannel(fifochan, startdelay)
@@ -186,40 +187,6 @@ def SetDelayTest(fifoval, fifochan, startdelay=2, alctdelay=0x0000, testboarddel
 #-------------------------------------------------------------------------------
 # Tester Board Analysis Functions
 #-------------------------------------------------------------------------------
-
-def PinPointRiseTime(TimeR, FIFOvalue, ch, StartDly_R, alct_dly, num, alcttype):
-    tb_dly              = 0
-    RegisterMaskDone    = 0
-    FirstChn            = False
-    cntrs               = [0x00]*16 # "array of byte"
-
-    SetDelayTest(FIFOvalue, ch, StartDly_R, alct_dly, tb_dly, alcttype)
-
-    for j in range(26):
-        tb_dly = 5*j
-        SetTestBoardDelay(tb_dly)
-        ReadFIFOfast(num,cntrs,alcttype)
-
-        for i in range(16):
-            if (cntrs[i] > 0) and (FIFOvalue & (1 << i))>0 :
-                FirstChn = True
-
-            if (FirstChn) :
-                tb_dly = 10*(j-1)
-                break
-
-    for dly in range(tb_dly,256):
-        SetTestBoardDelay(dly)
-        ReadFIFOfast(num,cntrs, alcttype)
-
-        for i in range (16):
-            if (cntrs[i]>(num/2)) and ((FIFOvalue & (1 << i))>0) and ((RegisterMaskDone & (1 << i))==0):
-                TimeR[i] = dly
-                if debug: print(TimeR[i])
-                if debug: print('%i %i' % (i, dly))
-                RegisterMaskDone = RegisterMaskDone | (1 << i)
-        if (RegisterMaskDone == FIFOvalue):
-            break
 
 #def PinPointRiseTime50(TimeR, TimeR_50, value, ch, StartDly_R, alct_dly, num, alcttype):
 #    tb_dly      = 0
@@ -258,14 +225,22 @@ def PinPointRiseTime(TimeR, FIFOvalue, ch, StartDly_R, alct_dly, num, alcttype):
 #    if(RegisterMaskDone == FIFOvalue):
 #        return(0)
 
-def PinPointFallTime(TimeF, FIFOvalue, ch, StartDly_F, alct_dly, num, alcttype):
-    tb_dly           = 0
+def PinPointRiseTime(FIFOvalue, ch, StartDly_F, alct_dly, num, alcttype):
+    return(PinPointTime(FIFOvalue, ch, StartDly_F, alct_dly, num, alcttype, "rise"))
+
+def PinPointFallTime(FIFOvalue, ch, StartDly_F, alct_dly, num, alcttype):
+    return(PinPointTime(FIFOvalue, ch, StartDly_F, alct_dly, num, alcttype, "fall"))
+
+def PinPointTime(FIFOvalue, ch, StartDly_F, alct_dly, num, alcttype, edge):
+    # Initialize Values
+    tb_dly           = 0         # Initial Test Board Delay
     RegisterMaskDone = 0
-    FirstChn         = False
+    FirstChn         = False     # Is First Channel? 
     cntrs            = [0x00]*16 # "array of byte"
 
     SetDelayTest(FIFOvalue, ch, StartDly_F, alct_dly, tb_dly, alcttype)
 
+    # Rise
     for j in range(26):
         tb_dly = 10*j
         SetTestBoardDelay(tb_dly)
@@ -273,25 +248,40 @@ def PinPointFallTime(TimeF, FIFOvalue, ch, StartDly_F, alct_dly, num, alcttype):
 
         for i in range(16):
             if(cntrs[i] > 0) and ((FIFOvalue & (1 << i))>0):
-                FirstChn = True
+                tb_dly = 10*(j-1)
+                break
 
-        if(FirstChn):
-            tb_dly = 10*(j-1)
-            break
+    if edge=="rise": 
+        for dly in range(tb_dly,256):
+            SetTestBoardDelay(dly)
+            ReadFIFOfast(num,cntrs, alcttype)
 
-    for tb_dly in range (256):
-        SetTestBoardDelay(tb_dly)
-        ReadFIFOfast(num,cntrs,alcttype)
+            for i in range (16):
+                if (cntrs[i]>(num/2)) and ((FIFOvalue & (1 << i))>0) and ((RegisterMaskDone & (1 << i))==0):
+                    Time = dly+1
+                    RegisterMaskDone = RegisterMaskDone | (1 << i)
+            if (RegisterMaskDone == FIFOvalue):
+                break
 
-        for i in range(16):
-            if (cntrs[i]<(num/2)) and ((FIFOvalue & (1 << i))>0) and ((RegisterMaskDone & (1 << i))==0):
-                TimeF[i] = tb_dly
-                RegisterMaskDone = RegisterMaskDone | (1 << i)
+    if edge=="fall":
+        for dly in range (256):
+            SetTestBoardDelay(dly)
+            ReadFIFOfast(num,cntrs,alcttype)
 
-        if(RegisterMaskDone == FIFOvalue):
-            break
+            for i in range(16):
+                if edge=="fall": 
+                    if (cntrs[i]<(num/2)) and ((FIFOvalue & (1 << i))>0) and ((RegisterMaskDone & (1 << i))==0):
+                        Time = fall
+                        RegisterMaskDone = RegisterMaskDone | (1 << i)
+            if (RegisterMaskDone == FIFOvalue):
+                break
+    return(Time)
 
 def FindStartDly(FIFOvalue, ch, alct_dly, num, alcttype):
+    (FoundTimeBin, StartDly_R, StartDly_F,RegMaskDone) = FindStartDlyPin(FIFOvalue, ch, alct_dly, num, 0, alcttype)
+    return (FoundTimeBin, StartDly_R, StartDly_F)
+
+def FindStartDlyPin(FIFOvalue, ch, alct_dly, num, RegMaskDone, alcttype):
     if debug: print('Find Start Dly')
     alct.SetChain(alct.arJTAGChains[3])
     FoundTimeBin    = False # Found time bin ?
@@ -323,14 +313,13 @@ def FindStartDly(FIFOvalue, ch, alct_dly, num, alcttype):
         for i in range(16):
             if (cntrs[i] > (num/2)) and ((FIFOvalue & (1 << i))>0):
                 ChannelsCntr += 1
-                MaskDoneR = MaskDoneR | (1 << i)
+                MaskDoneR |= (1 << i)
 
         # Check if time bin is found
         if (ChannelsCntr > 0):
             FirstChnR = True
         if (MaskDoneR == FIFOvalue):
             AllChnR = True
-
 
         if (not FirstChnR):
             StartDly_R = StartDly
@@ -342,79 +331,15 @@ def FindStartDly(FIFOvalue, ch, alct_dly, num, alcttype):
             else:
                 FirstChnF = True
 
+        # Need to think about this code.. the original PASCAL is really odd.. 
         if (FirstChnF):
             MaskDoneF = 0
             for i in range (16):
-                #if (cntrs[i] < (num/2)) and ((FIFOvalue & (1 << i))>0) :
-                MaskDoneF = MaskDoneF | (1 << i)
-                RegMaskDoneF = MaskDoneF
-                if (MaskDoneF == FIFOvalue):
-                    AllChnF = True
-
-            if (AllChnR and AllChnF):
-                FoundTimeBin = True
-                break
-
-        if (not FirstChnR):
-            StartDly_R = 5
-
-    return(FoundTimeBin, StartDly_R, StartDly_F)
-
-def FindStartDlyPin(FIFOvalue, ch, alct_dly, num, RegMaskDone, alcttype):
-    RegMaskDoneR    = 0
-    RegMaskDoneF    = 0
-    MaxChannelsCntr = 0
-    FoundTimeBin    = False
-    FirstChnR       = False
-    AllChnR         = False
-    FirstChnF       = False
-    AllChnF         = False
-    StartDly_R      = 5
-    StartDly_F      = 5
-    StartDly        = 5
-    tb_dly          = 0
-    cntrs           = [0x00]*16 # "array of byte"
-    PulseWidth_min  = 0
-
-    SetDelayTest(FIFOvalue, ch, StartDly, alct_dly, tb_dly,alcttype)
-
-    for StartDly in range(5,16):
-        #Access board
-        SetFIFOChannel(ch, StartDly )
-        ReadFIFOfast(num,cntrs, alcttype)
-
-        #Check counters and increment
-        ChannelsCntr = 0
-        MaskDoneR = 0
-
-        for i in range (16):
-            if (cntrs[i] > (num/2)) and ((FIFOvalue & (1 << i))>0):
-                ChannelsCntr+=1
-                MaskDoneR = MaskDoneR | (1 << i)
-
-            #Check if time bin is found
-            if (ChannelsCntr > 0):
-                FirstChnR = True
-            if (MaskDoneR == FIFOvalue):
-                AllChnR = True
-
-            if (not FirstChnR):
-                StartDly_R = StartDly
-            else:
-                if ((ChannelsCntr > 0) and (ChannelsCntr >= MaxChannelsCntr)):
-                    MaxChannelsCntr = ChannelsCntr
-                    StartDly_F = StartDly
-                    RegMaskDoneR = MaskDoneR
-                else:
-                    FirstChnF = True
-
-        if (FirstChnF):
-            MaskDoneF = 0
-            for i in range(16):
                 if (cntrs[i] < (num/2)) and ((FIFOvalue & (1 << i))>0):
                     MaskDoneF = MaskDoneF | (1 << i)
 
             RegMaskDoneF = MaskDoneF
+
             if (MaskDoneF == FIFOvalue):
                 AllChnF = True
 
@@ -422,11 +347,14 @@ def FindStartDlyPin(FIFOvalue, ch, alct_dly, num, RegMaskDone, alcttype):
             FoundTimeBin = True
             break
 
+    # Failed to Find Start Delay? then call it 5..
     if (not FirstChnR):
         StartDly_R = 5
 
-    RegMaskDone[ch] = RegMaskDoneR and RegMaskDoneF
-    return(FoundTimeBin, StartDly_R, StartDly_F)
+    RegMaskDone[ch] = RegMaskDoneR & RegMaskDoneF
+
+    # Return tuple of values
+    return(FoundTimeBin, StartDly_R, StartDly_F,RegMaskDone)
 
 def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, AverageDelay_Time, RegMaskDone, alcttype):
     MinWidth       = 30
@@ -450,14 +378,15 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
         DeltaBeginTime[ch][i]   = 0
         Delay_Time[ch][i]       = 0
 
+    # 
     alct_dly        = 0
     StartDly_R      = 0
     StartDly_F      = 0
 
-    (FoundTimeBin, StartDly_R, StartDly_F) = FindStartDlyPin(FIFOvalue, ch, alct_dly, num, RegMaskDone,alcttype)
+    (FoundTimeBin, StartDly_R, StartDly_F,RegMaskDone) = FindStartDlyPin(FIFOvalue, ch, alct_dly, num, RegMaskDone,alcttype)
     if FoundTimeBin:
-        PinPointRiseTime(TimeR_0, FIFOvalue, ch, StartDly_R, alct_dly, num,alcttype)
-        PinPointFallTime(TimeF_0, FIFOvalue, ch, StartDly_F, alct_dly, num,alcttype)
+        TimeR_0[ch] = PinPointRiseTime(TimeR_0, FIFOvalue, ch, StartDly_R, alct_dly, num,alcttype)
+        TimeF_0[ch] = PinPointFallTime(TimeF_0, FIFOvalue, ch, StartDly_F, alct_dly, num,alcttype)
 
         BeginTime_Min[ch] = StartDly_R*25 + 255*0.25
         for i in range(16):
@@ -481,13 +410,15 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
         ErrMeasDly = ErrMeasDly | 0x1
         return(0)
 
+    #------------------------------------------------------------------------------
+
     alct_dly = 15
     AverageDelay_Time[ch] = 0
     SumDelay_Time = 0
 
     (FoundTimeBin, StartDly_R, StartDly_F) = FindStartDly(FIFOvalue, ch, alct_dly, num, alcttype)
     if FoundTimeBin:
-        PinPointRiseTime(TimeR_15, FIFOvalue, ch, StartDly_R, alct_dly, num)
+        TimeR_15[ch] = PinPointRiseTime(TimeR_15, FIFOvalue, ch, StartDly_R, alct_dly, num)
         for i in range(16):
             DelayTimeR_15[i]    = StartDly_R*25 + TimeR_15[i]*0.25
             Delay_Time[ch][i]   = DelayTimeR_15[i] - DelayTimeR_0[i]
@@ -505,9 +436,11 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
 
     for i in range(16):
         DeltaBeginTime[ch][i] = DelayTimeR_0[i] - BeginTime_Min[ch]
+        #if (DeltaBeginTime[ch][i] > MaxDeltaBeginTime) then
+        #    ErrMeasDly |= 0x10
+        # This was commented out in PASCAL.. for whatever reason
 
     return(ErrMeasDly)
-
 
 #def PrepareDelayLinePatterns(dlys, image):
 #    for i in range (0,4):
@@ -592,13 +525,11 @@ def ChipDelayScan(chip, alcttype):
 
     if FoundTimeBin:
         print('\t\t Found Start Delay Pulse on Chip #%i with alct delay of 0' % chip)
-        print('\t\t StartDly_R=%i StartDly_F=%i' % (StartDly_R,StartDly_F))
-        PinPointRiseTime(TimeR_0, FIFOvalue, chip, StartDly_R, alct_dly, num, alcttype)
-        PinPointFallTime(TimeF_0, FIFOvalue, chip, StartDly_F, alct_dly, num, alcttype)
-        print(TimeF_0)
+        print('\t\t StartDly Rise=%ins StartDly Fall=%ins' % (StartDly_R,StartDly_F))
+        TimeR_0[chip] = PinPointRiseTime(TimeR_0, FIFOvalue, chip, StartDly_R, alct_dly, num, alcttype)
+        TimeF_0[chip] = PinPointFallTime(TimeF_0, FIFOvalue, chip, StartDly_F, alct_dly, num, alcttype)
     else:
         print('\t\t ERROR: With alct_dly=0, Cannot find StartDly pulse on Chip: %i' % chip)
-
 
     MinDelayTimeR_0 = StartDly_R*25 + 255*0.25
 
@@ -635,8 +566,8 @@ def ChipDelayScan(chip, alcttype):
         print('\t\t Found Delay Pulse on Chip #%i with ALCT Delay=15' % chip)
         print('\t\t StartDly_rise=%i StartDly_fall=%i' % (StartDly_R,StartDly_F))
 
-        PinPointRiseTime(TimeR_15, FIFOvalue, chip, StartDly_R, alct_dly, num, alcttype)
-        PinPointFallTime(TimeF_15, FIFOvalue, chip, StartDly_F, alct_dly, num, alcttype)
+        TimeR_15[chip] = PinPointRiseTime(TimeR_15, FIFOvalue, chip, StartDly_R, alct_dly, num, alcttype)
+        TimeF_15[chip] = PinPointFallTime(TimeF_15, FIFOvalue, chip, StartDly_F, alct_dly, num, alcttype)
     else:
         print('\t\t With alct_dly=15, Cannot find StartDly pulse on Chip: %i' % chip)
 
@@ -662,7 +593,7 @@ def ChipDelayScan(chip, alcttype):
         print('\t\t Ch #%2i = %.02f ns' % (i,  PulseWidth_0[i]))
 
     #------------------------------------------------------------------------------
-    # Difference
+    # Take the Difference Between Rise and Fall (the width!)
     #------------------------------------------------------------------------------
     print("\n\t-----------------------------------------------------------------------")
     print('\t Pulse shifts (difference between 0 and 15) on Chip #%i' % chip)
@@ -673,7 +604,7 @@ def ChipDelayScan(chip, alcttype):
             ErrorDeltaDelay = Delay_Time[i]
 
 #-------------------------------------------------------------------------------
-# Automatic Check of Delay ASIC delays
+# Automatic Check of ALL Delay ASIC delays
 #-------------------------------------------------------------------------------
 def TestboardDelaysCheck(alcttype):
     NUM_AFEB = alct.alct[alcttype].groups * 6
@@ -754,61 +685,76 @@ def TestboardDelaysCheck(alcttype):
                 DeltaDelay_Max[chip] = DeltaDelay[i]
 
         if (DeltaBegin_Max[chip] > MaxDeltaBegin):
-            ErrMeasDly = ErrMeasDly | 0x10
-        if (DeltaDelay_Max[chip] > MaxDeltaDelay):
-            ErrMeasDly = ErrMeasDly | 0x20
+            ErrMeasDly |= 0x10
 
+        if (DeltaDelay_Max[chip] > MaxDeltaDelay):
+            ErrMeasDly |= 0x20
+
+
+        # Mark Test as Failed
         if (ErrMeasDly != 0):
             ErrDelayTest = True
-            for i in range(6):
-                if (ErrMeasDly & (1 << i)) > 0:
-                    k = i
-                    #break
-                    if k==0:
-                        print       ('\t FAIL: Cannot find StartDly_0 on Chip #%i' % chip)
-                        logging.info('\t FAIL: Cannot find StartDly_0 on Chip #%i' % chip)
 
-                        ErrDelayTest+=1
-                        if (RegMaskDone[chip]==0):
-                            print       ('\t All Pins Failed')
-                            logging.info('\t All Pins Failed')
+        # Produce some output about what failed
+        # Error Measure Delay is a Simple Bitmask of Error Types: 
+        # 0x01 = 000001 => Time Bin @ dly=0  Not Found
+        # 0x02 = 000010 => Time Bin @ dly=15 Not Found
+        # 0x04 = 000100 => Pulse Width too Small
+        # 0x08 = 001000 => Pulse Width too Large
+        # 0x10 = 010000 => Delta Begin Time Too Large
+        # 0x20 = 100000 => Delta Delay Time Too Large
+        #------------------------------------------------------------------------------
+        if (ErrMeasDly & 0x1): 
+            print       ('\t FAIL: Cannot find StartDly_0 on Chip #%i' % chip)
+            logging.info('\t FAIL: Cannot find StartDly_0 on Chip #%i' % chip)
+            ErrDelayTest+=1
+            if (RegMaskDone[chip]==0):
+                print       ('\t All Pins Failed')
+                logging.info('\t All Pins Failed')
+            else:
+                PinErrors  ='   Pin(s): '
+                for j in range(16):
+                    if ((RegMaskDone[chip] & (1 << j))==0):
+                        if (count==0):
+                            PinErrors = PinErrors + str(j)
                         else:
-                            PinErrors  ='   Pin(s): '
-                            for j in range(16):
-                                if ((RegMaskDone[chip] & (1 << j))==0):
-                                    if (count==0):
-                                        PinErrors = PinErrors + str(j)
-                                    else:
-                                        PinErrors  = PinErrors + ', ' + str(j)
-                                    count  = count+1
-                            PinErrors  = PinErrors + ' bad'
-                            print(PinErrors)
-
-                    if k==1:
-                        print        ('\t FAIL: Cannot find StartDly_15 on Chip: %i' % chip)
-                        logging.info ('\t FAIL: Cannot find StartDly_15 on Chip: %i' % chip)
-                        ErrDelayTest+=1
-                    if k==2:
-                        for l in range(16):
-                            if (PulseWidth[l] < 30):
-                                print        ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
-                                logging.info ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
-                                ErrDelayTest+=1
-                    if k==3:
-                        for l in range(16):
-                            if (PulseWidth[l] > 45):
-                                print        ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
-                                logging.info ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
-                                ErrDelayTest+=1
-
-                    if k==4:
-                        print        ('\t FAIL: Chip=%i DeltaBeginTime=%.02f ns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
-                        logging.info ('\t FAIL: Chip=%i DeltaBeginTime=%.02f ns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
-                        ErrDelayTest+=1
-                    if k==5:
-                        print        ('\t FAIL: Chip=%i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
-                        logging.info ('\t FAIL: Chip=%i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
-                        ErrDelayTest+=1
+                            PinErrors  = PinErrors + ', ' + str(j)
+                        count  = count+1
+                PinErrors  = PinErrors + ' bad'
+                print(PinErrors)
+        #------------------------------------------------------------------------------
+        if (ErrMeasDly & 0x2):
+            print        ('\t FAIL: Cannot find StartDly_15 on Chip: %i' % chip)
+            logging.info ('\t FAIL: Cannot find StartDly_15 on Chip: %i' % chip)
+            ErrDelayTest+=1
+        #------------------------------------------------------------------------------
+        if (ErrMeasDly & 0x4): 
+            for l in range(16):
+                if (PulseWidth[l] < 30):
+                    print        ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
+                    logging.info ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
+                    ErrDelayTest+=1
+        #------------------------------------------------------------------------------
+        if (ErrMeasDly & 0x8): 
+            for l in range(16):
+                if (PulseWidth[l] > 45):
+                    print        ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
+                    logging.info ('\t FAIL: Chip=%i Pin=%i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
+                    ErrDelayTest+=1
+        #------------------------------------------------------------------------------
+        if (ErrMeasDly & 0x10): 
+            print        ('\t FAIL: Chip=%i DeltaBeginTime=%.02f ns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
+            logging.info ('\t FAIL: Chip=%i DeltaBeginTime=%.02f ns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
+            ErrDelayTest+=1
+        #------------------------------------------------------------------------------
+        if (ErrMeasDly & 0x20): 
+                if i==5:
+                    print        ('\t FAIL: Chip=%i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
+                    logging.info ('\t FAIL: Chip=%i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
+                    ErrDelayTest+=1
+                else: 
+                    print        ('\t WTF!?')
+        #------------------------------------------------------------------------------
 
         if (AverageDelay_Time[chip] < MinDelay) or (AverageDelay_Time[chip] > MaxDelay) :
             ErrorDeltaDelay[chip] = AverageDelay_Time[chip]
@@ -820,6 +766,8 @@ def TestboardDelaysCheck(alcttype):
                 print        ('\t FAIL: Chip %02i Average Delay=%.2f ns is more than %.02f' % (chip,AverageDelay_Time[chip],MaxDelay))
                 logging.info ('\t FAIL: Chip %02i Average Delay=%.2f ns is more than %.02f' % (chip,AverageDelay_Time[chip],MaxDelay))
                 ErrDelayTest+=1
+            else: 
+                print        ('\t WTF!?')
         else:
             print        ('\t Chip %i Average Delay=%.2f ns ref=%.02f' % (chip,AverageDelay_Time[chip],(MaxDelay+MinDelay)/2.0))
             logging.info ('\t Chip %i Average Delay=%.2f ns ref=%.02f' % (chip,AverageDelay_Time[chip],(MaxDelay+MinDelay)/2.0))
@@ -830,32 +778,6 @@ def TestboardDelaysCheck(alcttype):
         print('\t ===> Delays Test Failed with %i Errors' % ErrDelayTest)
 
     return (ErrDelayTest)
-
-    #with DelaysChart do
-    #    Title.Text.Clear
-    #    Title.Text.Add('Test of Delays for ALCT # '+IntToStr(ch))
-    #    RemoveAllSeries
-    #    BottomAxis.Minimum  = 0
-    #    BottomAxis.Maximum  = 20
-    #    LeftAxis.Minimum  = 0
-    #    LeftAxis.Maximum  = 50*(0.000000001)
-
-    #    AddSeries(TBarSeries.Create(self))
-    #    AddSeries(TLineSeries.Create(self))
-    #    AddSeries(TBarSeries.Create(self))
-    #    AddSeries(TLineSeries.Create(self))
-
-    #    Series[0].Title  = 'Error Delay'
-    #    Series[1].Title  = 'Min Delay'
-    #    Series[2].Title  = 'DelayAverage'
-    #    Series[3].Title  = 'Max Delay '
-
-    #    for i =0 to NUM_AFEB-1 do
-    #        Series[0].Add(ErrorDeltaDelay[i],'',clTeeColor)
-    #        Series[1].AddXY(i, MinDelay,'',clTeeColor)
-    #        Series[2].Add(AverageDelay_Time[i],'',clTeeColor)
-    #        Series[3].AddXY(i, MaxDelay,'',clTeeColor)
-
 
 #------------------------------------------------------------------------------
 # Subtest Menu
