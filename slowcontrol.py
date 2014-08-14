@@ -220,28 +220,12 @@ def ReadRegister(reg):
 
 
 #------------------------------------------------------------------------------
-# Slow Control Functions
+# Slow-Control Control Functions
 #------------------------------------------------------------------------------
 
-# Set Standby Register for a Particular Group
-def SetGroupStandbyReg(group, value):
-    wgroups = 7
-    data = ReadStandbyReg()
-    if (group >=0) and (group < wgroups):
-        res = data
-        res = (res ^ ((res >> (group*6) & (0x3f)) << (6*group))) | ((value & 0x3F) << (group*6))
-        SetStandbyReg(res & 0xFFFFFFFFFFFF)
-
-
-# Read Standby Register for a Particular Group
-def ReadGroupStandbyReg(group):
-    alct.SetChain(alct.SLOW_CTL)
-    wgroups = 7
-    data    = ReadStandbyReg()
-    if (group >=0) and (group < wgroups):
-        return((data >> (group*6)) & 0x3F)
-    else:
-        print("Problem with Read Group Standby Reg")
+#------------------------------------------------------------------------------
+# Sets standby register. Logic 0 shuts down the AFEB power regulator for the
+# selected boards. Register bits are mapped one-to-one with AFEB cards
 
 def SetStandbyReg(value):
     alct.SetChain(alct.SLOW_CTL)
@@ -257,29 +241,64 @@ def SetStandbyForChan(chan, onoff):
         value = (value ^ (((value >> (chan % 6)) & 0x1 ) << (chan % 6) )) | (int(onoff) << (chan % 6))
         SetGroupStandbyReg(chan % 6, value)
 
+# Set Standby Register for a Particular Group
+def SetGroupStandbyReg(group, value):
+    wgroups = 7
+    data = ReadStandbyReg()
+    if (group >=0) and (group < wgroups):
+        res = data
+        res = (res ^ ((res >> (group*6) & (0x3f)) << (6*group))) | ((value & 0x3F) << (group*6))
+        SetStandbyReg(res & 0xFFFFFFFFFFFF)
+
+# Read Standby Register for a Particular Group
+def ReadGroupStandbyReg(group):
+    alct.SetChain(alct.SLOW_CTL)
+    wgroups = 7
+    data    = ReadStandbyReg()
+    if (group >=0) and (group < wgroups):
+        return((data >> (group*6)) & 0x3F)
+    else:
+        print("Problem with Reading Group Standby Reg")
+
+#------------------------------------------------------------------------------
+
+# Logic 0 shuts down test pulse generator, Logic 1 turns it on
 def SetTestPulsePower(sendval):
     return(WriteRegister(WTpd,sendval))
 
 def ReadTestPulsePower():
     return (ReadRegister(RTpd))
 
+# This 8-bit DAC controls the amplitude of the Analog Test Pulse sent to the
+# AFEBs. 1 LSB = 1.225V/256 = 4.7mV, and V(n)=1.225V*n/256, where n=0..255 
 def SetTestPulsePowerAmp(value):
-    temp = 0
-    for i in range(0,len-1):
-        temp = temp | (((value >> i) & 0x1) << (7-i))
-    WriteRegister(WTp,temp)
+    #temp = 0
+    #for i in range(0,len-1):
+    #    temp = temp | (((value >> i) & 0x1) << (7-i))
+    WriteRegister(WTp,value)
 
+# Stores the bits tp_group[] to specify which groups are enabled for the Analog
+# Test Pulse, which is initiated either by an external TTl signal or by a command
+# to the Virte Chip. Individual AFEBs cannot be selected to receive the test
+# pulse, but instead are arranged in groups of 6
 def SetTestPulseWireGroupMask(value):
     WriteRegister(WTpg,value)
 
 def ReadTestPulseWireGroupMask():
     return(ReadRegister(RTpg))
 
+
+# Stores the bits tp_strip[] to specify which CSC anode strips are enabled for
+# the analog test pulse. The register bits are mapped one-to-one with the
+# pulse-strips. 
+
 def SetTestPulseStripLayerMask(value):
     WriteRegister(WTps,value)
 
 def ReadTestPulseStripLayerMask():
     WriteRegister(RTps,value)
+
+#------------------------------------------------------------------------------
 
 # Set AFEB Threshold (value from 0-255)
 # Sets threshold in ADC counts
@@ -329,6 +348,20 @@ def ReadThreshold(ch):
 
     return(result)
 
+def ReadAllThresholds():
+    NUM_AFEB=24
+    print("\n%s> Read All Thresholds" % common.Now())
+    for j in range (NUM_AFEB):
+        thresh = ReadThreshold(j)
+        print("\t  AFEB #%02i:  Threshold=%.3fV (ADC=0x%03X)" % (j, (ADC_REF/1023)*thresh, thresh))
+
+def WriteAllThresholds(thresh):
+    print("\n%s> Write All Thresholds to %i" % (common.Now(), thresh))
+    for i in range(NUM_AFEB):
+        SetThreshold(i, thresh);
+    print("\t  All thresholds set to %i" % thresh)
+
+#------------------------------------------------------------------------------
 # Read ALCT board 12 bit voltage monitoring
 # Returns value in ADC counts (0-1023)
 def ReadVoltageADC(chan):
@@ -382,6 +415,10 @@ def ReadTemperatureADC():
 # Returns value in degrees C
 def ReadTemperature():
     return (ReadTemperatureADC()*arTemperature.coef-50)
+
+#------------------------------------------------------------------------------
+# Slow-Control Test Functions
+#------------------------------------------------------------------------------
 
 # Checks All board Thresholds
 # Optional depth argument allows for a quick scan
@@ -465,7 +502,7 @@ def CheckTestPulsePowerDown():
 def CheckTestPulsePowerUp():
     print('Checking Test Pulse Power Up')
     Errs = 0
-    sendval = 0
+    sendval = 1
     SetTestPulsePower(sendval)
     readval = ReadTestPulsePower()
     if readval != sendval:
@@ -589,19 +626,6 @@ def CheckTemperature():
     else:
         print('\t ====> Failed')
         return(Errs)
-
-def ReadAllThresholds():
-    NUM_AFEB=24
-    print("\n%s> Read All Thresholds" % common.Now())
-    for j in range (NUM_AFEB):
-        thresh = ReadThreshold(j)
-        print("\t  AFEB #%02i:  Threshold=%.3fV (ADC=0x%03X)" % (j, (ADC_REF/1023)*thresh, thresh))
-
-def WriteAllThresholds(thresh):
-    print("\n%s> Write All Thresholds to %i" % (common.Now(), thresh))
-    for i in range(NUM_AFEB):
-        SetThreshold(i, thresh);
-    print("\t  All thresholds set to %i" % thresh)
 
 # Runs an automatic self-test of Slow Control Functions
 # Should have _Normal_ ALCT Firmware Installed for Test
@@ -727,8 +751,3 @@ def SubtestMenu(alcttype):
             CheckTemperature()
 
         k=input("\n<cr> to return to menu: ")
-
-#def TestPulseManualCheck(): 
-#    SetTestPulsePowerAmp(value):
-#    SetTestPulsePower(sendval):
-
