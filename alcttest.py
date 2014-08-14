@@ -202,8 +202,45 @@ def AutomaticFullTest():
 
     #-------------------------------------------------------------------------------
     logging.info("\nTest Pulse Amplitude and Mask Check:")
-    # Manual check of Test Pulse
-        # need to implement this..
+    print("\nTest Pulse Generator Tests: ")
+
+    slowcontrol.SetTestPulsePower(1)       # Turn on Test Pulse Generator
+    slowcontrol.SetTestPulsePowerAmp(208)  # Set amplitude to approximately 1V
+    for i in range (6):
+        print("Connect oscilloscope to Lemo connector J%i" % i)
+
+        # Turn OFF test-channel, turn ON all others
+        slowcontrol.SetTestPulseStripLayerMask(~(0x1 << i))
+        while (True): 
+            k=input("\tChannel %i: Verify no test pulse.             <p> to pass, <f> to fail, <s> to skip: " % i)
+            if k=="p": 
+                logging.info("\t PASS: Channel %i confirmed test pulse power down" %i)
+                break
+            if k=="f": 
+                logging.info("\t FAIL: Channel %i failed test pulse power down" %i)
+                errors+=1
+                break
+            if k=="s": 
+                logging.info("\t SKIPPED: Channel %i User neglected to check Test Pulse Power Down" % i)
+                skipped+=1
+                break
+
+        # Turn ON test-channel, turn OFF all others
+        slowcontrol.SetTestPulseStripLayerMask(0x1 << i)
+        while (True): 
+            k=input("\tChannel %i: Verify test pulse amplitude=1V.   <p> to pass, <f> to fail, <s> to skip: " % i)
+            if k=="p": 
+                logging.info("\t PASS: Channel %i confirmed test pulse power up" %i)
+                break
+            if k=="f": 
+                logging.info("\t FAIL: Channel %i failed test pulse power up" %i)
+                errors+=1
+                break
+            if k=="s": 
+                logging.info("\t SKIPPED: Channel %i User neglected to check Test Pulse Power Up" % i)
+                skipped+=1
+                break
+    slowcontrol.SetTestPulsePower(0)  # Turn off Test Pulse Generator
 
     #-------------------------------------------------------------------------------
     logging.info("\nVoltage Reference Check:")
@@ -218,20 +255,20 @@ def AutomaticFullTest():
     print("\t From the corner of the chip nearest to LEMO connectors, it is the 4th pin down")
     print("\t ")
     print("\t    +--------------+              ")
-    print("\t    | •            |              ")
-    print("\t   -|   1      20  |-             ")
-    print("\t   -|   2      19  |-             ")
-    print("\t   -|   3      18  |-             ")
-    print("\t   -|   4      17  |-             ")
-    print("\t   -|   5      16  |-             ")
-    print("\t   -|   6      15  |-             ")
-    print("\t   -|   7      14  |- <-- 1.225 V ")
-    print("\t   -|   8      13  |-             ")
-    print("\t   -|   9      12  |-             ")
+    print("\t    | *            |              ")
+    print("\t   -|  01      20  |-             ")
+    print("\t   -|  02      19  |-             ")
+    print("\t   -|  03      18  |-             ")
+    print("\t   -|  04      17  |-             ")
+    print("\t   -|  05      16  |-             ")
+    print("\t   -|  06      15  |-             ")
+    print("\t   -|  07      14  |- <-- 1.225 V ")
+    print("\t   -|  08      13  |-             ")
+    print("\t   -|  09      12  |-             ")
     print("\t   -|  10      11  |-             ")
     print("\t    +--------------+              ")
     print("")
-    print("\tDC voltage MUST be 1.225 ± 0.001V")
+    print("\tDC voltage MUST be 1.225 +- 0.001V")
     print("")
 
 
@@ -244,15 +281,15 @@ def AutomaticFullTest():
             k=input("\tU%i voltage: <p> to pass, <f> to fail, <s> to skip: " % i)
             if k=="p": 
                 logging.info("\t PASS: User confirmed good U%i reference voltage" %i)
-                break 
+                break
             if k=="f": 
                 logging.info("\t FAIL: User indicates bad U%i reference voltage" % i)
                 errors+=1
-                break 
+                break
             if k=="s": 
                 logging.info("\t SKIPPED: User failed to check U%i reference voltage" % i)
                 skipped+=1
-                break 
+                break
 
     #-------------------------------------------------------------------------------
     logging.info("\nFinal configuration: ")
@@ -291,16 +328,21 @@ def AutomaticFullTest():
     if (skipped > 0): 
         print        ("\t ====> NOTE: %i Tests were Skipped!" % (skipped))
         logging.info ("\t NOTE: %i Tests were Skipped!" % (skipped))
-    if (errors == 0):
+
+    if (errors > 0):
+        print        ("\t ====> FAIL: ALCT #%s with mezzanine #%s failed with %i errors" % (baseboardSN, mezzanineSN, errors))
+        logging.info ("\t FAIL: ALCT #%s with mezzanine #%s failed with %i errors" % (baseboardSN, mezzanineSN, errors))
+    elif (errors == 0 && skipped==0):
         print        ("\t ====> PASS: ALCT #%s with mezzanine #%s passed all tests" % (baseboardSN, mezzanineSN))
         logging.info ("\t PASS: ALCT #%s with mezzanine #%s passed all tests" % (baseboardSN, mezzanineSN))
     else:
-        print        ("\t ====> FAIL: ALCT #%s with mezzanine #%s failed with %i errors" % (baseboardSN, mezzanineSN, errors))
-        logging.info ("\t FAIL: ALCT #%s with mezzanine #%s failed with %i errors" % (baseboardSN, mezzanineSN, errors))
+        print        ("\t ====> FAIL: ALCT #%s with mezzanine #%s passed all tests performed, but tests were skipped." % (baseboardSN, mezzanineSN))
+        logging.info ("\t FAIL: ALCT #%s with mezzanine #%s passed all tests performed, but tests were skipped" % (baseboardSN, mezzanineSN))
 
     k=input("\nAutomatic Self Test Finished ! Any key to return to main menu: ")
 
 
+# Prints and Returns hardware ID codes.. doesn't read some of them out. Need to understand why. 
 def PrintIDCodes():
     idcodestr  = ("\t Slow Control Firmware ID: 0x%X\n" % alct.ReadIDCode (0x0))
     idcodestr += ("\t Fast Control Firmware ID: 0x%X\n" % alct.ReadIDCode (0x1))
@@ -310,6 +352,7 @@ def PrintIDCodes():
     print (idcodestr)
     return (idcodestr)
 
+# Generates a string of the ALCT Type.. useful in some limited cases.. 
 def StringALCTType(type):
     if   type == 0: s = "ALCT-288"
     elif type == 1: s = "ALCT-384"
