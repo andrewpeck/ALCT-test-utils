@@ -7,6 +7,7 @@
 import random
 import sys
 import os
+import numpy as np
 #-------------------------------------------------------------------------------
 import jtaglib as jtag
 import common
@@ -23,9 +24,12 @@ def ConvertArray1Dto2D(array,alcttype):
     ngroups = alct.alct[alcttype].groups
     nchips  = 6*ngroups
     out = [[0 for j in range(6)] for i in range(ngroups)]
+    out = np.ndarray(shape=(6,ngroups,dtype=uint16)
+
     for i in range(ngroups):
         for j in range(6):
             out[i][j] = array[i*6 + j]
+
     return(out)
 
 # converts 2D array[number of groups][number of chips in group]
@@ -33,7 +37,8 @@ def ConvertArray1Dto2D(array,alcttype):
 def ConvertArray2Dto1D(array,alcttype):
     ngroups = alct.alct[alcttype].groups
     nchips  = 6*ngroups
-    out     = [0] * nchips
+    out     = np.ndarray(shape=nchips,dtype=uint16)
+
     for i in range(ngroups):
         for j in range(6):
             array[i*6 + j] =  out[i][j]
@@ -78,22 +83,18 @@ def SetDelayLines(cs, patterns, delays, alcttype):
             alct.WriteRegister(alct.DelayCtrlWrite,0x1FF,parlen)
 
 # Returns Array of  Delay Chip Patterns read from Board
-def ReadPatterns(pattern,alcttype):
-    SendPtrns =[[0 for j in range(6)] for i in range(alct.alct[alcttype].groups)]
-    ReadPtrns =[[0 for j in range(6)] for i in range(alct.alct[alcttype].groups)]
-    SendValues=[[0 for j in range(6)] for i in range(alct.alct[alcttype].groups)]
-    ReadValues=[[0 for j in range(6)] for i in range(alct.alct[alcttype].groups)]
+def ReadPatterns(alcttype):
+    pattern  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
 
     alct.SetChain(alct.VIRTEX_CONTROL)
     Wires = (alct.alct[alcttype].channels)
 
-    DR = 0
     PinMapOnRead = True
 
     #------------------------------------------------------------------------------
-    # This is a workaround... kind of silly.. but the easiest way to do it (and not too slow)
-    # A legacy of the old string-based PASCAL/Delphi code, which I haven't yet modified
-    # to be a little more sensible:
+    # This is a workaround... kind of silly.. but the easiest way to do it (and
+    # not too slow) # A legacy of the old string-based PASCAL/Delphi code, which
+    # I haven't yet modified to be a little more sensible:
     #
     # If we write pattern =
     # ABCD EFGH IJKL MNOP QRST UVWX YZ12 3456 7890 (truncated)
@@ -110,21 +111,21 @@ def ReadPatterns(pattern,alcttype):
     #       Then each LongWord is individually reversed
     #       Then we recover our original pattern...
     #       ABCD EFGH IJKL MNOP QRST UVWX YZ12 3456 7890 (truncated)
+    # 
+    # Why is this? I don't know.
     #------------------------------------------------------------------------------
 
-    alct.WriteRegister(0x11, 0x4001, 16)     # Enable Patterns from DelayChips into 384 bits ALCT Register
-    jtag.WriteIR(0x10,   alct.V_IR)          # Send 384 bits ALCT Register to PC via JTAG
-    DR = jtag.ReadDR(DR,Wires) & (2**384 -1) # Mask off 384 bits, just-in-case
+    alct.WriteRegister(0x11, 0x4001, 16)       # Enable Patterns from DelayChips into 384 bits ALCT Register
+    jtag.WriteIR      (0x10, alct.V_IR)        # Send 384 bits ALCT Register to PC via JTAG
+    DR = jtag.ReadDR  (DR,Wires) & (2**384 -1) # Mask off 384 bits, just-in-case
 
-    #check this I changed it but haven't checked it!!
     stringDR = format(DR, '096X')   # Convert to Hexdecimal string
     stringDR = stringDR[::-1]       # Invert the String
 
     for i in range(alct.alct[alcttype].groups):
-        for j in range(alct.alct[alcttype].chips):
-            tmp = stringDR[0:4]     # Grap the first four digits: 0xXXXX
-            num = int(tmp,16)       # set num= first 4 hex digits
-            stringDR = stringDR[4:] # cut off first 4 hex digits
+        for j in range(6):
+            num = int(stringDR[0:4],16)     # extract the first four hex digits 
+            stringDR = stringDR[4:]         # cut off first 4 hex digits since we are done with them
 
             pattern[i][j] = (num) & 0xFFFF
             # Invert the patterns
@@ -136,6 +137,7 @@ def ReadPatterns(pattern,alcttype):
             stringPat = stringPat.zfill(4)
             stringPat = stringPat[::-1]
             pattern[i][j]=int(stringPat,16)
+    return(pattern)
 
 # Remaps pins according to some scheme..
 # Please see notes accompanying ReadPatterns
@@ -161,9 +163,9 @@ def PinRemap(i,j,pattern):
 # Checks two patterns arrays against eachother---returns number of Errors found
 def CheckPatterns(SendPtrns, ReadPtrns,alcttype):
     Errs = 0
-    for i in range(alct.alct[alcttype].groups):
-        for j in range(6):
-            for bit in range (16):
+    for i in range(alct.alct[alcttype].groups):       # Loop over number of groups
+        for j in range(6):                            # Loop over number of chips in a group
+            for bit in range (16):                    # Loop over number of channels in a chip
                 if ((ReadPtrns[i][j] >> bit) & 0x1) != ((SendPtrns[i][j] >> bit) & 0x1):
                     Errs = Errs + 1
     return(Errs)
@@ -174,7 +176,7 @@ def PrintPatterns(alcttype, SendPtrns, ReadPtrns):
     readstr = ''
     output  = ''
     for i in range(alct.alct[alcttype].groups):
-        for j in range(alct.alct[alcttype].chips):
+        for j in range(6):
             sentstr = ("%04X" % SendPtrns[i][j]) + ' ' + sentstr
             readstr = ("%04X" % ReadPtrns[i][j]) + ' ' + readstr
     output += ('\n\t ->Sent: %s' % sentstr)
@@ -183,10 +185,10 @@ def PrintPatterns(alcttype, SendPtrns, ReadPtrns):
 
 # Sends a walking 1 pattern through the delay ASICs
 def Walking1(alcttype):
-    SendPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    SendValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
+    SendPtrns  = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
+    ReadPtrns  = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
+    SendValues = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
+    
     Wires = alct.alct[alcttype].channels
     Errs        = 0
     ErrOnePass  = 0
@@ -201,14 +203,13 @@ def Walking1(alcttype):
         alct.WriteRegister(0x11,0x4000,16)
 
         for i in range(alct.alct[alcttype].groups):
-            for j in range(alct.alct[alcttype].chips):
+            for j in range(6):
                 SendValues[i][j]    = 0
                 SendPtrns [i][j]    = 0 or ((bit // 16) == ((i*6)+j)) << (bit % 16)
-                ReadValues[i][j]    = 0
                 ReadPtrns [i][j]    = 0
 
         SetDelayLines(0x7F, SendPtrns, SendValues, alcttype)
-        ReadPatterns(ReadPtrns,alcttype)
+        ReadPtrns = ReadPatterns(alcttype)
 
         ErrOnePass = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
         Errs = Errs + ErrOnePass
@@ -227,10 +228,10 @@ def Walking1(alcttype):
 
 # Sends a walking 1 pattern through the delay ASICs
 def Walking0(alcttype):
-    SendPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    SendValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
+    SendPtrns  = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
+    ReadPtrns  = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
+    SendValues = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
+
     Wires = alct.alct[alcttype].channels
     Errs        = 0
     ErrOnePass  = 0
@@ -244,14 +245,13 @@ def Walking0(alcttype):
         alct.WriteRegister(0x11,0x4000,0x16)
 
         for i in range (alct.alct[alcttype].groups):
-            for j in range(alct.alct[alcttype].chips):
-                    SendValues[i][j] = 0
+            for j in range(6):
+                    SendValues[i][j] = 0x0000
                     SendPtrns [i][j] = 0xFFFF & (~(((bit//16)==((i*6)+j)) << (bit%16)))
-                    ReadValues[i][j] = 0
-                    ReadPtrns [i][j] = 0
+                    ReadPtrns [i][j] = 0x0000
 
         SetDelayLines(0x7F, SendPtrns, SendValues, alcttype)
-        ReadPatterns(ReadPtrns,alcttype)
+        ReadPtrns = ReadPatterns(alcttype)
         #PrintPatterns(alcttype, SendPtrns, ReadPtrns)
 
         ErrOnePass  = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
@@ -270,10 +270,9 @@ def Walking0(alcttype):
 
 # Fills delay ASICs with a Walking 1
 def Filling1(alcttype):
-    SendPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    SendValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
+    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+
     Wires = alct.alct[alcttype].channels
     Errs       = 0
     ErrOnePass = 0
@@ -284,11 +283,9 @@ def Filling1(alcttype):
     alct.SetChain(alct.VIRTEX_CONTROL)
 
     for i in range(alct.alct[alcttype].groups):
-        for j in range(alct.alct[alcttype].chips):
+        for j in range(6):
             SendValues[i][j] = 0
             SendPtrns [i][j] = 0
-            ReadValues[i][j] = 0
-            ReadPtrns [i][j] = 0
 
     SetDelayLines(0xF,SendPtrns,SendValues,alcttype)
 
@@ -296,14 +293,12 @@ def Filling1(alcttype):
         alct.WriteRegister(0x11,0x4000,0x16)
 
         for i in range(alct.alct[alcttype].groups):
-            for j in range(alct.alct[alcttype].chips):
+            for j in range(6):
                 SendValues[i][j] = 0
                 SendPtrns [i][j] = SendPtrns[i][j] | (((bit//16) == ((i*6)+j)) << (bit % 16))
-                ReadValues[i][j] = 0
-                ReadPtrns [i][j] = 0
 
         SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
-        ReadPatterns(ReadPtrns,alcttype)
+        ReadPtrns = ReadPatterns(alcttype)
 
         ErrOnePass = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
         Errs       = Errs + ErrOnePass
@@ -320,10 +315,9 @@ def Filling1(alcttype):
 
 # Unfills delay ASICs with a Walking 0
 def Filling0(alcttype):
-    SendPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    SendValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
+    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+
     Wires = alct.alct[alcttype].channels
     Errs       = 0
     ErrOnePass = 0
@@ -333,11 +327,9 @@ def Filling0(alcttype):
     alct.SetChain(alct.VIRTEX_CONTROL)
 
     for i in range(alct.alct[alcttype].groups):
-        for j in range(alct.alct[alcttype].chips):
+        for j in range(6):
             SendValues[i][j] = 0x0000
             SendPtrns [i][j] = 0xFFFF
-            ReadValues[i][j] = 0x0000
-            ReadPtrns [i][j] = 0x0000
 
     SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
 
@@ -345,14 +337,12 @@ def Filling0(alcttype):
         alct.WriteRegister(0x11,0x4000,0x16)
 
         for i in range(alct.alct[alcttype].groups):
-            for j in range(alct.alct[alcttype].chips):
+            for j in range(6):
                 SendValues[i][j] = 0x0000
                 SendPtrns [i][j] = SendPtrns[i][j] & (~(((bit // 16) == ((i*6)+j)) << (bit % 16)))
-                ReadValues[i][j] = 0x0000
-                ReadPtrns [i][j] = 0x0000
 
         SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
-        ReadPatterns(ReadPtrns,alcttype)
+        ReadPtrns = ReadPatterns(alcttype)
 
         ErrOnePass = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
         Errs       = Errs + ErrOnePass
@@ -371,16 +361,16 @@ def Filling0(alcttype):
 
 # Shifts 5 and A through the delay asic... 0101010101 --> 10101010101..
 # Uses HIGH current.. maybe not a good test.
-def Shifting5andA(alcttype):
-    SendPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    SendValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    Wires = (alct.alct[alcttype].channels)
-    npasses = 25
-    Errs = 0
-    ErrOnePass = 0
-    fStop = False
+def Shifting5andA(alcttype, npasses=25):
+    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+
+    Wires       = (alct.alct[alcttype].channels) #Number of wires on this kind of board
+
+    # Initialize Vars
+    Errs        = 0      
+    ErrOnePass  = 0
+    fStop       = False
 
     print        ('Shifting 5 and A Test')
 
@@ -395,18 +385,16 @@ def Shifting5andA(alcttype):
         alct.WriteRegister(0x11,0x4000,0x16)
 
         for i in range(alct.alct[alcttype].groups):
-            for j in range(alct.alct[alcttype].chips):
+            for j in range(6):
                 SendValues[i][j]        = 0     # delay value to set
                 if ((p+1) % 2)==1:
                     SendPtrns[i][j] = 0x5555    # delay pattern to set even/odd
                 else:
                     SendPtrns[i][j] = 0xAAAA    # delay pattern to set even/odd
 
-                ReadValues[i][j]        = 0     # reset read value
-                ReadPtrns[i][j]         = 0     # reset read pattern
 
             SetDelayLines(0xF, SendPtrns, SendValues, alcttype) # write delay patterns/values
-            ReadPatterns(ReadPtrns,alcttype)             # read delay patterns
+            ReadPtrns = ReadPatterns(alcttype)             # read delay patterns
             ErrOnePass      = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
             Errs            = Errs + ErrOnePass
 
@@ -424,13 +412,11 @@ def Shifting5andA(alcttype):
 
     # Reset Delay Chips (returns Current to normal values
     for i in range(alct.alct[alcttype].groups):
-        for j in range(alct.alct[alcttype].chips):
-            SendValues[i][j] = 0x0000
-            SendPtrns [i][j] = 0x0000
-            ReadValues[i][j] = 0x0000
-            ReadPtrns [i][j] = 0x0000
-
+        for j in range(6):
+            SendValues [i][j] = 0x0000
+            SendPtrns  [i][j] = 0x0000
     SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
+
     # Fini
     if (Errs == 0): 
         print        ('\t ====> PASSED: Shifting 5 and A Test Finished with %i Errors ' % Errs)
@@ -442,21 +428,24 @@ def Shifting5andA(alcttype):
     return (Errs)
 
 # Sends random patterns into delay ASICs
-def RandomData(alcttype):
-    SendPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    SendValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
+def RandomData(alcttype, npasses=50):
+    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+
+    # Wires
     Wires = alct.alct[alcttype].channels
-    npasses    = 50
+
+    # Number of errors
     Errs       = 0
     ErrOnePass = 0
     fStop      = False
 
     print        ('Random Data Test')
 
+    # Select virtex control register
     alct.SetChain(alct.VIRTEX_CONTROL)
 
+    # Seed random number generator
     random.seed()
 
     for p in range(npasses):
@@ -465,16 +454,14 @@ def RandomData(alcttype):
 
         alct.WriteRegister(0x11,0x4000,0x16)
 
+        # Set Delay ASICs with random patterns
         for i in range(alct.alct[alcttype].groups):
-            for j in range(alct.alct[alcttype].chips):
-                SendValues[i][j]     = 0
+            for j in range(6):
+                SendValues[i][j]    = 0
                 SendPtrns[i][j]     = random.getrandbits(16)
-                ReadValues[i][j]     = 0
-                ReadPtrns[i][j]     = 0
-
         SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
 
-        ReadPatterns(ReadPtrns,alcttype)
+        ReadPtrns  = ReadPatterns(alcttype)
         ErrOnePass = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
         Errs       = Errs + ErrOnePass
 
@@ -494,11 +481,9 @@ def RandomData(alcttype):
 
     # Reset Delay Chips (returns Current to normal values
     for i in range(alct.alct[alcttype].groups):
-        for j in range(alct.alct[alcttype].chips):
+        for j in range(6):
             SendValues[i][j] = 0x0000
             SendPtrns [i][j] = 0x0000
-            ReadValues[i][j] = 0x0000
-            ReadPtrns [i][j] = 0x0000
 
     SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
 
@@ -528,14 +513,12 @@ def RandomData(alcttype):
 #
 #    # reset delay lines
 #    for i in range(alct.alct[alcttype].groups):
-#        for j in range(alct.alct[alcttype].chips):
+#        for j in range(6):
 #            SendValues[i][j] = 0
 #            if FTestType = 3 :
 #                SendPtrns[i][j]     = 0xFFFF
 #            else :
 #                SendPtrns[i][j]     = 0x0000
-#            ReadValues[i][j]             = 0
-#            ReadPtrns[i][j]         = 0
 #
 #    SetDelayLines(0x7F, SendPtrns, SendValues, alcttype)
 #
@@ -572,7 +555,6 @@ def RandomData(alcttype):
 #                    else
 #                        SendPtrns[i][j]  = 0
 #                    end
-#                    ReadValues[i][j]          = 0
 #                    ReadPtrns[i][j]      = 0
 #                end
 #            end
@@ -668,121 +650,118 @@ def RandomData(alcttype):
 
 #def SetDelaysChips(value,pattern,alcttype):
 
-def SetDelayChips(alcttype):
-    SendPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadPtrns =[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    SendValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-    ReadValues=[[0 for j in range(alct.alct[alcttype].chips)] for i in range(alct.alct[alcttype].groups)]
-
-    Wires          = alct.alct[alcttype].channels
-    Errs           = 0
-    ErrOnePass     = 0
-    fStop          = False
-    fOddConnector  = False
-    cbPinMapOnRead = True
-    cbFlipDelay    = False
-    fReadback      = True
-
-    for i in range(alct.alct[alcttype].groups):
-        for j in range(alct.alct[alcttype].chips):
-            SendValues[i][j] = 0
-            SendPtrns [i][j] = 0
-            ReadValues[i][j] = 0
-            ReadPtrns [i][j] = 0
-
-    alct.WriteRegister(0x11,0x4000,0x16)
-
-    for i in range(alct.alct[alcttype].groups):
-        for j in range(alct.alct[alcttype].chips):
-            SendValues[i][j] = 0
-            #SendPtrns[i][j]     = random.getrandbits(16)
-            SendPtrns[i][j]  = 0x0001
-            ReadValues[i][j] = 0
-            ReadPtrns [i][j] = 0
-
-    #SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
-    ReadPatterns(ReadPtrns,alcttype)
-
-    #PrintPatterns(alcttype, SendPtrns, ReadPtrns):
-
-    #pattern=[0x1111,0x2222,0x3333,0x4444,0x5555,0x6666]
-    #value=[ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-
-    #print('> === Setting Delays and Patterns ===')
-    #alct.SetChain(VRTX_CH)
-    #parlen = alct.alct[alcttype].groups + 2
-    #cs = 0
-
-    ## Load Patterns, Chip Select Bitmask
-    #for i in range (alct.alct[alcttype].groups):
-    #    #for j in range(6):
-    #        #arDelays[i][j].Value    = value[j]
-    #        #arDelays[i][j]  = pattern[j]
-    #    cs = cs | (1 << i)
-    #    #ReadPtrns.Enabled = True
-
-
-    #if fOddConnector:
-    #    jtag.WriteIR(0x11, alct.V_IR)
-    #    jtag.WriteDR(0xa000, 16)
-    #else:
-    #    jtag.WriteIR(0x11, alct.V_IR)
-    #    jtag.WriteDR(0x4000, 16)
-
-    #dr  = 0x1FF & (~(cs << 2))
-    #jtag.WriteIR(0xFF  & alct.DelayCtrlWrite  , V_IR)
-    #jtag.WriteDR(0xFFF & dr              , parlen)
-
-    #jtag.WriteIR(0xFF  & alct.DelayCtrlRead   , V_IR)
-    #jtag.ReadDR (0x0                     , parlen)
-
-    #jtag.WriteIR(0xFF  & alct.Wdly            , V_IR)
-
-    #print('Writing Values to ALCT')
-    #jtag.StartDRShift()
-    #
-    #for i in range(6):
-    #    DlyVal      =  value[i]
-    #    DlyPtrn     =  pattern[i]
-    #    DlyPtrnTmp  =  DlyPtrn
-
-    #    #print("<- Chip #%i: Delay=%02X Pattern=%04X" % ((i+1), DlyVal, DlyPtrn))
-    #    #      === Pin Remapping ===
-    #    if not (cbPinMapOnRead==True):
-    #        DlyPtrnTmp = 0
-    #        if (i%2)==1:
-    #            for j in range(8):
-    #                DlyPtrnTmp = DlyPtrnTmp | (((DlyPtrn >> j) & 0x01) << (7 -j))
-    #            DlyPtrnTmp = DlyPtrnTmp | (DlyPtrn & 0xFF00)
-    #        else:
-    #            for j in range(8):
-    #                DlyPtrnTmp = DlyPtrnTmp | (((DlyPtrn >> (j+8)) & 0x01) << (15 -j))
-    #            DlyPtrnTmp = DlyPtrnTmp | (DlyPtrn & 0x00ff)
-
-    #    if cbFlipDelay==True:
-    #        DlyValTmp = 0xF & jtag.ShiftData(FlipHalfByte(DlyVal), 4, False)
-    #    else:
-    #        DlyValTmp = 0xF & jtag.ShiftData(DlyVal, 4, False)
-
-    #    DlyPtrnTmp  = jtag.ShiftData(DlyPtrnTmp, 16, 5)
-    #    #DlyPtrnTmp  = jtag.ShiftData(0xFFFF & DlyPtrnTmp, 16, i=5)
-
-    #    if fReadback:
-    #        DlyVal  = DlyValTmp
-    #        DlyPtrn = DlyPtrnTmp
-    #        print("<- Chip #%i: Delay=%02X Pattern=%04X" % ((i+1), DlyVal, DlyPtrn))
-    #jtag.ExitDRShift()
-
-    #jtag.WriteIR(alct.DelayCtrlWrite, V_IR)
-    #jtag.WriteDR(0x1FF, parlen)
-
-    #jtag.WriteIR(alct.DelayCtrlRead, V_IR)
-    #jtag.ReadDR(0x0, parlen)
-
-    #jtag.WriteIR(0x11, alct.V_IR)
-    #jtag.WriteDR(0x0001, 16)
-
-    #print('> === Delay Chip Patterns are set  ===')
+#def SetDelayChips(alcttype):
+#
+#    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+#    ReadPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+#    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+#
+#    Wires          = alct.alct[alcttype].channels
+#    Errs           = 0
+#    ErrOnePass     = 0
+#    fStop          = False
+#    fOddConnector  = False
+#    cbPinMapOnRead = True
+#    cbFlipDelay    = False
+#    fReadback      = True
+#
+#    for i in range(alct.alct[alcttype].groups):
+#        for j in range(6):
+#            SendValues[i][j] = 0
+#            SendPtrns [i][j] = 0
+#            ReadPtrns [i][j] = 0
+#
+#    alct.WriteRegister(0x11,0x4000,0x16)
+#
+#    for i in range(alct.alct[alcttype].groups):
+#        for j in range(6):
+#            SendValues[i][j] = 0x0000
+#            SendPtrns[i][j]  = 0x0001
+#            ReadPtrns [i][j] = 0x0000
+#
+#    #SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
+#    ReadPtrns = ReadPatterns(alcttype)
+#
+#    #PrintPatterns(alcttype, SendPtrns, ReadPtrns):
+#
+#    #pattern=[0x1111,0x2222,0x3333,0x4444,0x5555,0x6666]
+#    #value=[ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+#
+#    #print('> === Setting Delays and Patterns ===')
+#    #alct.SetChain(VRTX_CH)
+#    #parlen = alct.alct[alcttype].groups + 2
+#    #cs = 0
+#
+#    ## Load Patterns, Chip Select Bitmask
+#    #for i in range (alct.alct[alcttype].groups):
+#    #    #for j in range(6):
+#    #        #arDelays[i][j].Value    = value[j]
+#    #        #arDelays[i][j]  = pattern[j]
+#    #    cs = cs | (1 << i)
+#    #    #ReadPtrns.Enabled = True
+#
+#
+#    #if fOddConnector:
+#    #    jtag.WriteIR(0x11, alct.V_IR)
+#    #    jtag.WriteDR(0xa000, 16)
+#    #else:
+#    #    jtag.WriteIR(0x11, alct.V_IR)
+#    #    jtag.WriteDR(0x4000, 16)
+#
+#    #dr  = 0x1FF & (~(cs << 2))
+#    #jtag.WriteIR(0xFF  & alct.DelayCtrlWrite  , V_IR)
+#    #jtag.WriteDR(0xFFF & dr              , parlen)
+#
+#    #jtag.WriteIR(0xFF  & alct.DelayCtrlRead   , V_IR)
+#    #jtag.ReadDR (0x0                     , parlen)
+#
+#    #jtag.WriteIR(0xFF  & alct.Wdly            , V_IR)
+#
+#    #print('Writing Values to ALCT')
+#    #jtag.StartDRShift()
+#    #
+#    #for i in range(6):
+#    #    DlyVal      =  value[i]
+#    #    DlyPtrn     =  pattern[i]
+#    #    DlyPtrnTmp  =  DlyPtrn
+#
+#    #    #print("<- Chip #%i: Delay=%02X Pattern=%04X" % ((i+1), DlyVal, DlyPtrn))
+#    #    #      === Pin Remapping ===
+#    #    if not (cbPinMapOnRead==True):
+#    #        DlyPtrnTmp = 0
+#    #        if (i%2)==1:
+#    #            for j in range(8):
+#    #                DlyPtrnTmp = DlyPtrnTmp | (((DlyPtrn >> j) & 0x01) << (7 -j))
+#    #            DlyPtrnTmp = DlyPtrnTmp | (DlyPtrn & 0xFF00)
+#    #        else:
+#    #            for j in range(8):
+#    #                DlyPtrnTmp = DlyPtrnTmp | (((DlyPtrn >> (j+8)) & 0x01) << (15 -j))
+#    #            DlyPtrnTmp = DlyPtrnTmp | (DlyPtrn & 0x00ff)
+#
+#    #    if cbFlipDelay==True:
+#    #        DlyValTmp = 0xF & jtag.ShiftData(FlipHalfByte(DlyVal), 4, False)
+#    #    else:
+#    #        DlyValTmp = 0xF & jtag.ShiftData(DlyVal, 4, False)
+#
+#    #    DlyPtrnTmp  = jtag.ShiftData(DlyPtrnTmp, 16, 5)
+#    #    #DlyPtrnTmp  = jtag.ShiftData(0xFFFF & DlyPtrnTmp, 16, i=5)
+#
+#    #    if fReadback:
+#    #        DlyVal  = DlyValTmp
+#    #        DlyPtrn = DlyPtrnTmp
+#    #        print("<- Chip #%i: Delay=%02X Pattern=%04X" % ((i+1), DlyVal, DlyPtrn))
+#    #jtag.ExitDRShift()
+#
+#    #jtag.WriteIR(alct.DelayCtrlWrite, V_IR)
+#    #jtag.WriteDR(0x1FF, parlen)
+#
+#    #jtag.WriteIR(alct.DelayCtrlRead, V_IR)
+#    #jtag.ReadDR(0x0, parlen)
+#
+#    #jtag.WriteIR(0x11, alct.V_IR)
+#    #jtag.WriteDR(0x0001, 16)
+#
+#    #print('> === Delay Chip Patterns are set  ===')
 
 def SubtestMenu(alcttype):
     while True:
