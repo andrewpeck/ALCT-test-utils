@@ -218,11 +218,11 @@ def Walking1(alcttype):
 
     # Fini
     if (Errs == 0): 
-        print       ('\n\t ====> PASS: Walking 1 Test Finished with %i Errors ' % Errs)
-        logging.info('\t PASS: Walking 1 Test Finished with %i Errors ' % Errs)
+        print       ('\t ====> PASSED: Walking 1 Test Finished with %i Errors ' % Errs)
+        logging.info('\t PASSED: Walking 1 Test Finished with %i Errors ' % Errs)
     else: 
-        print       ('\n\t ====> FAIL: Walking 1 Test Finished with %i Errors ' % Errs)
-        logging.info('\t FAIL: Walking 1 Test Finished with %i Errors ' % Errs)
+        print       ('\t ====> FAILED: Walking 1 Test Finished with %i Errors ' % Errs)
+        logging.info('\t FAILED: Walking 1 Test Finished with %i Errors ' % Errs)
     return (Errs)
 
 # Sends a walking 1 pattern through the delay ASICs
@@ -261,11 +261,11 @@ def Walking0(alcttype):
 
     # Fini
     if (Errs == 0): 
-        print       ('\n\t ====> PASS: Walking 0 Test Finished with %i Errors ' % Errs)
-        logging.info('\t PASS: Walking 0 Test Finished with %i Errors ' % Errs)
+        print       ('\t ====> PASSED: Walking 0 Test Finished with %i Errors ' % Errs)
+        logging.info('\t PASSED: Walking 0 Test Finished with %i Errors ' % Errs)
     else: 
-        print       ('\n\t ====> FAIL: Walking 0 Test Finished with %i Errors ' % Errs)
-        logging.info('\t FAIL: Walking 0 Test Finished with %i Errors ' % Errs)
+        print       ('\n\t ====> FAILED: Walking 0 Test Finished with %i Errors ' % Errs)
+        logging.info('\t FAILED: Walking 0 Test Finished with %i Errors ' % Errs)
     return (Errs)
 
 # Fills delay ASICs with a Walking 1
@@ -311,11 +311,11 @@ def Filling1(alcttype):
             print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
     # Fini
     if (Errs==0):
-        print       ('\n\t ====> PASS: Filling by 1s Test Finished with %i Errors ' % Errs)
-        logging.info('\t PASS: Filling by 1s Test Finished with %i Errors ' % Errs)
+        print       ('\t ====> PASSED: Filling by 1s Test Finished with %i Errors ' % Errs)
+        logging.info('\t PASSED: Filling by 1s Test Finished with %i Errors ' % Errs)
     else: 
-        print       ('\n\t ====> FAIL: Filling by 1s Test Finished with %i Errors ' % Errs)
-        logging.info('\t FAIL: Filling by 1s Test Finished with %i Errors ' % Errs)
+        print       ('\n\t ====> FAILED: Filling by 1s Test Finished with %i Errors ' % Errs)
+        logging.info('\t FAILED: Filling by 1s Test Finished with %i Errors ' % Errs)
     return (Errs)
 
 # Unfills delay ASICs with a Walking 0
@@ -361,11 +361,11 @@ def Filling0(alcttype):
 
     # Fini
     if (Errs == 0): 
-        print        ('\n\t ====> PASS: Filling by 0s Test Finished with %i Errors ' % Errs)
-        logging.info ('\t PASS: Filling by 0s Test Finished with %i Errors ' % Errs)
+        print        ('\t ====> PASSED: Filling by 0s Test Finished with %i Errors ' % Errs)
+        logging.info ('\t PASSED: Filling by 0s Test Finished with %i Errors ' % Errs)
     else: 
-        print        ('\n\t ====> FAIL: Filling by 0s Test Finished with %i Errors ' % Errs)
-        logging.info ('\t FAIL: Filling by 0s Test Finished with %i Errors ' % Errs)
+        print        ('\n\t ====> FAILED: Filling by 0s Test Finished with %i Errors ' % Errs)
+        logging.info ('\t FAILED: Filling by 0s Test Finished with %i Errors ' % Errs)
 
     return (Errs)
 
@@ -390,7 +390,7 @@ def Shifting5andA(alcttype):
                         # The delay chips cannot handle Shifting too fast
                         # (causes overcurrent on the board, esp. ALCT-672)
 
-        print ("\t Pass %2i of %2i" % (p+1, npasses))
+        print ("    Pass %2i of %2i" % (p+1, npasses))
 
         alct.WriteRegister(0x11,0x4000,0x16)
 
@@ -418,9 +418,9 @@ def Shifting5andA(alcttype):
                 send = send + format(SendPtrns[i][j],'04X')
 
             if ErrOnePass > 0:
-                print("\t\t Error in group %i: Write=%s, Read=%s " % (i, send, read))
+                print("\t Error in group %i: Write=%s, Read=%s " % (i, send, read))
             else: 
-                print("\t\t ====> Pass") 
+                print("\t ====> PASSED") 
 
     # Reset Delay Chips (returns Current to normal values
     for i in range(alct.alct[alcttype].groups):
@@ -433,11 +433,11 @@ def Shifting5andA(alcttype):
     SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
     # Fini
     if (Errs == 0): 
-        print        ('\n\t ====> PASS: Shifting 5 and A Test Finished with %i Errors ' % Errs)
-        logging.info ('\t PASS: Shifting 5 and A Test Finished with %i Errors ' % Errs)
+        print        ('\t ====> PASSED: Shifting 5 and A Test Finished with %i Errors ' % Errs)
+        logging.info ('\t PASSED: Shifting 5 and A Test Finished with %i Errors ' % Errs)
     else: 
-        print        ('\n\t ====> FAIL: Shifting 5 and A Test Finished with %i Errors ' % Errs)
-        logging.info ('\t FAIL: Shifting 5 and A Test Finished with %i Errors ' % Errs)
+        print        ('\n\t ====> FAILED: Shifting 5 and A Test Finished with %i Errors ' % Errs)
+        logging.info ('\t FAILED: Shifting 5 and A Test Finished with %i Errors ' % Errs)
 
     return (Errs)
 
@@ -461,7 +461,7 @@ def RandomData(alcttype):
 
     for p in range(npasses):
         time.sleep(0.1)
-        print ("\t Pass %i of %i" % (p+1, npasses))
+        print ("    Pass %i of %i" % (p+1, npasses))
 
         alct.WriteRegister(0x11,0x4000,0x16)
 
@@ -487,9 +487,9 @@ def RandomData(alcttype):
 
         # If error, print pattern
         if ErrOnePass > 0:
-            print("\t\t Error in group %i: Write=%s, Read=%s " % (i, send, read))
+            print("\t Error in group %i: Write=%s, Read=%s " % (i, send, read))
         else: 
-            print("\t\t ====> Pass") 
+            print("\t ====> PASSED") 
 
 
     # Reset Delay Chips (returns Current to normal values
@@ -504,11 +504,11 @@ def RandomData(alcttype):
 
     # Fini
     if (Errs==0): 
-        print        ('\n\t ====> PASS: Random Data Test Finished with %i Errors ' % Errs)
-        logging.info ('\t PASS: Random Data Test Finished with %i Errors ' % Errs)
+        print        ('\t ====> PASSED: Random Data Test Finished with %i Errors ' % Errs)
+        logging.info ('\t PASSED: Random Data Test Finished with %i Errors ' % Errs)
     else: 
-        print        ('\n\t ====> FAIL: Random Data Test Finished with %i Errors ' % Errs)
-        logging.info ('\t FAIL: Random Data Test Finished with %i Errors ' % Errs)
+        print        ('\n\t ====> FAILED: Random Data Test Finished with %i Errors ' % Errs)
+        logging.info ('\t FAILED: Random Data Test Finished with %i Errors ' % Errs)
     return (Errs)
 
 #def GeneratePattern():
@@ -803,7 +803,7 @@ def SubtestMenu(alcttype):
         print("")
         if not k: break
 
-        if k=="0": DelayPatternSelfTest(alcttype)
+        if k=="0": PatternsSelfTest(alcttype)
         if k=="1": Walking1(alcttype)
         if k=="2": Walking0(alcttype)
         if k=="3": Filling1(alcttype)
