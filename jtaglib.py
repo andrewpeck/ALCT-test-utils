@@ -5,7 +5,11 @@
 # ALL IO in other modules should be done through this wrapper!!
 # ------------------------------------------------------------------------------
 
-BACKEND = "ctypes"
+import os
+if os.name=='nt':
+    BACKEND = "ctypes"
+else:
+    BACKEND = "python"
 
 if   BACKEND=="nativec": 
     import _lptjtaglib
