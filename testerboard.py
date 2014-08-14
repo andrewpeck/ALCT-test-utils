@@ -99,89 +99,67 @@ def SetALCTBoardDelay(ch, delay, alcttype):
     if debug: print(DelayValue)
     Write6DelayLines(DelayPattern, DelayValue, 1 << (ch // 6), alcttype)
 
-def SetTestBoardFIFO(fifoval, fifochan, numwords, startdelay, alctdelay, testboarddelay, alcttype):
-    numwords        = 1
-    startdelay      = 2
-    alctdelay       = 0
-    testboarddelay  = 0
-
-    SetFIFOReset()
-    SetFIFOChannel(fifochan, startdelay)
-    SetFIFOValue(fifoval)
-    SetTestBoardDelay(testboarddelay)
-    SetALCTBoardDelay(fifochan, alctdelay, alcttype)
-    SetFIFOWrite
-    for i in range(1,numwords+1):
-        FIFOClock
+#unused ? 
+#def SetTestBoardFIFO(fifoval, fifochan, numwords, startdelay, alctdelay, testboarddelay, alcttype):
+#    numwords        = 1
+#    startdelay      = 2
+#    alctdelay       = 0
+#    testboarddelay  = 0
+#
+#    SetFIFOReset()
+#    SetFIFOChannel(fifochan, startdelay)
+#    SetFIFOValue(fifoval)
+#    SetTestBoardDelay(testboarddelay)
+#    SetALCTBoardDelay(fifochan, alctdelay, alcttype)
+#    SetFIFOWrite
+#    for i in range(1,numwords+1):
+#        FIFOClock
 
 def ReadFIFOValue():
     return(alct.ReadRegister(RdDataReg,lengthOf[RdDataReg]))
 
 def ALCTEnableInput(alcttype):
     parlen = alct.alct[alcttype].groups + 2
-
     alct.WriteRegister(WrParamDly,0x1FD,parlen)
     return(alct.ReadRegister(RdParamDly,parlen))
 
 def ALCTDisableInput(alcttype):
     parlen = alct.alct[alcttype].groups + 2
-
     alct.WriteRegister(WrParamDly,0x1FF,parlen)
-    result = alct.ReadRegister(RdParamDly,0x1FD,parlen)
+    return(alct.ReadRegister(RdParamDly,0x1FD,parlen))
 
-    return(result)
-
-def ReadFIFO(vals, numwords, cntrs, alcttype):
+def ReadFIFO(numwords, alcttype):
     SetFIFOReset()
     SetFIFOWrite()
     FIFOClock()
     SetFIFOReadWrite()
     ALCTEnableInput(alcttype)
 
-    for i in range(numwords):
-        FIFOClock()                 # Clock FIFO
-        vals[i] = ReadFIFOValue()   # Read Bit from FIFO
-
-    # this hasn't been tested please test it
-    cntstr=format(ReadFIFOCounters(), '032X')
-
-    cntstr = cntstr[::-1]           # Reverse String
-
-    for i in range (16):
-        tmp = cntstr[:2]            # pick of first two hex digits
-        num = int(tmp,16)           # convert to int
-        cntstr = cntstr[2:]         # truncate string
-        cntrs[15-i] = num           # fill cntrs array
-
-def ReadFIFOfast(numwords, cntrs, alcttype):
-    SetFIFOReset()
-    SetFIFOWrite()
-    FIFOClock()
-    SetFIFOReadWrite()
-    ALCTEnableInput(alcttype)
-
-    jtag.WriteIR(WrFIFO,alct.V_IR)        # FIFOClock
+    jtag.WriteIR(WrFIFO,alct.V_IR)             # FIFOClock
     for i in range(numwords):
         jtag.WriteDR(0x1,lengthOf[WrFIFO])     # FIFOClock
 
-    # this hasn't been tested please test it
-    cntstr=format(ReadFIFOCounters(), '032X')  # Convert int to string
-    cntstr = cntstr[::-1]           # Reverse String
+    # This really sucks please fix it..
+    # Have a look at http://stackoverflow.com/questions/7983684/how-to-switch-byte-order-of-binary-data
 
+    cntstr=format(ReadFIFOCounters(), '032X')  # Convert int to string
+    cntstr = cntstr[::-1]                      # Reverse String (change endianess)
+
+    cntrs = [0]*16 # "array of byte"
     for i in range (16):
-        tmp = cntstr[:2]            # pick of first two hex digits
-        num = int(tmp,16)           # convert to int
-        cntstr = cntstr[2:]         # truncate string
+        num = int(cntstr[:2],16)    # We extract the first byte (2 hex characters) and convert them to an integer
+        cntstr = cntstr[2:]         # Remove the extracted bytes from the string for the next pass. 
         cntrs[15-i] = num           # fill cntrs array
 
+    return(cntrs)
 
-# Configure FIFO data, channel, delays, test board delays
+
+# Configure FIFO data, channel, ALCT board delays, test board delays
 def SetDelayTest(fifoval, fifochan, startdelay=2, alctdelay=0x0000, testboarddelay=0, alcttype=0):
     #debug=True
     SetFIFOChannel(fifochan, startdelay)
     SetFIFOValue(fifoval)
     SetTestBoardDelay(testboarddelay)
-    if debug: print('\t Writing delay=0x%04X to channel %i' %(alctdelay, fifochan))
     SetALCTBoardDelay(fifochan, alctdelay, alcttype)
 
 #-------------------------------------------------------------------------------
@@ -202,32 +180,37 @@ def PinPointTime(FIFOvalue, ch, StartDly, alct_dly, num, alcttype, edge):
     cntrs            = [0]*16 # "array of byte"
     Time             = [0]*16 # another array of bytes
 
+    # Load data into FIFO, set ALCT ASIC delay. Also sets an initial value for
+    # test-board delay but this will be overwritten.. 
     SetDelayTest(FIFOvalue, ch, StartDly, alct_dly, tb_dly, alcttype)
 
-    # Get an idea of where the pulse rise is, but stepping in increments 0,10,20...250
-    # Once we see a pulse, go decrement the delay by 10 and then perform the deep scan
-    # This is just here as a way to speed up the test..
-    for j in range(26):
-        tb_dly = 10*j
-        SetTestBoardDelay(tb_dly)
-        ReadFIFOfast(num,cntrs,alcttype)
-
-        for i in range(16):
-            if(cntrs[i] > 0) and ((FIFOvalue & (1 << i))>0):
-                FirstChn = True
-        if (FirstChn): 
-            tb_dly = 10*(j-1)
-            break
 
     # Now look more closely (we now step by individual delay values, rather
     # than multiples of 10)
     if edge=="rise": 
+
+        # Get an idea of where the pulse rise is, stepping in increments 0,10,20...250
+        # Once we see a pulse, go decrement the delay by 10 and then perform the deep scan
+        # This is just here as a way to speed up the test... 
+        for j in range(26):
+            tb_dly = 10*j
+            SetTestBoardDelay(tb_dly)
+            cntrs = ReadFIFO(num, alcttype)
+
+            for i in range(16):
+                if(cntrs[i] > 0) and ((FIFOvalue & (1 << i))>0):
+                    FirstChn = True
+            if (FirstChn): 
+                tb_dly = 10*(j-1)
+                break
+
+        # Now do a full scan
         for dly in range(tb_dly,256):
             # Set Delay
             SetTestBoardDelay(dly)
 
             # Read out data
-            ReadFIFOfast(num,cntrs, alcttype)
+            cntrs = ReadFIFO(num, alcttype)
 
             # Loop over chip channels and check if they saw something
             for i in range (16):
@@ -243,7 +226,7 @@ def PinPointTime(FIFOvalue, ch, StartDly, alct_dly, num, alcttype, edge):
     if edge=="fall":
         for dly in range (256):
             SetTestBoardDelay(dly)
-            ReadFIFOfast(num,cntrs,alcttype)
+            cntrs = ReadFIFO(num, alcttype)
 
             for i in range(16):
                 if edge=="fall": 
@@ -254,11 +237,16 @@ def PinPointTime(FIFOvalue, ch, StartDly, alct_dly, num, alcttype, edge):
                 break
     return(Time)
 
-def FindStartDly(FIFOvalue, ch, alct_dly, num, alcttype):
-    (FoundTimeBin, StartDly_R, StartDly_F,RegMaskDone) = FindStartDlyPin(FIFOvalue, ch, alct_dly, num, 0, alcttype)
+def FindStartDly(FIFOvalue, ch, alct_dly, num_words, alcttype):
+    (FoundTimeBin, StartDly_R, StartDly_F,RegMaskDone) = FindStartDlyPin(FIFOvalue, ch, alct_dly, num_words, 0, alcttype)
     return (FoundTimeBin, StartDly_R, StartDly_F)
 
-def FindStartDlyPin(FIFOvalue, ch, alct_dly, num, RegMaskDone, alcttype):
+# function returns: 
+#   bool FoundTimeBin       - true/false basically redundant with RegMaskDone
+#   int  StartDly_R         - Delay value when a rising  pulse was first seen on any channel
+#   int  StartDly_F         - Delay value when a falling pulse was first seen on any channel
+#   int  RegMaskDone        - 16 bit mask that a channel has seen both rising and falling edges
+def FindStartDlyPin(FIFOvalue, ch, alct_dly, num_words, RegMaskDone, alcttype):
     if debug: print('Find Start Dly')
     alct.SetChain(alct.arJTAGChains[3])
     FoundTimeBin    = False # Found time bin ?
@@ -266,9 +254,9 @@ def FindStartDlyPin(FIFOvalue, ch, alct_dly, num, RegMaskDone, alcttype):
     AllChnR         = False # All Channels Rise
     FirstChnF       = False # First Channel Fall
     AllChnF         = False # All Channels Fall
-    RegMaskDoneR    = 0
-    RegMaskDoneF    = 0
-    MaxChannelsCntr = 0
+    RegMaskDoneR    = 0     # Rising edge of pulse has been seen?
+    RegMaskDoneF    = 0     # Falling edge of pulse has been seen? 
+    MaxChannelsCntr = 0     
     StartDly_R      = 5     # Rise Start Delay
     StartDly_F      = 5     # Fall Start Delay
     StartDly        = 5
@@ -279,47 +267,61 @@ def FindStartDlyPin(FIFOvalue, ch, alct_dly, num, RegMaskDone, alcttype):
 
     for StartDly in range (5,16):
 
-        # Access board
+        # Select Channel
         SetFIFOChannel(ch, StartDly)
-        ReadFIFOfast(num,cntrs,alcttype)
 
+        # Read FIFO into a 16 entry array. 
+        # Each entry is a byte of data, with 16 entries for channel 0-15
+        cntrs = ReadFIFO(num_words, alcttype)
+
+        # Initialize vars
         ChannelsCntr = 0
         MaskDoneR    = 0
 
         # Fill Counters with FIFO Bitmask
+        # Loop over all the channels.. 
+        # Check that ___ and that there should be data in that channel
         for i in range(16):
-            if (cntrs[i] > (num/2)) and ((FIFOvalue & (1 << i))>0):
+            if (cntrs[i] > (num_words/2)) and ((FIFOvalue & (1 << i))>0):
                 ChannelsCntr += 1
                 MaskDoneR |= (1 << i)
 
-        # Check if time bin is found
-        if (ChannelsCntr > 0):
-            FirstChnR = True
+        # Mark whether ALL channels have seen a rising edge
         if (MaskDoneR == FIFOvalue):
             AllChnR = True
 
+        # Check if ANY channel has seen something, and call this the Rising Start Delay
+        if (ChannelsCntr > 0):
+            FirstChnR = True
         if (not FirstChnR):
             StartDly_R = StartDly
+        # If the rising edge has already been seen... start looking for the falling edge: 
         else:
+            # If the number of channels seeing a pulse is still equal the
+            # number of channels.. then we haven't seen the falling edge
             if ((ChannelsCntr > 0) and (ChannelsCntr >= MaxChannelsCntr)):
                 MaxChannelsCntr = ChannelsCntr
                 StartDly_F      = StartDly
                 RegMaskDoneR    = MaskDoneR
+            # At least one channel is not seeing a pulse.. so we've seen a falling edge.. 
             else:
                 FirstChnF = True
 
-        # Need to think about this code.. the original PASCAL is really odd.. 
+        # If we've seen at least one channel Fall: 
         if (FirstChnF):
             MaskDoneF = 0
+            # Loop over all the channels.. make a bitmask of which channels have seen falling edge
             for i in range (16):
-                if (cntrs[i] < (num/2)) and ((FIFOvalue & (1 << i))>0):
+                if (cntrs[i] < (num_words/2)) and ((FIFOvalue & (1 << i))>0):
                     MaskDoneF = MaskDoneF | (1 << i)
 
             RegMaskDoneF = MaskDoneF
 
+            # If ALL marked channels have fallen: 
             if (MaskDoneF == FIFOvalue):
                 AllChnF = True
 
+        # If all channels rose and fell.. then we found a time bin for everything: 
         if (AllChnR and AllChnF):
             FoundTimeBin = True
             break
@@ -328,10 +330,11 @@ def FindStartDlyPin(FIFOvalue, ch, alct_dly, num, RegMaskDone, alcttype):
     if (not FirstChnR):
         StartDly_R = 5
 
+    # Conflate the Rising and Falling edge bitmasks 
     RegMaskDone = RegMaskDoneR & RegMaskDoneF
 
     # Return tuple of values
-    return(FoundTimeBin, StartDly_R, StartDly_F,RegMaskDone)
+    return(FoundTimeBin, StartDly_R, StartDly_F, RegMaskDone)
 
 def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, AverageDelay_Time, RegMaskDone, alcttype):
     MinWidth       = 30
@@ -770,6 +773,8 @@ def SubtestMenu(alcttype):
         print(  "================================================================================\n")
         print("\t 1 Check Entire Board")
         print("\t 2 Check Single Chip")
+        print("")
+        print("\t ? Test Information")
 
         k=input("\nChoose Test or <cr> to return to Main Menu: ")
         if not k: break
@@ -785,5 +790,36 @@ def SubtestMenu(alcttype):
             print("")
             ChipDelayScan(chip, alcttype)
 
+        if k=="?":
+            common.ClearScreen()
+            print(SubTestInfo())
+
         k=input("\n<cr> to return to menu: ")
 
+def SubTestInfo():
+    info = """ 
+This test verifies the functionality of the delay ASICs, which each provide 16
+channels of programmable delay to the digital signals that are sent from the AFEBs. 
+
+The test will verify two things: 
+1) Simple connectivity of the 16 channels back to the FPGA. But this is also
+achieved more easily through the single cable test..  
+2) Verify correct delays!  
+
+The latter portion of the test is the much more important one: the delay ASICs
+were found to have very large chip-to-chip variation. To accommodate for this,
+the chips were binned into several classes, based on the averaged delays of the
+16 individual channels. Each board is populated with delay ASICs from a single
+time bin, and all boards of the same type (288 vs. 384 vs. 672) are also
+populated with chips of the same time bins, and the design of the board types
+is adjusted (by changing the values of some resistors) to account for this
+difference. 
+
+These tests will verify first that the average delay of any board, when set to a
+prescribed value, is within an acceptable range.         
+
+Besides of course the chip-to-chip variation, however, there is also
+channel-to-channel variation within a single chip, so it must also be checked
+that the differences between channels is not too large. 
+"""
+    return (info)
