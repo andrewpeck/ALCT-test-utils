@@ -142,7 +142,7 @@ def SingleCableSelfTest(alcttype):
     errcnt = 0
 
     logging.info("\nStarting Single Cable Self Test:")
-    for (channel) in range (alct.alct[alcttype].groups * alct.alct[alcttype].chips):
+    for (channel) in range (alct.alct[alcttype].chips):
         k = input ("Please connect ALCT connector J5 to AFEB connector %i. <s> to skip, <cr> to continue" % channel)
 
         # skip connector

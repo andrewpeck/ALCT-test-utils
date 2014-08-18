@@ -733,10 +733,10 @@ def SubtestMenu(alcttype):
             while True: 
                 k=input("\nEnter channel to test (0-23), or <q> for a quick scan, or <cr> for a Full Scan (slow)")
                 if (not k): 
-                    CheckThresholds(0,alct.alct[alcttype].groups*alct.alct[alcttype].chips,1)
+                    CheckThresholds(0,alct.alct[alcttype].chips,1)
                     break
                 elif (k=="q"): 
-                    CheckThresholds(0,alct.alct[alcttype].groups*6,17)
+                    CheckThresholds(0,alct.alct[alcttype].chips,17)
                     break
                 elif (int(k) >=0 and int(k) < 24): 
                     CheckThresholds(int(k),int(k),1)

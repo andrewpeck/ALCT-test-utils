@@ -145,7 +145,7 @@ alct = [ MutableNamedTuple() for i in range(3)]
 alct[0].name          = 'ALCT288'   # Name
 alct[0].channels      = 288         # Number of channels on board
 alct[0].groups        = 3           # Number of Delay Chip Groups
-alct[0].chips         = 6           # Number of Delay Chips per Group
+alct[0].chips         = 18           # Number of Delay Chips per Group
 alct[0].delaylines    = 16          # Number of Channels Per Delay Chip
 alct[0].pwrchans      = 3           # Number of Power Inputs
 
@@ -153,7 +153,7 @@ alct[0].pwrchans      = 3           # Number of Power Inputs
 alct[1].name          = 'ALCT384'
 alct[1].channels      = 384
 alct[1].groups        = 4
-alct[1].chips         = 6
+alct[1].chips         = 24
 alct[1].delaylines    = 16
 alct[1].pwrchans      = 4
 
@@ -161,7 +161,7 @@ alct[1].pwrchans      = 4
 alct[2].name          = 'ALCT672'
 alct[2].channels      = 672
 alct[2].groups        = 7
-alct[2].chips         = 6
+alct[2].chips         = 42
 alct[2].delaylines    = 16
 alct[2].pwrchans      = 4
 
@@ -321,7 +321,7 @@ v_idreg     = MutableNamedTuple()
 
 #------------------------------------------------------------------------------
 
-# Read Slow Control or Mezzanine FPGA ID Codes
+# Read Slow Control or Mezzanine FIRMWARE FPGA ID Codes
 def ReadIDCode (alct_ctl):
     if (alct_ctl == SLOW_CTL):
         SetChain(SLOW_CTL) # Slow Control Control Chain
@@ -340,7 +340,7 @@ def ReadBoardSN(board_type):
 
     if board_type == BOARD_SN:
         cr_str    = ReadRegister(RdCfg)
-        cr_str = cr_str & 0X0FFFFFFFFFFFFFFFFF
+        cr_str    = cr_str & 0X0FFFFFFFFFFFFFFFFF
 
         #cr_str[1] = 0
         #cr_str = '0020A03806B1193FC1'
@@ -482,7 +482,7 @@ def VReadFPGAID():
     jtag.WriteIR(0x1F,5)
     jtag.WriteIR(0x1F,5)
     jtag.WriteIR(0x9,5)
-    result = jtag.ReadDR(0xffffffff,34)
+    result = jtag.ReadDR(0xFFFFFFFF,34)
     jtag.WriteIR(0x1F,5)
     return(result)
 
