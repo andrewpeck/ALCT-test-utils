@@ -24,7 +24,7 @@ def ConvertArray1Dto2D(array,alcttype):
     ngroups = alct.alct[alcttype].groups
     nchips  = 6*ngroups
     out = [[0 for j in range(6)] for i in range(ngroups)]
-    out = np.ndarray(shape=(6,ngroups,dtype=uint16)
+    out = np.ndarray(shape=(ngroups,6),dtype=np.uint16)
 
     for i in range(ngroups):
         for j in range(6):
@@ -37,7 +37,7 @@ def ConvertArray1Dto2D(array,alcttype):
 def ConvertArray2Dto1D(array,alcttype):
     ngroups = alct.alct[alcttype].groups
     nchips  = 6*ngroups
-    out     = np.ndarray(shape=nchips,dtype=uint16)
+    out     = np.ndarray(shape=nchips,dtype=np.uint16)
 
     for i in range(ngroups):
         for j in range(6):
@@ -84,7 +84,7 @@ def SetDelayLines(cs, patterns, delays, alcttype):
 
 # Returns Array of  Delay Chip Patterns read from Board
 def ReadPatterns(alcttype):
-    pattern  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+    pattern  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
 
     alct.SetChain(alct.VIRTEX_CONTROL)
     Wires = (alct.alct[alcttype].channels)
@@ -117,7 +117,7 @@ def ReadPatterns(alcttype):
 
     alct.WriteRegister(0x11, 0x4001, 16)       # Enable Patterns from DelayChips into 384 bits ALCT Register
     jtag.WriteIR      (0x10, alct.V_IR)        # Send 384 bits ALCT Register to PC via JTAG
-    DR = jtag.ReadDR  (DR,Wires) & (2**384 -1) # Mask off 384 bits, just-in-case
+    DR = jtag.ReadDR  (0x0,Wires) & (2**384 -1) # Mask off 384 bits, just-in-case
 
     stringDR = format(DR, '096X')   # Convert to Hexdecimal string
     stringDR = stringDR[::-1]       # Invert the String
@@ -185,9 +185,9 @@ def PrintPatterns(alcttype, SendPtrns, ReadPtrns):
 
 # Sends a walking 1 pattern through the delay ASICs
 def Walking1(alcttype):
-    SendPtrns  = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
-    ReadPtrns  = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
-    SendValues = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
+    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    ReadPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
     
     Wires = alct.alct[alcttype].channels
     Errs        = 0
@@ -228,9 +228,9 @@ def Walking1(alcttype):
 
 # Sends a walking 1 pattern through the delay ASICs
 def Walking0(alcttype):
-    SendPtrns  = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
-    ReadPtrns  = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
-    SendValues = np.ndarray(shape=(6,alct.alct[alcttype].groups),dtype=uint16)
+    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    ReadPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
 
     Wires = alct.alct[alcttype].channels
     Errs        = 0
@@ -270,8 +270,8 @@ def Walking0(alcttype):
 
 # Fills delay ASICs with a Walking 1
 def Filling1(alcttype):
-    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
-    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
 
     Wires = alct.alct[alcttype].channels
     Errs       = 0
@@ -315,8 +315,8 @@ def Filling1(alcttype):
 
 # Unfills delay ASICs with a Walking 0
 def Filling0(alcttype):
-    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
-    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
 
     Wires = alct.alct[alcttype].channels
     Errs       = 0
@@ -362,8 +362,8 @@ def Filling0(alcttype):
 # Shifts 5 and A through the delay asic... 0101010101 --> 10101010101..
 # Uses HIGH current.. maybe not a good test.
 def Shifting5andA(alcttype, npasses=25):
-    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
-    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
 
     Wires       = (alct.alct[alcttype].channels) #Number of wires on this kind of board
 
@@ -393,22 +393,22 @@ def Shifting5andA(alcttype, npasses=25):
                     SendPtrns[i][j] = 0xAAAA    # delay pattern to set even/odd
 
 
-            SetDelayLines(0xF, SendPtrns, SendValues, alcttype) # write delay patterns/values
-            ReadPtrns = ReadPatterns(alcttype)             # read delay patterns
-            ErrOnePass      = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
-            Errs            = Errs + ErrOnePass
+        SetDelayLines(0xF, SendPtrns, SendValues, alcttype) # write delay patterns/values
+        ReadPtrns = ReadPatterns(alcttype)             # read delay patterns
+        ErrOnePass      = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
+        Errs            = Errs + ErrOnePass
 
-            # Generate a hexdecimal formatted string of the read/write patterns
-            read = "0x"
-            send = "0x"
-            for j in range(alct.alct[alcttype].chips): 
-                read = read + format(ReadPtrns[i][j],'04X')
-                send = send + format(SendPtrns[i][j],'04X')
+        # Generate a hexdecimal formatted string of the read/write patterns
+        read = "0x"
+        send = "0x"
+        for j in range(6): 
+            read = read + format(ReadPtrns[i][j],'04X')
+            send = send + format(SendPtrns[i][j],'04X')
 
-            if ErrOnePass > 0:
-                print("\t Error in group %i: Write=%s, Read=%s " % (i, send, read))
-            else: 
-                print("\t ====> PASSED") 
+        if ErrOnePass > 0:
+            print("\t Error: Write=%s Read=%s " % (send, read))
+        else: 
+            print("\t ====> PASSED") 
 
     # Reset Delay Chips (returns Current to normal values
     for i in range(alct.alct[alcttype].groups):
@@ -429,8 +429,8 @@ def Shifting5andA(alcttype, npasses=25):
 
 # Sends random patterns into delay ASICs
 def RandomData(alcttype, npasses=50):
-    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
-    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
 
     # Wires
     Wires = alct.alct[alcttype].channels
@@ -468,13 +468,13 @@ def RandomData(alcttype, npasses=50):
         # Generate a hexdecimal formatted string of the read/write patterns
         read = "0x"
         send = "0x"
-        for j in range(alct.alct[alcttype].chips): 
+        for j in range(6): 
             read = read + format(ReadPtrns[i][j],'04X')
             send = send + format(SendPtrns[i][j],'04X')
 
         # If error, print pattern
         if ErrOnePass > 0:
-            print("\t Error in group %i: Write=%s, Read=%s " % (i, send, read))
+            print("\t Error: Write=%s Read=%s " % (send, read))
         else: 
             print("\t ====> PASSED") 
 
@@ -652,9 +652,9 @@ def RandomData(alcttype, npasses=50):
 
 #def SetDelayChips(alcttype):
 #
-#    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
-#    ReadPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
-#    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=uint16)
+#    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+#    ReadPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+#    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
 #
 #    Wires          = alct.alct[alcttype].channels
 #    Errs           = 0
