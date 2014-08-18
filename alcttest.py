@@ -332,7 +332,7 @@ def AutomaticFullTest():
     if (errors > 0):
         print        ("\t ====> FAIL: ALCT #%s with mezzanine #%s failed with %i errors" % (baseboardSN, mezzanineSN, errors))
         logging.info ("\t FAIL: ALCT #%s with mezzanine #%s failed with %i errors" % (baseboardSN, mezzanineSN, errors))
-    elif (errors == 0 && skipped==0):
+    elif (errors == 0 and skipped==0):
         print        ("\t ====> PASS: ALCT #%s with mezzanine #%s passed all tests" % (baseboardSN, mezzanineSN))
         logging.info ("\t PASS: ALCT #%s with mezzanine #%s passed all tests" % (baseboardSN, mezzanineSN))
     else:
@@ -345,9 +345,9 @@ def AutomaticFullTest():
 # Prints and Returns hardware ID codes.. doesn't read some of them out. Need to understand why. 
 def PrintIDCodes():
     idcodestr  = ("\t Slow Control Firmware ID: 0x%X\n" % alct.ReadIDCode (0x0))
-    idcodestr += ("\t Fast Control Firmware ID: 0x%X\n" % alct.ReadIDCode (0x1))
-    idcodestr += ("\t Board Serial Number:      0x%X\n" % alct.ReadBoardSN(0x2))
-    idcodestr += ("\t Mezz. Serial Number:      0x%X"   % alct.ReadBoardSN(0x3))
+    #idcodestr += ("\t Fast Control Firmware ID: 0x%X\n" % alct.ReadIDCode (0x1))
+    #idcodestr += ("\t Board Serial Number:      0x%X\n" % alct.ReadBoardSN(0x2))
+    #idcodestr += ("\t Mezz. Serial Number:      0x%X"   % alct.ReadBoardSN(0x3))
 
     print (idcodestr)
     return (idcodestr)
