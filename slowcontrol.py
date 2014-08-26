@@ -348,14 +348,15 @@ def ReadThreshold(ch):
 
     return(result)
 
-def ReadAllThresholds():
-    NUM_AFEB=24
+def ReadAllThresholds(alcttype):
+    NUM_AFEB = alct.alct[alcttype].chips
     print("\n%s> Read All Thresholds" % common.Now())
     for j in range (NUM_AFEB):
         thresh = ReadThreshold(j)
         print("\t  AFEB #%02i:  Threshold=%.3fV (ADC=0x%03X)" % (j, (ADC_REF/1023)*thresh, thresh))
 
-def WriteAllThresholds(thresh):
+def WriteAllThresholds(thresh,alcttype)
+    NUM_AFEB = alct.alct[alcttype].chips
     print("\n%s> Write All Thresholds to %i" % (common.Now(), thresh))
     for i in range(NUM_AFEB):
         SetThreshold(i, thresh);
