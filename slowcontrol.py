@@ -167,16 +167,16 @@ arVoltages[3].toler     = 0.2
 arCurrents = [ MutableNamedTuple() for i in range(4)]
 
 arCurrents[0].ref       = '1.8v'
-arCurrents[0].ref288    = 0.58
-arCurrents[0].ref384    = 0.94 # double check this
-arCurrents[0].ref672    = 0.94 # double check this
+arCurrents[0].ref288    = 0.667
+arCurrents[0].ref384    = 0.667 # double check this
+arCurrents[0].ref672    = 0.667 # double check this
 arCurrents[0].coef      = 0.002987
 arCurrents[0].toler     = 0.1
 
 arCurrents[1].ref       = '3.3v'
-arCurrents[1].ref288    = 1.28
-arCurrents[1].ref384    = 2.81 # double check this
-arCurrents[1].ref672    = 2.81 # double check this
+arCurrents[1].ref288    = 1.20
+arCurrents[1].ref384    = 1.20 # double check this
+arCurrents[1].ref672    = 1.20 # double check this
 arCurrents[1].coef      = 0.002987
 arCurrents[1].toler     = 0.2
 
@@ -185,14 +185,14 @@ arCurrents[2].ref288    = 0.15
 arCurrents[2].ref384    = 0.15 # double check this
 arCurrents[2].ref672    = 0.15 # double check this
 arCurrents[2].coef      = 0.002987
-arCurrents[2].toler     = 0.1
+arCurrents[2].toler     = 0.10
 
 arCurrents[3].ref       = '5.5v2'
-arCurrents[3].ref288    = 0.00
-arCurrents[3].ref384    = 0.15  # double check this
-arCurrents[3].ref672    = 0.15  # double check this
+arCurrents[3].ref288    = 0.10
+arCurrents[3].ref384    = 0.10  # double check this
+arCurrents[3].ref672    = 0.10  # double check this
 arCurrents[3].coef      = 0.002987
-arCurrents[3].toler     = 0.1
+arCurrents[3].toler     = 0.10
 
 #-------------------------------------------------------------------------------
 # Container for ADC Temperature Measurement
