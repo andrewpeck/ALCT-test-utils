@@ -7,7 +7,6 @@
 import random
 import sys
 import os
-import numpy as np
 #-------------------------------------------------------------------------------
 import jtaglib as jtag
 import common
@@ -24,7 +23,6 @@ def ConvertArray1Dto2D(array,alcttype):
     ngroups = alct.alct[alcttype].groups
     nchips  = 6*ngroups
     out = [[0 for j in range(6)] for i in range(ngroups)]
-    out = np.ndarray(shape=(ngroups,6),dtype=np.uint16)
 
     for i in range(ngroups):
         for j in range(6):
@@ -37,7 +35,7 @@ def ConvertArray1Dto2D(array,alcttype):
 def ConvertArray2Dto1D(array,alcttype):
     ngroups = alct.alct[alcttype].groups
     nchips  = 6*ngroups
-    out     = np.ndarray(shape=nchips,dtype=np.uint16)
+    out     = [0]*nchips
 
     for i in range(ngroups):
         for j in range(6):
@@ -84,7 +82,8 @@ def SetDelayLines(cs, patterns, delays, alcttype):
 
 # Returns Array of  Delay Chip Patterns read from Board
 def ReadPatterns(alcttype):
-    pattern  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    ngroups = alct.alct[alcttype].groups
+    pattern = [[0 for j in range(6)] for i in range(ngroups)]
 
     alct.SetChain(alct.VIRTEX_CONTROL)
     Wires = (alct.alct[alcttype].channels)
@@ -185,9 +184,10 @@ def PrintPatterns(alcttype, SendPtrns, ReadPtrns):
 
 # Sends a walking 1 pattern through the delay ASICs
 def Walking1(alcttype):
-    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
-    ReadPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
-    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    ngroups = alct.alct[alcttype].groups
+    SendPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
+    ReadPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
+    SendValues = [[0 for j in range(6)] for i in range(ngroups)]
     
     Wires = alct.alct[alcttype].channels
     Errs        = 0
@@ -228,9 +228,9 @@ def Walking1(alcttype):
 
 # Sends a walking 1 pattern through the delay ASICs
 def Walking0(alcttype):
-    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
-    ReadPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
-    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    ngroups = alct.alct[alcttype].groups
+    SendPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
+    SendValues = [[0 for j in range(6)] for i in range(ngroups)]
 
     Wires = alct.alct[alcttype].channels
     Errs        = 0
@@ -270,8 +270,9 @@ def Walking0(alcttype):
 
 # Fills delay ASICs with a Walking 1
 def Filling1(alcttype):
-    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
-    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    ngroups = alct.alct[alcttype].groups
+    SendPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
+    SendValues = [[0 for j in range(6)] for i in range(ngroups)]
 
     Wires = alct.alct[alcttype].channels
     Errs       = 0
@@ -315,8 +316,9 @@ def Filling1(alcttype):
 
 # Unfills delay ASICs with a Walking 0
 def Filling0(alcttype):
-    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
-    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    ngroups = alct.alct[alcttype].groups
+    SendPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
+    SendValues = [[0 for j in range(6)] for i in range(ngroups)]
 
     Wires = alct.alct[alcttype].channels
     Errs       = 0
@@ -362,8 +364,9 @@ def Filling0(alcttype):
 # Shifts 5 and A through the delay asic... 0101010101 --> 10101010101..
 # Uses HIGH current.. maybe not a good test.
 def Shifting5andA(alcttype, npasses=25):
-    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
-    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    ngroups = alct.alct[alcttype].groups
+    SendPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
+    SendValues = [[0 for j in range(6)] for i in range(ngroups)]
 
     Wires       = (alct.alct[alcttype].channels) #Number of wires on this kind of board
 
@@ -429,8 +432,9 @@ def Shifting5andA(alcttype, npasses=25):
 
 # Sends random patterns into delay ASICs
 def RandomData(alcttype, npasses=50):
-    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
-    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+    ngroups = alct.alct[alcttype].groups
+    SendPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
+    SendValues = [[0 for j in range(6)] for i in range(ngroups)]
 
     # Wires
     Wires = alct.alct[alcttype].channels
@@ -652,9 +656,9 @@ def RandomData(alcttype, npasses=50):
 
 #def SetDelayChips(alcttype):
 #
-#    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
-#    ReadPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
-#    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.uint16)
+#    SendPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.int)
+#    ReadPtrns  = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.int)
+#    SendValues = np.ndarray(shape=(alct.alct[alcttype].groups,6),dtype=np.int)
 #
 #    Wires          = alct.alct[alcttype].channels
 #    Errs           = 0
