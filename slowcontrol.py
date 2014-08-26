@@ -752,3 +752,32 @@ def SubtestMenu(alcttype):
             CheckTemperature()
 
         k=input("\n<cr> to return to menu: ")
+
+
+#Read virtex id codes:
+#Program Script;
+#Begin
+#// === Set Virtex Programming Chain
+#	SetChain(2);
+#
+#// Read Virtex ID Code
+#	WriteIR('09FFFF',21);
+#	ReadDR('0',32);
+#
+#// Read EPROM #1 ID Code
+#	WriteIR('1FFFFE',21);
+#	ReadDR('0',32);
+#
+#// Read EPROM #2 ID Code 
+#	WriteIR('1FFEFF',21); 
+#	ReadDR('0',32); 
+#
+#// === Set Slow Control Control Chain
+#	SetChain(1);
+#
+#// Read Slow Control Spartan User ID Code
+#	WriteIR('0',6);
+#	ReadDR('0',40);
+#End.
+
+
