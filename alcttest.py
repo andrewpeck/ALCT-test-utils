@@ -8,12 +8,15 @@ import testerboard
 import common
 import delays
 import alct
+import ctypes
 #-------------------------------------------------------------------------------
 # generic python includes
 import random
 import datetime
 import time
 import os.path
+import os
+import atexit
 #-------------------------------------------------------------------------------
 # logging 
 import logging
@@ -23,6 +26,9 @@ import logging
 alcttype = 1
 
 def main():
+    if os.name == 'nt': 
+        ctypes.windll.inpout32.Closedriver()
+        ctypes.windll.inpout32.Opendriver(True)
     MainMenu()
     print("SIC TRANSIT GLORIA MUNDI")
     time.sleep(0.1)
@@ -120,7 +126,8 @@ def AutomaticFullTest():
                 break
         else: 
             k=input("\n No serial number entered! <y> to continue without logging: ")
-            if k=="y" or k=="Y" or y=="yes": break
+            if k=="y" or k=="Y" or k=="yes": 
+                break
 
 
     # Create Log if baseboard and mezzanine have S/N specified
@@ -133,6 +140,8 @@ def AutomaticFullTest():
 
         logFile = os.path.join(logFileDir,logFileName)
     else:
+        baseboardSN = 0
+        mezzanineSN = 0
         logFile = os.devnull
 
     # Log File Configuration
@@ -155,7 +164,7 @@ def AutomaticFullTest():
     # connectivity of Delay Chips, connectivity of ALCT mezzanine tx (J5)
     #-------------------------------------------------------------------------------
 
-    k=input("\nPlease load Single Cable Firmware. Press s to skip, any key to Continue: ")
+    k=input("\nPlease load Single Cable Firmware. \n\t <s> to skip, <cr> to Continue: ")
     if k!="s":
         errors += singlecable.SingleCableSelfTest(alcttype)
     else: 
@@ -169,7 +178,7 @@ def AutomaticFullTest():
     # Verifies linearity of AFEB thresholds (read/write)
     #-------------------------------------------------------------------------------
 
-    k=input("\nPlease load Test Firmware. Press s to skip, any key to Continue: ")
+    k=input("\nPlease load Test Firmware. \n\t <s> to skip, <cr> to Continue: ")
     if k!="s":
         # Delays Chips Pattern Tests
         errors += delays.PatternsSelfTest(alcttype)
@@ -179,6 +188,8 @@ def AutomaticFullTest():
         # Tester Board Test
         errors += testerboard.TestboardDelaysCheck(alcttype)
 
+        #Test Pulse Self Test
+        errors += testerboard.TestPulseSelfCheck(alcttype)
     else:
         skipped += 1
         logging.info("SKIPPED: Test Firmware Tests")
@@ -189,7 +200,7 @@ def AutomaticFullTest():
     # Checks functioning of slow control features
     #-------------------------------------------------------------------------------
 
-    k=input("\nPlease load Normal Firmware. Press s to skip, any key to Continue: ")
+    k=input("\nPlease load Normal Firmware. \n\t <s> to skip, <cr> to Continue: ")
     if k!="s":
         errors += slowcontrol.SelfTest(alcttype)
     else: 
@@ -204,15 +215,20 @@ def AutomaticFullTest():
     logging.info("\nTest Pulse Amplitude and Mask Check:")
     print("\nTest Pulse Generator Tests: ")
 
+    print("\t For each test pulse channel, Please verify:")
+    print("\t 1) Test pulse can correctly turn ON and OFF")
+    print("\t 2) Test pulse amplitude is correct")
+    print("\t Recommended scope settings: 200 us, 500mV")
+
     slowcontrol.SetTestPulsePower(1)       # Turn on Test Pulse Generator
     slowcontrol.SetTestPulsePowerAmp(208)  # Set amplitude to approximately 1V
     for i in range (6):
-        print("Connect oscilloscope to Lemo connector J%i" % i)
+        print("    Connect oscilloscope to Lemo connector S%i" % (i+1))
 
         # Turn OFF test-channel, turn ON all others
         slowcontrol.SetTestPulseStripLayerMask(~(0x1 << i))
         while (True): 
-            k=input("\tChannel %i: Verify no test pulse.             <p> to pass, <f> to fail, <s> to skip: " % i)
+            k=input("\tChannel %i: Verify no test pulse. \n\t\t <p> to pass, <f> to fail, <s> to skip: " % i)
             if k=="p": 
                 logging.info("\t PASS: Channel %i confirmed test pulse power down" %i)
                 break
@@ -228,7 +244,7 @@ def AutomaticFullTest():
         # Turn ON test-channel, turn OFF all others
         slowcontrol.SetTestPulseStripLayerMask(0x1 << i)
         while (True): 
-            k=input("\tChannel %i: Verify test pulse amplitude=1V.   <p> to pass, <f> to fail, <s> to skip: " % i)
+            k=input("\tChannel %i: Verify test pulse amplitude=1.2V. \n\t\t <p> to pass, <f> to fail, <s> to skip: " % i)
             if k=="p": 
                 logging.info("\t PASS: Channel %i confirmed test pulse power up" %i)
                 break
@@ -244,15 +260,17 @@ def AutomaticFullTest():
 
     #-------------------------------------------------------------------------------
     logging.info("\nVoltage Reference Check:")
+    print("\nVoltage Reference Check:")
 
     # Manual check of reference voltage
-    print("\nPlease verify the precision voltage reference on chips: ")
+    print("\n    Please verify the precision voltage reference on chips: ")
     print("\t * U2, U3, U4         for ALCT-288")
     print("\t * U2, U3, U4         for ALCT-384")
     print("\t * U2, U3, U4, U5, U6 for ALCT-672")
     print("")
     print("\t Use a voltmeter to measure the voltage on pin number 14:")
-    print("\t From the corner of the chip nearest to LEMO connectors, it is the 4th pin down")
+    print("\t     From the corner of the chip nearest to LEMO connectors,")
+    print("\t     it is the 4th pin down")
     print("\t ")
     print("\t    +--------------+              ")
     print("\t    | *            |              ")
@@ -358,6 +376,9 @@ def StringALCTType(type):
     elif type == 1: s = "ALCT-384"
     elif type == 2: s = "ALCT-672"
     return(s)
+
+if os.name == 'nt': 
+    atexit.register(ctypes.windll.inpout32.Closedriver)
 
 if __name__ == "__main__":
     main()

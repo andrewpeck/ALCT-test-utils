@@ -8,14 +8,16 @@
 import alct
 import jtaglib as jtag
 import common
+import slowcontrol
 #-------------------------------------------------------------------------------
 import logging
 logging.getLogger()
 #-------------------------------------------------------------------------------
 import os
+import time
 #-------------------------------------------------------------------------------
 
-debug=False
+debug=True
 
 #-------------------------------------------------------------------------------
 # Register Locations / Sizes
@@ -336,7 +338,7 @@ def FindStartDlyPin(FIFOvalue, ch, alct_dly, num_words, RegMaskDone, alcttype):
     # Return tuple of values
     return(FoundTimeBin, StartDly_R, StartDly_F, RegMaskDone)
 
-def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, AverageDelay_Time, RegMaskDone, alcttype):
+def MeasureDelay(chip, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, AverageDelay_Time, RegMaskDone, alcttype):
     MinWidth       = 30
     MaxWidth       = 45
     FIFOvalue      = 0xFFFF
@@ -355,20 +357,20 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
     # write zeroes to arrays from args
     for i in range(16):
         PulseWidth[i]           = 0
-        DeltaBeginTime[ch][i]   = 0
-        Delay_Time[ch][i]       = 0
+        DeltaBeginTime[chip][i]   = 0
+        Delay_Time[chip][i]       = 0
 
     # 
     alct_dly        = 0
     StartDly_R      = 0
     StartDly_F      = 0
 
-    (FoundTimeBin, StartDly_R, StartDly_F,RegMaskDone) = FindStartDlyPin(FIFOvalue, ch, alct_dly, num, RegMaskDone,alcttype)
+    (FoundTimeBin, StartDly_R, StartDly_F,RegMaskDone) = FindStartDlyPin(FIFOvalue, chip, alct_dly, num, RegMaskDone,alcttype)
     if FoundTimeBin:
-        TimeR_0 = PinPointRiseTime(FIFOvalue, ch, StartDly_R, alct_dly, num,alcttype)
-        TimeF_0 = PinPointFallTime(FIFOvalue, ch, StartDly_F, alct_dly, num,alcttype)
+        TimeR_0 = PinPointRiseTime(FIFOvalue, chip, StartDly_R, alct_dly, num,alcttype)
+        TimeF_0 = PinPointFallTime(FIFOvalue, chip, StartDly_F, alct_dly, num,alcttype)
 
-        BeginTime_Min[ch] = StartDly_R*25 + 255*0.25
+        BeginTime_Min[chip] = StartDly_R*25 + 255*0.25
         for i in range(16):
             DelayTimeR_0[i] = StartDly_R*25 + TimeR_0[i]*0.25
             DelayTimeF_0[i] = StartDly_F*25 + TimeF_0[i]*0.25
@@ -378,8 +380,8 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
                 PulseWidth_Min = PulseWidth[i]
                 PulseWidth_Max = PulseWidth[i]
 
-            if (DelayTimeR_0[i] < BeginTime_Min[ch]):
-                BeginTime_Min[ch] = DelayTimeR_0[i]
+            if (DelayTimeR_0[i] < BeginTime_Min[chip]):
+                BeginTime_Min[chip] = DelayTimeR_0[i]
 
             if (PulseWidth[i] < PulseWidth_Min):
                 PulseWidth_Min = PulseWidth[i]
@@ -393,18 +395,18 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
     #------------------------------------------------------------------------------
 
     alct_dly = 15
-    AverageDelay_Time[ch] = 0
+    AverageDelay_Time[chip] = 0
     SumDelay_Time = 0
 
-    (FoundTimeBin, StartDly_R, StartDly_F) = FindStartDly(FIFOvalue, ch, alct_dly, num, alcttype)
+    (FoundTimeBin, StartDly_R, StartDly_F) = FindStartDly(FIFOvalue, chip, alct_dly, num, alcttype)
     if FoundTimeBin:
-        TimeR_15 = PinPointRiseTime(FIFOvalue, ch, StartDly_R, alct_dly, num, alcttype)
+        TimeR_15 = PinPointRiseTime(FIFOvalue, chip, StartDly_R, alct_dly, num, alcttype)
         for i in range(16):
             DelayTimeR_15[i]    = StartDly_R*25 + TimeR_15[i]*0.25
-            Delay_Time[ch][i]   = DelayTimeR_15[i] - DelayTimeR_0[i]
-            SumDelay_Time       = SumDelay_Time + Delay_Time[ch][i]
+            Delay_Time[chip][i] = DelayTimeR_15[i] - DelayTimeR_0[i]
+            SumDelay_Time       = SumDelay_Time + Delay_Time[chip][i]
 
-        AverageDelay_Time[ch] = SumDelay_Time / 16
+        AverageDelay_Time[chip] = SumDelay_Time / 16
     else:
         ErrMeasDly = ErrMeasDly | 0x2
 
@@ -415,8 +417,8 @@ def MeasureDelay(ch, PulseWidth, BeginTime_Min, DeltaBeginTime, Delay_Time, Aver
         ErrMeasDly = ErrMeasDly | 0x8
 
     for i in range(16):
-        DeltaBeginTime[ch][i] = DelayTimeR_0[i] - BeginTime_Min[ch]
-        #if (DeltaBeginTime[ch][i] > MaxDeltaBeginTime) then
+        DeltaBeginTime[chip][i] = DelayTimeR_0[i] - BeginTime_Min[chip]
+        #if (DeltaBeginTime[chip][i] > MaxDeltaBeginTime) then
         #    ErrMeasDly |= 0x10
         # This was commented out in PASCAL.. for whatever reason
 
@@ -758,6 +760,154 @@ def TestboardDelaysCheck(alcttype):
 
     return (ErrDelayTest)
 
+#-------------------------------------------------------------------------------
+# procedure TForm1.Button15Click(Sender: TObject);
+# set
+#-------------------------------------------------------------------------------
+def SetStandby(channel,cbStandby): 
+    alct.SetChain(1)
+    slowcontrol.SetStandbyForChan(channel,cbStandby)
+
+#-------------------------------------------------------------------------------
+# procedure TForm1.Button13Click(Sender: TObject);
+# Go
+#-------------------------------------------------------------------------------
+def ConfigureTestPulseChannel(channel, cbLoop, cbStandby, alcttype):
+    TouchFIFO(channel);
+    alct.SetChain(1);
+
+    # Setting Thresholds to 200
+    for j in range (alct.alct[alcttype].chips):
+        slowcontrol.SetThreshold(j, 200);
+
+    slowcontrol.SetTestPulseWireGroupMask (0x7F)
+    slowcontrol.SetTestPulseStripLayerMask(0x3f)
+    slowcontrol.SetStandbyReg(0)
+    slowcontrol.SetTestPulsePower(0)
+    slowcontrol.SetTestPulsePowerAmp(255)
+    slowcontrol.SetTestPulsePower(1)
+
+def TestPulseLoopTest(alcttype): 
+    cbLoop    = True
+    cbStandby = False
+    ChannelLoopTest(cbLoop,cbStandby,alcttype)
+
+def StandbyLoopTest(alcttype): 
+    #------------------------------------------------------------------------
+    while True: 
+        print ("Make sure to connect a shunt across TP1_28 and TP1_29!!!")
+        k = input("\t<cr> to continue")
+        if not k: 
+            break
+
+    cbLoop    = True
+    cbStandby = True
+    ChannelLoopTest(cbLoop,cbStandby,alcttype)
+
+def ChannelLoopTest(cbLoop,cbStandby,alcttype): 
+
+    SetStandby(0,cbStandby)
+    
+    NUM_AFEB = alct.alct[alcttype].chips
+
+    # Set Test Pulse Amplitude
+    # Set Test Pulse Power On
+    # Chain Loop
+
+    PassCnt = 0
+    chip    = 0
+
+    while (chip < NUM_AFEB):
+        #if (debug): print ("Pass Count: %i" % PassCnt)
+        #-------------------------------------------------------------------
+        alct.SetChain(1);
+        PassCnt += 1
+        #-------------------------------------------------------------------
+        if (PassCnt > 4): 
+            if chip < (NUM_AFEB // 2): 
+                grpmask = chip // 3
+            else: 
+                grpmask = (chip - NUM_AFEB // 2) // 3;
+
+            slowcontrol.SetTestPulseWireGroupMask((not (1 << grpmask)) and 0x7f);
+
+            if (slowcontrol.ReadTestPulseWireGroupMask != ((not (1 << grpmask)) and 0x7f)):
+                print('ERROR: Test Stopped -> Couldn''t set Test Pulse Wire Group Mask');
+                ConfigureTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
+                break
+        else: 
+            slowcontrol.SetTestPulseWireGroupMask(0x7F)
+        #-------------------------------------------------------------------
+        if (PassCnt > 8): 
+            if cbLoop:
+                alct.SetChain(1);
+                slowcontrol.SetStandbyForChan(chip, False);
+
+                if (chip == NUM_AFEB):
+                    chip = 0
+                    ConfigureTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
+                else: 
+                    print('Input Channel # %i is selected' % chip)
+                    chip = chip + 1;
+            PassCnt = 0
+
+        #-------------------------------------------------------------------
+        alct.SetChain(1)
+        slowcontrol.SetStandbyForChan (chip, False)
+        slowcontrol.SetStandbyForChan (chip, True)
+        slowcontrol.SetThreshold      (chip, (PassCnt % 2)*255)
+        time.sleep(0)
+        TouchFIFO         (chip);
+
+def TouchFIFO (chip):
+    alct.SetChain(3);
+
+    # Write to FIFO
+    jtag.WriteIR  (0x1a,                                     alct.V_IR)
+    jtag.WriteDR ((1 and 0x1FFF) or ((chip and 0x3F) << 13), 5   )
+    jtag.WriteIR  (0x18,                                     alct.V_IR)
+    jtag.WriteDR  (0x5555,                                   16  )
+    jtag.WriteIR  (0x18,                                     alct.V_IR)
+    jtag.WriteDR  (0xAAAA,                                   16  )
+
+    # Read from FIFO
+    jtag.WriteIR  (0x1A,                                         alct.V_IR)
+    jtag.WriteDR ((0x1 and 0x1FFF) or (( chip and 0x3F) << 13),  5)
+    jtag.WriteIR  (0x19,                                         alct.V_IR)
+    jtag.ReadDR   (0x00,                                         16)
+    jtag.WriteIR  (0x19,                                         alct.V_IR)
+    jtag.ReadDR   (0x00,                                         16)
+
+def TestPulseSelfCheck(alcttype):
+    Errs = 0
+    alct.SetChain(alct.SLOW_CTL)
+
+    print("\nTest Pulse Semi-Automatic Self Test\n")
+    logging.info("\nTest Pulse Semi-Automatic Self Test")
+
+    print("\n    Test Pulse Loop Test: Please verify that, as the LEMO output from the")
+    print("\n    tester board switches between its different inputs, the waveform that it")
+    print("\n    puts out is consistent in shape and amplitude.")
+    #--------------------------------------------------------------------------
+    while (true): 
+        TestPulseLoopTest(alcttype)
+        k=input("\nDid all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
+        if k=="p":
+            logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
+        elif k=="f":
+            s=input("\n Please record which channels failed the test: ")
+            logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
+            logging.info("\t         Failure indicated on channels %s" % s)
+            Errs += 1
+        elif k=="r":
+            continue 
+        else: 
+            print("WTF!?")
+            continue
+
+    #--------------------------------------------------------------------------
+    return (Errs)
+
 #------------------------------------------------------------------------------
 # Subtest Menu
 #------------------------------------------------------------------------------
@@ -773,6 +923,8 @@ def SubtestMenu(alcttype):
         print(  "================================================================================\n")
         print("\t 1 Check Entire Board")
         print("\t 2 Check Single Chip")
+        print("\t 3 Scan Test Pulse Loopback")
+        print("\t 4 Scan Standby Loopback")
         print("")
         print("\t ? Test Information")
 
@@ -789,6 +941,14 @@ def SubtestMenu(alcttype):
             common.ClearScreen()
             print("")
             ChipDelayScan(chip, alcttype)
+        if k=="3": 
+            common.ClearScreen()
+            print("")
+            TestPulseLoopTest(alcttype)
+        if k=="4": 
+            common.ClearScreen()
+            print("")
+            StandbyLoopTest(alcttype)
 
         if k=="?":
             common.ClearScreen()
@@ -796,30 +956,31 @@ def SubtestMenu(alcttype):
 
         k=input("\n<cr> to return to menu: ")
 
+
 def SubTestInfo():
     info = """ 
-This test verifies the functionality of the delay ASICs, which each provide 16
-channels of programmable delay to the digital signals that are sent from the AFEBs. 
+    This test verifies the functionality of the delay ASICs, which each provide 16
+    channels of programmable delay to the digital signals that are sent from the AFEBs. 
 
-The test will verify two things: 
-1) Simple connectivity of the 16 channels back to the FPGA. But this is also
-achieved more easily through the single cable test..  
-2) Verify correct delays!  
+    The test will verify two things: 
+    1) Simple connectivity of the 16 channels back to the FPGA. But this is also
+    achieved more easily through the single cable test..  
+    2) Verify correct delays!  
 
-The latter portion of the test is the much more important one: the delay ASICs
-were found to have very large chip-to-chip variation. To accommodate for this,
-the chips were binned into several classes, based on the averaged delays of the
-16 individual channels. Each board is populated with delay ASICs from a single
-time bin, and all boards of the same type (288 vs. 384 vs. 672) are also
-populated with chips of the same time bins, and the design of the board types
-is adjusted (by changing the values of some resistors) to account for this
-difference. 
+    The latter portion of the test is the much more important one: the delay ASICs
+    were found to have very large chip-to-chip variation. To accommodate for this,
+    the chips were binned into several classes, based on the averaged delays of the
+    16 individual channels. Each board is populated with delay ASICs from a single
+    time bin, and all boards of the same type (288 vs. 384 vs. 672) are also
+    populated with chips of the same time bins, and the design of the board types
+    is adjusted (by changing the values of some resistors) to account for this
+    difference. 
 
-These tests will verify first that the average delay of any board, when set to a
-prescribed value, is within an acceptable range.         
+    These tests will verify first that the average delay of any board, when set to a
+    prescribed value, is within an acceptable range.         
 
-Besides of course the chip-to-chip variation, however, there is also
-channel-to-channel variation within a single chip, so it must also be checked
-that the differences between channels is not too large. 
-"""
+    Besides of course the chip-to-chip variation, however, there is also
+    channel-to-channel variation within a single chip, so it must also be checked
+    that the differences between channels is not too large. 
+    """
     return (info)
