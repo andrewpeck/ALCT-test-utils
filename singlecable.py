@@ -12,6 +12,8 @@
 #-ALCT Specific Includes--------------------------------------------------------
 import alct
 import common
+import beeper
+import jtaglib as jtag
 #-Generic Python Includes-------------------------------------------------------
 import os
 import random
@@ -19,6 +21,7 @@ import sys
 #-Logging-----------------------------------------------------------------------
 import logging
 logging.getLogger()
+debug=0
 ################################################################################
 
 TestNames = ['',                #Dummy entry to number from 1
@@ -40,7 +43,7 @@ TestNames = ['',                #Dummy entry to number from 1
 #       4 = 'Filling 0'
 #       5 = 'Shifting 5s and As'
 #       6 = 'Random Data'
-def SingleCableTest(test,channel,npasses=50):
+def SingleCableTest(test,channel,npasses=10):
     alct.SetChain(alct.arJTAGChains[3])
     errcnt                  = 0
     CustomData              = 0x1234
@@ -49,9 +52,9 @@ def SingleCableTest(test,channel,npasses=50):
     StopOnErrorSingleCable  = False
     ErrCntSingleTest        = 50
 
-    print('Running %s test on Channel %2i' % (TestNames[test],channel))
+    print('    Running %s test on Channel %2i' % (TestNames[test],channel))
 
-    test                   -= 1             # we enumerate from zero inside code, but from 1 in the interface
+    test = test-1             # we enumerate from zero inside code, but from 1 in the interface
 
 
 
@@ -94,17 +97,26 @@ def SingleCableTest(test,channel,npasses=50):
                 else:                   senddata = 0xAAAA
             if test==6: senddata = random.getrandbits(16)                       # 6 = Random Data
 
-            if bit==0: print ('\t Pass %2i' % (npass+1))
 
             # Select Channel
-            alct.WriteRegister(alct.DelayCtrlWrite,0x1FF & channel,9)
+            alct.WriteRegister(alct.DelayCtrlWrite,0x1FF & channel ,9)
+            #jtag.WriteIR(0x16,alct.V_IR)
+            #jtag.WriteDR(0x1FF & channel,9)
+            
+
             alct.ReadRegister(alct.DelayCtrlRead,9)
+            #jtag.WriteIR(0x15,alct.V_IR)
+            #jtag.ReadDR (0x0,9)
 
             # Write Data
             alct.WriteRegister(0x18,0xFFFF & senddata,16)
+            #jtag.WriteIR(0x18,alct.V_IR)
+            #jtag.WriteDR(0xFFFF & senddata,16)
 
             # Read Back Data
             readdata = alct.ReadRegister(0x17,16)
+            #jtag.WriteIR(0x17,alct.V_IR)
+            #readdata = jtag.ReadDR(0x0,16)
 
             #if readdata != senddata:
             #    errcnt += 1
@@ -116,25 +128,37 @@ def SingleCableTest(test,channel,npasses=50):
 
             # Select Channel
             alct.WriteRegister(alct.DelayCtrlWrite, channel | 0x40, 9)
+            #jtag.WriteIR(0x16,alct.V_IR)
+            #jtag.WriteDR(0x1FF & (channel | 0x40),9)
+
+            alct.WriteRegister(alct.DelayCtrlWrite, 0x1FF & channel, 9)
+            #jtag.WriteIR(0x16,alct.V_IR)
+            #jtag.WriteDR(0x1FF & channel,9)
 
             # Read Data
-            alct.WriteRegister(alct.DelayCtrlWrite, channel | 0x1FF, 9)
             readdata = alct.ReadRegister(0x19, 16)
+            #jtag.WriteIR(0x19,alct.V_IR)
+            #readdata = jtag.ReadDR(0x0,16)
+
 
             if (readdata != senddata):
                 errcnt += 1
+                if bit==0: print ('\t Pass %2i' % (npass+1))
                 print("\t\t ====> Fail: ", end="")
+                print('Read=0x%04X Expect=0x%04X' % (readdata,senddata))
                 if StopOnErrorSingleCable:
                     return(0)
             else:
-                print("\t\t ====> Pass: ", end="")
+                if debug: 
+                    if bit==0: print ('\t Pass %2i' % (npass+1))
+                    print("\t\t ====> Pass: ", end="")
+                    print('Read=0x%04X Expect=0x%04X' % (readdata,senddata))
 
-            print('Read=0x%04X Expect=0x%04X' % (readdata,senddata))
 
     if errcnt==0:
-        print('\n\t ====> Passed')
+        print('\t ====> Passed with 0 Errors')
     else:
-        print('\n\t ====> Failed Single Cable Test with %i Errors' % errcnt)
+        print('\t ====> Failed %i Errors' % errcnt)
     return (errcnt)
 
 def SingleCableSelfTest(alcttype):
@@ -143,7 +167,8 @@ def SingleCableSelfTest(alcttype):
 
     logging.info("\nStarting Single Cable Self Test:")
     for (channel) in range (alct.alct[alcttype].chips):
-        k = input ("Please connect ALCT connector J5 to AFEB connector %i. \n\t <s> to skip, <cr> to continue: " % channel)
+        k = input ("\nPlease connect ALCT connector J5 to AFEB connector %i. \n\t <s> to skip, <cr> to continue: " % channel)
+        print("")
 
         # skip connector
         if (k=="s" or k=="S"):
@@ -154,12 +179,15 @@ def SingleCableSelfTest(alcttype):
         else:
             logging.info("\tSingle Cable Test on Channel %2i" % channel)
             for i in range(2,8): #prefer NOT to do custom data test for the Self-Test
-                fail = SingleCableTest(i,0,10)
+                fail = SingleCableTest(i,channel,10)
                 if fail:
                     errcnt += fail
                     logging.info("\t\t FAIL: %-12s with %3i Errors" % (TestNames[i], fail))
+                    beeper.failed()
                 else:
                     logging.info("\t\t PASS: %-12s " % TestNames[i])
+                    beeper.passed()
+
 
     # Tests Summary
 
@@ -190,21 +218,25 @@ def SubtestMenu(alcttype):
         print("\t 5 Filling 0 Test")
         print("\t 6 Shifting 5 and A Test")
         print("\t 7 Random Data Test")
+        print("\t 8 Single Cable Self Test")
 
         k=input("\nChoose Test or <cr> to return to Main Menu: ")
         if not k: break
         test = int(k,10)
 
-        k=input("\nChannel (<cr> for ch=%i):" % channel)
-        if k:
-            channel = int(k,10)
-        common.ClearScreen()
-        print("")
+        if (test==8):
+            SingleCableSelfTest(alcttype)
+        else: 
+            k=input("\nChannel (<cr> for ch=%i):" % channel)
+            if k:
+                channel = int(k,10)
+            common.ClearScreen()
+            print("")
 
-        if test==0:
-            for i in range(1,8):
-                SingleCableTest(i,channel,25)
-        elif (test<8 and test>0):
-            SingleCableTest(test,channel,25)
+            if test==0:
+                for i in range(1,8):
+                    SingleCableTest(i,channel,10)
+            elif (test<8 and test>0):
+                SingleCableTest(test,channel,10)
 
         k=input("\n<cr> to return to menu: ")

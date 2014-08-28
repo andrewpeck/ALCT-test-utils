@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 ################################################################################
-# Tools for Verifying ASIC delays using the large external test board
+# Tools for Verifying delays ASICs using the large external test board
 ################################################################################
 
 #-------------------------------------------------------------------------------
@@ -17,7 +17,7 @@ import os
 import time
 #-------------------------------------------------------------------------------
 
-debug=True
+debug=False
 
 #-------------------------------------------------------------------------------
 # Register Locations / Sizes
@@ -93,7 +93,6 @@ def SetTestBoardDelay(delay):
     alct.WriteRegister(WrParamF, 0x8,                                        lengthOf[WrParamF])
 
 def SetALCTBoardDelay(ch, delay, alcttype):
-    #debug=True
     DelayValue   = [0x0] * 6 # 6 delay chips in group
     DelayPattern = [0x0] * 6 # 6 delay chips in group
     DelayValue[ch % 6] = delay
@@ -158,7 +157,6 @@ def ReadFIFO(numwords, alcttype):
 
 # Configure FIFO data, channel, ALCT board delays, test board delays
 def SetDelayTest(fifoval, fifochan, startdelay=2, alctdelay=0x0000, testboarddelay=0, alcttype=0):
-    #debug=True
     SetFIFOChannel(fifochan, startdelay)
     SetFIFOValue(fifoval)
     SetTestBoardDelay(testboarddelay)
@@ -485,12 +483,14 @@ def ChipDelayScan(chip, alcttype):
     ErrorDeltaDelay     = 0
 
     print("================================================================================")
-    print(' Running Chip Delay Scan on Chip %i: '% chip)
-    print('\t* Ensure Clock Select Switch is Set to Position 2/3')
-    print('\t* Load test firmware')
-    print('\t* Connect delays test board to ALCT')
+    print('     Running Chip Delay Scan on Chip %i: '% chip)
+    print('        * Ensure Clock Select Switch is Set to Position 2/3')
+    print('        * Load test firmware')
+    print('        * Connect special tester board to ALCT')
     print(  "================================================================================\n")
-    k = input("<cr> to continue when ready.")
+    while True: 
+        k = input("\n\t<cr> to continue when ready.")
+        if not k: break
 
     # Pinpoint rise/fall times for ALCT delay of 0
 
@@ -645,7 +645,7 @@ def TestboardDelaysCheck(alcttype):
     print('\t* Load test firmware')
     print('\t* Connect delays test board to ALCT')
     print("================================================================================\n")
-    k = input("<cr> to continue when ready.")
+    k = input("\n\t<cr> to continue when ready.")
 
     print('\nRunning Delays Test on ALCT Board')
     logging.info ("\n Delay ASICs Delay Test:")
@@ -768,10 +768,6 @@ def SetStandby(channel,cbStandby):
     alct.SetChain(1)
     slowcontrol.SetStandbyForChan(channel,cbStandby)
 
-#-------------------------------------------------------------------------------
-# procedure TForm1.Button13Click(Sender: TObject);
-# Go
-#-------------------------------------------------------------------------------
 def ConfigureTestPulseChannel(channel, cbLoop, cbStandby, alcttype):
     TouchFIFO(channel);
     alct.SetChain(1);
@@ -788,6 +784,8 @@ def ConfigureTestPulseChannel(channel, cbLoop, cbStandby, alcttype):
     slowcontrol.SetTestPulsePower(1)
 
 def TestPulseLoopTest(alcttype): 
+    slowcontrol.SetTestPulsePower(1)       # Turn on Test Pulse Generator
+    slowcontrol.SetTestPulsePowerAmp(208)  # Set amplitude to approximately 1V
     cbLoop    = True
     cbStandby = False
     ChannelLoopTest(cbLoop,cbStandby,alcttype)
@@ -818,53 +816,66 @@ def ChannelLoopTest(cbLoop,cbStandby,alcttype):
     chip    = 0
 
     while (chip < NUM_AFEB):
-        #if (debug): print ("Pass Count: %i" % PassCnt)
+        if PassCnt==0: 
+            print('    Input Channel #%2i is selected' % chip)
         #-------------------------------------------------------------------
-        alct.SetChain(1);
+        alct.SetChain(alct.SLOW_CTL);
         PassCnt += 1
         #-------------------------------------------------------------------
-        if (PassCnt > 4): 
-            if chip < (NUM_AFEB // 2): 
-                grpmask = chip // 3
-            else: 
-                grpmask = (chip - NUM_AFEB // 2) // 3;
 
-            slowcontrol.SetTestPulseWireGroupMask((not (1 << grpmask)) and 0x7f);
-
-            if (slowcontrol.ReadTestPulseWireGroupMask != ((not (1 << grpmask)) and 0x7f)):
-                print('ERROR: Test Stopped -> Couldn''t set Test Pulse Wire Group Mask');
-                ConfigureTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
-                break
-        else: 
+        # Turn on ALL Groups
+        if (PassCnt <= 4):
             slowcontrol.SetTestPulseWireGroupMask(0x7F)
+        # Turn off ALL Groups Except the one we want. 
+        else: 
+            # Group 0   AFEBs 00,01,02, 12,13,14
+            # Group 1   AFEBs 03,04,05, 15,16,17
+            # Group 2   AFEBs 06,07,08, 18,19,20
+            # Group 3   AFEBs 09,10,11, 21,22,23
+            # Group 4-6 Not implemented on ALCT2001-384
+            if chip < (NUM_AFEB/2): 
+                group = chip // 3
+            else:
+                group = (chip-NUM_AFEB/2) // 3;
+
+            write = (~(1 << group)) & 0x7F
+            slowcontrol.SetTestPulseWireGroupMask(write)
+            read = slowcontrol.ReadTestPulseWireGroupMask()
+
+            if (read != write):
+                print('ERROR: Test Stopped -> Could not set Test Pulse Wire Group Mask')
+                #ConfigureTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
+                #break
+
         #-------------------------------------------------------------------
         if (PassCnt > 8): 
             if cbLoop:
-                alct.SetChain(1);
+                alct.SetChain(alct.SLOW_CTL);
                 slowcontrol.SetStandbyForChan(chip, False);
 
                 if (chip == NUM_AFEB):
                     chip = 0
-                    ConfigureTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
+                    #ConfigureTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
+                    break
                 else: 
-                    print('Input Channel # %i is selected' % chip)
                     chip = chip + 1;
             PassCnt = 0
 
         #-------------------------------------------------------------------
-        alct.SetChain(1)
+        alct.SetChain(alct.SLOW_CTL)
         slowcontrol.SetStandbyForChan (chip, False)
         slowcontrol.SetStandbyForChan (chip, True)
         slowcontrol.SetThreshold      (chip, (PassCnt % 2)*255)
-        time.sleep(0)
         TouchFIFO         (chip);
 
+        ConfigureTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
+
 def TouchFIFO (chip):
-    alct.SetChain(3);
+    alct.SetChain(alct.arJTAGChains[3]);
 
     # Write to FIFO
-    jtag.WriteIR  (0x1a,                                     alct.V_IR)
-    jtag.WriteDR ((1 and 0x1FFF) or ((chip and 0x3F) << 13), 5   )
+    jtag.WriteIR  (0x1A,                                     alct.V_IR)
+    jtag.WriteDR ((1 & 0x1FFF) | ((chip & 0x3F) << 13),      19)
     jtag.WriteIR  (0x18,                                     alct.V_IR)
     jtag.WriteDR  (0x5555,                                   16  )
     jtag.WriteIR  (0x18,                                     alct.V_IR)
@@ -872,7 +883,7 @@ def TouchFIFO (chip):
 
     # Read from FIFO
     jtag.WriteIR  (0x1A,                                         alct.V_IR)
-    jtag.WriteDR ((0x1 and 0x1FFF) or (( chip and 0x3F) << 13),  5)
+    jtag.WriteDR ((0x1 & 0x1FFF) | (( chip & 0x3F) << 13),       19)
     jtag.WriteIR  (0x19,                                         alct.V_IR)
     jtag.ReadDR   (0x00,                                         16)
     jtag.WriteIR  (0x19,                                         alct.V_IR)
@@ -885,20 +896,31 @@ def TestPulseSelfCheck(alcttype):
     print("\nTest Pulse Semi-Automatic Self Test\n")
     logging.info("\nTest Pulse Semi-Automatic Self Test")
 
-    print("\n    Test Pulse Loop Test: Please verify that, as the LEMO output from the")
-    print("\n    tester board switches between its different inputs, the waveform that it")
-    print("\n    puts out is consistent in shape and amplitude.")
+    print("    * Connect LEMO output J3 (near power connector) to oscilloscope")
+    print("      and configure scope to triggering from it ")
+    print("    * Connect LEMO output on the bottom of large testing board to")
+    print("      another channel of the oscilloscope. ")
+    print("")
+    print("    * Verify that, as the LEMO output from the tester board ")
+    print("      switches between inputs, a pulse is generated at each input")
+    print("      and is of consistent amplitude")
+    while True: 
+        k = input("\n\t <cr> to continue when ready.")
+        if not k: break
+    print("")
+
     #--------------------------------------------------------------------------
-    while (true): 
+    while (True): 
         TestPulseLoopTest(alcttype)
         k=input("\nDid all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
         if k=="p":
-            logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
+            logging.info("\t PASSED: User failed board on Test Pulse Loopback Test")
+            return (0)
         elif k=="f":
             s=input("\n Please record which channels failed the test: ")
             logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
             logging.info("\t         Failure indicated on channels %s" % s)
-            Errs += 1
+            return (1)
         elif k=="r":
             continue 
         else: 
@@ -906,7 +928,52 @@ def TestPulseSelfCheck(alcttype):
             continue
 
     #--------------------------------------------------------------------------
-    return (Errs)
+
+def StandbySelfCheck(alcttype):
+    Errs = 0
+    alct.SetChain(alct.SLOW_CTL)
+
+    print("\nAFEB Standby Semi-Automatic Self Test: \n")
+    logging.info("\nAFEB Standby Semi-Automatic Self Test")
+    print("    * Place a shunt across Test Points 28 and 29. ")
+    print("    * Keep Tester Board attached.")
+    print("")
+    print("    * Verify that as the board is cycling through channels, the ")
+    print("      red LED labeled D14 is not blinking. Blinking indicates that ")
+    print("      the board failed to go into standby mode (that's bad). ")
+    while True: 
+        k = input("\n\t <cr> to continue when ready.")
+        if not k: break
+    print("")
+    #--------------------------------------------------------------------------
+    while (True): 
+        TestPulseLoopTest(alcttype)
+        k=input("\nDid all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
+        if k=="p":
+            logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
+            done = True
+            errs = 1
+            break
+        elif k=="f":
+            s=input("\n Please record which channels failed the test: ")
+            logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
+            logging.info("\t         Failure indicated on channels %s" % s)
+            done = True
+            errs = 0
+            break
+        elif k=="r":
+            break 
+        else: 
+            print("WTF!?")
+            continue
+
+    if done: 
+        while True: 
+            k=input("Make sure to remove Shunt from TP 28/29! <y> to confirm")
+            if k=="y": 
+                return (errs)
+            if k=="s": 
+                return (1)
 
 #------------------------------------------------------------------------------
 # Subtest Menu
@@ -944,11 +1011,11 @@ def SubtestMenu(alcttype):
         if k=="3": 
             common.ClearScreen()
             print("")
-            TestPulseLoopTest(alcttype)
+            TestPulseSelfCheck(alcttype)
         if k=="4": 
             common.ClearScreen()
             print("")
-            StandbyLoopTest(alcttype)
+            StandbySelfCheck(alcttype)
 
         if k=="?":
             common.ClearScreen()

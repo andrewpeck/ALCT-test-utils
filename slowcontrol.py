@@ -355,7 +355,7 @@ def ReadAllThresholds(alcttype):
         thresh = ReadThreshold(j)
         print("\t  AFEB #%02i:  Threshold=%.3fV (ADC=0x%03X)" % (j, (ADC_REF/1023)*thresh, thresh))
 
-def WriteAllThresholds(thresh,alcttype)
+def WriteAllThresholds(thresh,alcttype): 
     NUM_AFEB = alct.alct[alcttype].chips
     print("\n%s> Write All Thresholds to %i" % (common.Now(), thresh))
     for i in range(NUM_AFEB):
@@ -520,7 +520,6 @@ def CheckTestPulsePowerUp():
 def CheckTestPulseWireGroupMask():
     print('Checking Test Pulse Wire Group Mask')
     Errs = 0
-    sendval = 0
     for sendval in range (0x7F+1):
         SetTestPulseWireGroupMask(sendval)
         readval = ReadTestPulseWireGroupMask()
@@ -635,7 +634,14 @@ def SelfTest(alcttype):
     Errs = 0
     alct.SetChain(alct.SLOW_CTL)
 
-    print("\n%s> Start Slow Control Self Test\n" % common.Now())
+    print("\nSlow Control Self Test\n")
+    print("Make sure NORMAL firmware is loaded (alct{288,384,672}.mcs)")
+    print("Make sure Tester Board is Disconnected")
+    print("Make sure Clock Source jumper is set to position 1/2")
+    while True: 
+        k = input("\t <cr> to continue")
+        if not k: break
+
     logging.info("\nSlow Control Self Test:")
 
     #--------------------------------------------------------------------------

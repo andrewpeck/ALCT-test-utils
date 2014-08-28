@@ -7,7 +7,7 @@
 
 import os
 if os.name=='nt':
-    BACKEND = "ctypes"
+    BACKEND = "python"
 else:
     BACKEND = "python"
 
@@ -148,7 +148,7 @@ elif BACKEND=="ctypes":
         if (DataSize < 0 or DataSize >32):
             print("ERROR: Attempted to shift too large of data (>32 bits at a time).")
             sys.exit()
-        return(lptjtaglib.ShiftData(ctypes.c_int(Data), ctypes.c_int(DataSize), ctypes.c_int(sendtms)))
+        return(lptjtaglib.ShiftData(Data, DataSize, sendtms))
 
     #-------------------------------------------------------------------------------
     # Sends and receives JTAG data... wrapper to to Start IR/DR Shift, Shift in data

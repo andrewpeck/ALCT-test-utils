@@ -8,9 +8,10 @@ import testerboard
 import common
 import delays
 import alct
-import ctypes
+import beeper
 #-------------------------------------------------------------------------------
 # generic python includes
+import ctypes
 import random
 import datetime
 import time
@@ -23,14 +24,14 @@ import logging
 ################################################################################
 
 # default to ALCT-384
+# user can change it later.. 
 alcttype = 1
 
 def main():
-    if os.name == 'nt': 
-        ctypes.windll.inpout32.Closedriver()
-        ctypes.windll.inpout32.Opendriver(True)
+    #if os.name == 'nt': 
+        #ctypes.windll.inpout32.Closedriver()
+        #ctypes.windll.inpout32.Opendriver(True)
     MainMenu()
-    print("SIC TRANSIT GLORIA MUNDI")
     time.sleep(0.1)
 
 def MainMenu():
@@ -53,7 +54,6 @@ def MainMenu():
         print("\t 7 Change ALCT Type")
         print("\t 8 Initialize JTAG Chains")
         k=input("\nChoose Test: ")
-        if not k: break
         common.ClearScreen()
 
         if k=="0": AutomaticFullTest()
@@ -164,12 +164,23 @@ def AutomaticFullTest():
     # connectivity of Delay Chips, connectivity of ALCT mezzanine tx (J5)
     #-------------------------------------------------------------------------------
 
-    k=input("\nPlease load Single Cable Firmware. \n\t <s> to skip, <cr> to Continue: ")
-    if k!="s":
-        errors += singlecable.SingleCableSelfTest(alcttype)
-    else: 
-        skipped += 1
-        logging.info("\nSKIPPED: Single Cable Self Test ")
+    print("")
+    print("Please load Single Cable Firmware")
+    print("Ensure that Clock source jumper is set to position 1/2")
+    print("Check that 40Mhz oscillator is installed")
+    while True: 
+        k=input("\t <s> to skip, <j> to set jtag programming chain, <cr> to Continue: ")
+        print("")
+
+        if k=="j": 
+            alct.SetChain(alct.VIRTEX_PROGRAM)  # Mezzanine Programming
+        if k=="s": 
+            skipped += 1
+            logging.info("\nSKIPPED: Single Cable Self Test ")
+            break
+        if not k: 
+            errors += singlecable.SingleCableSelfTest(alcttype)
+            break
 
     #-------------------------------------------------------------------------------
     # Special board tests:
@@ -178,21 +189,59 @@ def AutomaticFullTest():
     # Verifies linearity of AFEB thresholds (read/write)
     #-------------------------------------------------------------------------------
 
-    k=input("\nPlease load Test Firmware. \n\t <s> to skip, <cr> to Continue: ")
-    if k!="s":
-        # Delays Chips Pattern Tests
-        errors += delays.PatternsSelfTest(alcttype)
+    while True: 
+        k=input("Please load Test Firmware. \n\t <s> to skip, <j> to set JTAG programming chain, <cr> to Continue: ")
+        print("")
 
-        # Thresholds Linearity Test
+        if k=="j": 
+            alct.SetChain(alct.VIRTEX_PROGRAM)  # Mezzanine Programming
+        elif k=="s":
+            skipped += 1
+            logging.info("SKIPPED: Test Firmware Tests")
+            break
 
-        # Tester Board Test
-        errors += testerboard.TestboardDelaysCheck(alcttype)
+        elif not k:
+            # Delays Chips Pattern Tests
+            print ('Delay ASICs Pattern Test:')
+            while True:
+                k=input("\t<s> to skip, <cr> to continue test: ")
+                print("")
+                if k=="s": 
+                    skipped += 1
+                    break
+                if not k: 
+                    errors += delays.PatternsSelfTest(alcttype)
+                    break
 
-        #Test Pulse Self Test
-        errors += testerboard.TestPulseSelfCheck(alcttype)
-    else:
-        skipped += 1
-        logging.info("SKIPPED: Test Firmware Tests")
+            # Thresholds Linearity Test
+
+            # Tester Board Test
+            print ('Tester Board Delay ASICs Test:')
+            while True: 
+                k=input("\t<s> to skip, <cr> to continue test: ")
+                print("")
+                if k=="s": 
+                    skipped += 1
+                    break
+                if not k: 
+                    errors += testerboard.TestboardDelaysCheck(alcttype)
+                    break
+
+            #Test Pulse Self Test
+            print ('Tester Board Test Pulse Check:')
+            while True: 
+                k=input("\t<s> to skip, <cr> to continue test: ")
+                print("")
+                if k=="s": 
+                    skipped += 1
+                    break
+                if not k: 
+                    errors += testerboard.TestPulseSelfCheck(alcttype)
+                    break
+
+            break
+        else: 
+            continue
 
     #-------------------------------------------------------------------------------
     # "Normal" firmware self-test
@@ -200,12 +249,19 @@ def AutomaticFullTest():
     # Checks functioning of slow control features
     #-------------------------------------------------------------------------------
 
-    k=input("\nPlease load Normal Firmware. \n\t <s> to skip, <cr> to Continue: ")
-    if k!="s":
-        errors += slowcontrol.SelfTest(alcttype)
-    else: 
-        skipped += 1
-        logging.info("SKIPPED: Slow Control Self Test")
+    while True: 
+        k=input("Please load Normal Firmware. \n\t <s> to skip, <j> to set JTAG programming chain, <cr> to Continue: ")
+        print("")
+
+        if k=="j": 
+            alct.SetChain(alct.VIRTEX_PROGRAM)  # Mezzanine Programming
+        if k=="s": 
+            skipped += 1
+            logging.info("SKIPPED: Slow Control Self Test")
+            break
+        if not k: 
+            errors += slowcontrol.SelfTest(alcttype)
+            break
 
     #-------------------------------------------------------------------------------
     # Manually performed tests which are verified solely by eye..
@@ -357,6 +413,7 @@ def AutomaticFullTest():
         print        ("\t ====> FAIL: ALCT #%s with mezzanine #%s passed all tests performed, but tests were skipped." % (baseboardSN, mezzanineSN))
         logging.info ("\t FAIL: ALCT #%s with mezzanine #%s passed all tests performed, but tests were skipped" % (baseboardSN, mezzanineSN))
 
+    beeper.playTune(beeper.FINI)
     k=input("\nAutomatic Self Test Finished ! Any key to return to main menu: ")
 
 
@@ -377,8 +434,8 @@ def StringALCTType(type):
     elif type == 2: s = "ALCT-672"
     return(s)
 
-if os.name == 'nt': 
-    atexit.register(ctypes.windll.inpout32.Closedriver)
+#if os.name == 'nt': 
+#    atexit.register(ctypes.windll.inpout32.Closedriver)
 
 if __name__ == "__main__":
     main()

@@ -1,16 +1,26 @@
 #!/usr/bin/env python3
 
-################################################################################
+#-------------------------------------------------------------------------------
 # LPT JTAG Driver Built around inpout32.dll
-# Windows only ! Sorry. But it DOES supposedly work with windows 7 
-################################################################################
-import ctypes
-import os
+# 04/22/2014 Driver written around inpout32.dll, for Windows only 
+#            But it DOES supposedly work with windows 7, as well as with 
+#            64 bit machines (using the appropriate version of inpout32.dll
+# 08/26/2014 Updated to work also with Linux through the portio module.. yay. 
+#
+#-------------------------------------------------------------------------------
 
+#-Imports-----------------------------------------------------------------------
+import os
+if os.name == 'posix': 
+    import portio
+if os.name == 'nt':
+    import ctypes
+
+#-Register Definitions----------------------------------------------------------
 # LPT Addresses
-base_adr    = 0x378
-status_adr  = base_adr + 0x1
-ctrl_adr    = base_adr + 0x2
+BASE_ADR    = 0x378
+STATUS_ADR  = BASE_ADR + 0x1
+CTRL_ADR    = BASE_ADR + 0x2
 
 # JTAG-to-LPT Pin Mapping
 TDI         = 0x01
@@ -26,16 +36,25 @@ STRB        = 0x01
 
 # Reads Byte off LPT Port
 def GetPortByte(adr):
-    if os.name == 'nt':
+    if   os.name == 'nt':
         return(ctypes.windll.inpout32.Inp32(adr))
+    elif os.name == 'posix' : 
+        if os.getuid():
+            #print('Need root permissions for direct port access')
+            return(0xFF)
+        else: 
+            return(portio.inp(adr))
     else: 
-        # return BS for non-windows
         return(0xFF)
 
 # Writes Byte to LPT Port
 def SetPortByte(adr,data):
-    if os.name == 'nt':
+    if   os.name == 'nt':
         ctypes.windll.inpout32.Out32(adr, data)
+    if os.name == 'posix':
+        if (not os.getuid()):
+            portio.outb(data,adr)
+        
 
 # Legacy function
 #def openLPTJTAG():
@@ -47,119 +66,102 @@ def SetPortByte(adr,data):
 
 # Set JTAG Chain
 def setchainLPTJTAG(Chain):
-    if os.name == 'nt':
-        SetPortByte(base_adr, Chain)
-        SetPortByte(ctrl_adr, 11)
-        SetPortByte(ctrl_adr, 0)
-        SetPortByte(base_adr, 0)
+    SetPortByte(BASE_ADR, Chain)
+    SetPortByte(CTRL_ADR, 11)
+    SetPortByte(CTRL_ADR, 0)
+    SetPortByte(BASE_ADR, 0)
 
 # Send JTAG Test Logic Reset
 def resetLPTJTAG():  
-    if os.name == 'nt':
-        SetPortByte(base_adr, 0)
-        SetPortByte(ctrl_adr, STRB | TRST)  # Strobe with TRST high
-        SetPortByte(ctrl_adr, STRB)         # Strobe with TRST low
-        SetPortByte(ctrl_adr, STRB | TRST)  # Strobe with TRST high
-        SetPortByte(base_adr, 0)
+    SetPortByte(BASE_ADR, 0)
+    SetPortByte(CTRL_ADR, STRB | TRST)  # Strobe with TRST high
+    SetPortByte(CTRL_ADR, STRB)         # Strobe with TRST low
+    SetPortByte(CTRL_ADR, STRB | TRST)  # Strobe with TRST high
+    SetPortByte(BASE_ADR, 0)
 
 def enableLPTJTAG(): 
-    if os.name == 'nt':
-        status = GetPortByte(ctrl_adr)
-        SetPortByte(ctrl_adr, status | 0x02)
+    status = GetPortByte(CTRL_ADR)
+    SetPortByte(CTRL_ADR, status | 0x02)
 
 # Writes a 1 to TMS
 def TMSHighLPTJTAG(): 
-    if os.name == 'nt':
-        SetPortByte(base_adr, TMS)
-        SetPortByte(base_adr, TCK | TMS)
-        SetPortByte(base_adr, TMS)
+    SetPortByte(BASE_ADR, TMS)
+    SetPortByte(BASE_ADR, TCK | TMS)
+    SetPortByte(BASE_ADR, TMS)
 
 # Writes a 0 to TMS
 def TMSLowLPTJTAG(): 
-    if os.name == 'nt':
-        SetPortByte(base_adr, 0)
-        SetPortByte(base_adr, TCK)
-        SetPortByte(base_adr, 0)
+    SetPortByte(BASE_ADR, 0)
+    SetPortByte(BASE_ADR, TCK)
+    SetPortByte(BASE_ADR, 0)
 
 def idleLPTJTAG(): 
-    if os.name == 'nt':
-        for i in range(5):
-            TMSHighLPTJTAG()
+    for i in range(5):
+        TMSHighLPTJTAG()
 
 # Writes a TMS and TDI value, returns TDO
 def jtagioLPTJTAG(TMSvalue, TDIvalue):
-    if os.name == 'nt':
-        # Read Current Port Data
-        sendbit = GetPortByte(base_adr)
-    
-        # choose TDI Bit
-        if (TDIvalue>0):
-            sendbit = sendbit | TDI
-        else:
-            sendbit = sendbit & ~TDI
+    # Read Current Port Data
+    sendbyte = GetPortByte(BASE_ADR)
 
-        # choose TMS Bit
-        if (TMSvalue>0):
-            sendbit = sendbit | TMS
-        else: 
-            sendbit = sendbit & ~TMS
 
-        # Don't Change TDO bit
-        sendbit = sendbit | TDO
+    # choose TDI Bit
+    sendbyte = sendbyte & ~TDI
+    if (TDIvalue):
+        sendbyte = sendbyte | TDI
 
-        # Write data to port
-        SetPortByte(base_adr, sendbit)
+    # choose TMS Bit
+    sendbyte = sendbyte & ~TMS
+    if (TMSvalue):
+        sendbyte = sendbyte | TMS
 
-        # Clock rise
-        sendbit = sendbit | TCK
-        SetPortByte(base_adr, sendbit)
+    # Set TDO high for some reason?
+    sendbyte = sendbyte | TDO
 
-        # Read data from port
-        rcvbit  = GetPortByte(status_adr)
+    # Write data to port
+    SetPortByte(BASE_ADR, sendbyte)
 
-        # Extract TDO Bit
-        rcvbit  = rcvbit & TDO
-        rcvbit  = not rcvbit
-        rcvbit  = rcvbit & 0xFF
-        TDOvalue = not rcvbit
+    # Clock rise
+    sendbyte = sendbyte | TCK
+    SetPortByte(BASE_ADR, sendbyte)
 
-        # Clock fall
-        sendbit = sendbit & (~TCK)
-        SetPortByte(base_adr, sendbit)
-            
-        return(TDOvalue)
-    else: 
-        return(0x0)
+    # Read data from port
+    rcvbit  = GetPortByte(STATUS_ADR)
+
+    # Extract TDO Bit
+    TDOvalue = (rcvbit & TDO) > 0
+
+    # Clock fall
+    sendbyte = sendbyte & (~TCK)
+    SetPortByte(BASE_ADR, sendbyte)
+        
+    return(TDOvalue)
 
 # Starts an Instruction Register Shift
 def StartIRShiftLPTJTAG():
-    if os.name == 'nt':
-        tdo=jtagioLPTJTAG(0, 0)
-        tdo=jtagioLPTJTAG(1, 0)
-        tdo=jtagioLPTJTAG(1, 0)
-        tdo=jtagioLPTJTAG(0, 0)
-        tdo=jtagioLPTJTAG(0, 0)
+    jtagioLPTJTAG (0,0)
+    jtagioLPTJTAG (1,0)
+    jtagioLPTJTAG (1,0)
+    jtagioLPTJTAG (0,0)
+    jtagioLPTJTAG (0,0)
 
 # Finishes an Instruction Register Shift
 def ExitIRShiftLPTJTAG():
-    if os.name == 'nt':
-        tdo=jtagioLPTJTAG(1, 0)
-        tdo=jtagioLPTJTAG(0, 0)
-        tdo=jtagioLPTJTAG(0, 0)
-        tdo=jtagioLPTJTAG(0, 0)
+    jtagioLPTJTAG (1,0)
+    jtagioLPTJTAG (0,0)
+    jtagioLPTJTAG (0,0)
+    jtagioLPTJTAG (0,0)
 
 # Starts a Data Register Shift
 def StartDRShiftLPTJTAG():
-    if os.name == 'nt':
-        tdo=jtagioLPTJTAG(0, 0)
-        tdo=jtagioLPTJTAG(1, 0)
-        tdo=jtagioLPTJTAG(0, 0)
-        tdo=jtagioLPTJTAG(0, 0)
+    jtagioLPTJTAG (0,0)
+    jtagioLPTJTAG (1,0)
+    jtagioLPTJTAG (0,0)
+    jtagioLPTJTAG (0,0)
 
 # Finishes a Data Register Shift
 def ExitDRShiftLPTJTAG():
-    if os.name == 'nt':
-        tdo=jtagioLPTJTAG(1, 0)
-        tdo=jtagioLPTJTAG(0, 0)
-        tdo=jtagioLPTJTAG(0, 0)
-        tdo=jtagioLPTJTAG(0, 0)
+    jtagioLPTJTAG (1,0)
+    jtagioLPTJTAG (0,0)
+    jtagioLPTJTAG (0,0)
+    jtagioLPTJTAG (0,0)
