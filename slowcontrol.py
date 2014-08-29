@@ -239,7 +239,7 @@ def SetStandbyForChan(chan, onoff):
     if (chan >= 0) and (chan < 42):
         value = ReadGroupStandbyReg(chan // 6) & 0x3F
         value = (value ^ (((value >> (chan % 6)) & 0x1 ) << (chan % 6) )) | (int(onoff) << (chan % 6))
-        SetGroupStandbyReg(chan % 6, value)
+        SetGroupStandbyReg(chan // 6, value)
 
 # Set Standby Register for a Particular Group
 def SetGroupStandbyReg(group, value):

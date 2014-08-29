@@ -765,19 +765,19 @@ def TestboardDelaysCheck(alcttype):
 # set
 #-------------------------------------------------------------------------------
 def SetStandby(channel,cbStandby): 
-    alct.SetChain(1)
+    alct.SetChain(alct.SLOW_CTL)
     slowcontrol.SetStandbyForChan(channel,cbStandby)
 
-def ConfigureTestPulseChannel(channel, cbLoop, cbStandby, alcttype):
+def ResetTestPulseChannel(channel, cbLoop, cbStandby, alcttype):
     TouchFIFO(channel);
-    alct.SetChain(1);
+    alct.SetChain(alct.SLOW_CTL);
 
     # Setting Thresholds to 200
     for j in range (alct.alct[alcttype].chips):
         slowcontrol.SetThreshold(j, 200);
 
     slowcontrol.SetTestPulseWireGroupMask (0x7F)
-    slowcontrol.SetTestPulseStripLayerMask(0x3f)
+    slowcontrol.SetTestPulseStripLayerMask(0x3F)
     slowcontrol.SetStandbyReg(0)
     slowcontrol.SetTestPulsePower(0)
     slowcontrol.SetTestPulsePowerAmp(255)
@@ -803,72 +803,62 @@ def StandbyLoopTest(alcttype):
     ChannelLoopTest(cbLoop,cbStandby,alcttype)
 
 def ChannelLoopTest(cbLoop,cbStandby,alcttype): 
-
-    SetStandby(0,cbStandby)
-    
     NUM_AFEB = alct.alct[alcttype].chips
 
-    # Set Test Pulse Amplitude
+    alct.SetChain(alct.SLOW_CTL);
+
     # Set Test Pulse Power On
+    slowcontrol.SetTestPulsePower(1)
+    # Set Test Pulse Amplitude
+    slowcontrol.SetTestPulsePowerAmp(255)
+
+
     # Chain Loop
+    SetStandby(0,cbStandby)
 
-    PassCnt = 0
-    chip    = 0
+    for chip in range(NUM_AFEB): 
+        for Pass in range (10): 
+            if Pass==0: 
+                print('    Input Channel #%2i is selected' % chip)
 
-    while (chip < NUM_AFEB):
-        if PassCnt==0: 
-            print('    Input Channel #%2i is selected' % chip)
-        #-------------------------------------------------------------------
-        alct.SetChain(alct.SLOW_CTL);
-        PassCnt += 1
-        #-------------------------------------------------------------------
 
-        # Turn on ALL Groups
-        if (PassCnt <= 4):
-            slowcontrol.SetTestPulseWireGroupMask(0x7F)
-        # Turn off ALL Groups Except the one we want. 
-        else: 
-            # Group 0   AFEBs 00,01,02, 12,13,14
-            # Group 1   AFEBs 03,04,05, 15,16,17
-            # Group 2   AFEBs 06,07,08, 18,19,20
-            # Group 3   AFEBs 09,10,11, 21,22,23
-            # Group 4-6 Not implemented on ALCT2001-384
-            if chip < (NUM_AFEB/2): 
-                group = chip // 3
-            else:
-                group = (chip-NUM_AFEB/2) // 3;
+            # Turn on ALL Groups
+            if (Pass <= 4):
+                slowcontrol.SetTestPulseWireGroupMask(0x7F)
 
-            write = (~(1 << group)) & 0x7F
-            slowcontrol.SetTestPulseWireGroupMask(write)
-            read = slowcontrol.ReadTestPulseWireGroupMask()
+            # Turn off ALL Groups Except the one we want. 
+            else: 
+                # Group 0   AFEBs 00,01,02, 12,13,14
+                # Group 1   AFEBs 03,04,05, 15,16,17
+                # Group 2   AFEBs 06,07,08, 18,19,20
+                # Group 3   AFEBs 09,10,11, 21,22,23
+                # Group 4-6 Not implemented on ALCT2001-384
+                if chip < (NUM_AFEB//2): 
+                    group = chip // 3
+                else:
+                    group = (chip-NUM_AFEB//2) // 3;
 
-            if (read != write):
-                print('ERROR: Test Stopped -> Could not set Test Pulse Wire Group Mask')
-                #ConfigureTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
-                #break
+                write = (~(1 << group)) & 0x7F
+                slowcontrol.SetTestPulseWireGroupMask(write)
+                read = slowcontrol.ReadTestPulseWireGroupMask()
 
-        #-------------------------------------------------------------------
-        if (PassCnt > 8): 
-            if cbLoop:
-                alct.SetChain(alct.SLOW_CTL);
-                slowcontrol.SetStandbyForChan(chip, False);
-
-                if (chip == NUM_AFEB):
-                    chip = 0
+                if (read != write):
+                    print('ERROR: Test Stopped -> Could not set Test Pulse Wire Group Mask')
                     #ConfigureTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
-                    break
-                else: 
-                    chip = chip + 1;
-            PassCnt = 0
+                    #break
 
-        #-------------------------------------------------------------------
-        alct.SetChain(alct.SLOW_CTL)
-        slowcontrol.SetStandbyForChan (chip, False)
-        slowcontrol.SetStandbyForChan (chip, True)
-        slowcontrol.SetThreshold      (chip, (PassCnt % 2)*255)
-        TouchFIFO         (chip);
+            #-------------------------------------------------------------------
+            if (Pass == 9): 
+                if cbLoop:
+                    slowcontrol.SetStandbyForChan(chip, False);
 
-        ConfigureTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
+            #-------------------------------------------------------------------
+            slowcontrol.SetStandbyForChan (chip, False)
+            slowcontrol.SetStandbyForChan (chip, True)
+            slowcontrol.SetThreshold      (chip, (Pass % 2)*255)
+            TouchFIFO         (chip);
+
+            ResetTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
 
 def TouchFIFO (chip):
     alct.SetChain(alct.arJTAGChains[3]);
@@ -912,7 +902,7 @@ def TestPulseSelfCheck(alcttype):
     #--------------------------------------------------------------------------
     while (True): 
         TestPulseLoopTest(alcttype)
-        k=input("\nDid all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
+        k=input("\n    Did all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
         if k=="p":
             logging.info("\t PASSED: User failed board on Test Pulse Loopback Test")
             return (0)
