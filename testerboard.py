@@ -140,6 +140,7 @@ def ReadFIFO(numwords, alcttype):
     for i in range(numwords):
         jtag.WriteDR(0x1,lengthOf[WrFIFO])     # FIFOClock
 
+    # TODO: 
     # This really sucks please fix it..
     # Have a look at http://stackoverflow.com/questions/7983684/how-to-switch-byte-order-of-binary-data
 
@@ -248,7 +249,7 @@ def FindStartDly(FIFOvalue, ch, alct_dly, num_words, alcttype):
 #   int  RegMaskDone        - 16 bit mask that a channel has seen both rising and falling edges
 def FindStartDlyPin(FIFOvalue, ch, alct_dly, num_words, RegMaskDone, alcttype):
     if debug: print('Find Start Dly')
-    alct.SetChain(alct.arJTAGChains[3])
+    alct.SetChain(alct.VIRTEX_CONTROL)
     FoundTimeBin    = False # Found time bin ?
     FirstChnR       = False # First Channel Rise
     AllChnR         = False # All Channels Rise
@@ -459,7 +460,7 @@ def Write6DelayLines(DelayPattern, DelayValue, mask, alcttype):
 # Full scan of single delay ASIC
 ################################################################################
 def ChipDelayScan(chip, alcttype):
-    alct.SetChain(alct.arJTAGChains[3])
+    alct.SetChain(alct.VIRTEX_CONTROL)
     MinDelay            = 29
     MaxDelay            = 35
     num                 = 100       # number of words
@@ -482,12 +483,12 @@ def ChipDelayScan(chip, alcttype):
     DeltaBeginTime      = [0]*16
     ErrorDeltaDelay     = 0
 
-    print("================================================================================")
+    print("==============================================================================")
     print('     Running Chip Delay Scan on Chip %i: '% chip)
     print('        * Ensure Clock Select Switch is Set to Position 2/3')
     print('        * Load test firmware')
     print('        * Connect special tester board to ALCT')
-    print(  "================================================================================\n")
+    print("==============================================================================\n")
     while True: 
         k = input("\n\t<cr> to continue when ready.")
         if not k: break
@@ -600,7 +601,7 @@ def TestboardDelaysCheck(alcttype):
     #PathString, PinErrors: string//Zach
     #RegMaskDone: array[0..41] of word
 
-    alct.SetChain(alct.arJTAGChains[3])
+    alct.SetChain(alct.VIRTEX_CONTROL)
     ErrDelayTest    = False
     MaxDeltaBegin   = 2
     MaxDeltaDelay   = 2
@@ -639,13 +640,14 @@ def TestboardDelaysCheck(alcttype):
     DeltaBeginTime      = [[0 for i in range(16)] for j in range(NUM_AFEB)]
     Delay_Time          = [[0 for i in range(16)] for j in range(NUM_AFEB)]
 
-    print("\n================================================================================")
-    print('Running Chip Delay Scan on Full Board')
-    print('\t* Ensure Clock Select Switch is Set to Position 2/3')
-    print('\t* Load test firmware')
-    print('\t* Connect delays test board to ALCT')
-    print("================================================================================\n")
-    k = input("\n\t<cr> to continue when ready.")
+    print    ("")
+    print    ("================================================================================")
+    print    ('Running Chip Delay Scan on Full Board')
+    print    ('\t* Ensure Clock Select Switch is Set to Position 2/3')
+    print    ('\t* Load test firmware')
+    print    ('\t* Connect delays test board to ALCT')
+    print    ("================================================================================")
+    k = input("        <cr> to continue when ready.")
 
     print('\nRunning Delays Test on ALCT Board')
     logging.info ("\n Delay ASICs Delay Test:")
@@ -750,8 +752,8 @@ def TestboardDelaysCheck(alcttype):
             else: 
                 print        ('\t WTF!?')
         else:
-            print        ('\t Chip %2i Average Delay=%.2fns ref=%.02f' % (chip,AverageDelay_Time[chip],(MaxDelay+MinDelay)/2.0))
-            logging.info ('\t Chip %2i Average Delay=%.2fns ref=%.02f' % (chip,AverageDelay_Time[chip],(MaxDelay+MinDelay)/2.0))
+            print        ('\t Chip %2i Average Delay=%.2fns (ref=%.02f)' % (chip,AverageDelay_Time[chip],(MaxDelay+MinDelay)/2.0))
+            logging.info ('\t Chip %2i Average Delay=%.2fns (ref=%.02f)' % (chip,AverageDelay_Time[chip],(MaxDelay+MinDelay)/2.0))
 
     if (ErrDelayTest==0):
         print('\t ===> PASSED: Delays Test without Error')
@@ -861,7 +863,7 @@ def ChannelLoopTest(cbLoop,cbStandby,alcttype):
             ResetTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
 
 def TouchFIFO (chip):
-    alct.SetChain(alct.arJTAGChains[3]);
+    alct.SetChain(alct.VIRTEX_CONTROL);
 
     # Write to FIFO
     jtag.WriteIR  (0x1A,                                     alct.V_IR)
@@ -883,7 +885,6 @@ def TestPulseSelfCheck(alcttype):
     Errs = 0
     alct.SetChain(alct.SLOW_CTL)
 
-    print("\nTest Pulse Semi-Automatic Self Test\n")
     logging.info("\nTest Pulse Semi-Automatic Self Test")
 
     print("    * Connect LEMO output J3 (near power connector) to oscilloscope")
@@ -905,25 +906,27 @@ def TestPulseSelfCheck(alcttype):
         k=input("\n    Did all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
         if k=="p":
             logging.info("\t PASSED: User failed board on Test Pulse Loopback Test")
-            return (0)
+            errs = 0
+            break
         elif k=="f":
             s=input("\n Please record which channels failed the test: ")
             logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
             logging.info("\t         Failure indicated on channels %s" % s)
-            return (1)
+            errs = 1
+            break
         elif k=="r":
             continue 
         else: 
             print("WTF!?")
             continue
 
-    #--------------------------------------------------------------------------
+    return (errs)
+
 
 def StandbySelfCheck(alcttype):
     Errs = 0
     alct.SetChain(alct.SLOW_CTL)
 
-    print("\nAFEB Standby Semi-Automatic Self Test: \n")
     logging.info("\nAFEB Standby Semi-Automatic Self Test")
     print("    * Place a shunt across Test Points 28 and 29. ")
     print("    * Keep Tester Board attached.")
@@ -938,14 +941,14 @@ def StandbySelfCheck(alcttype):
     #--------------------------------------------------------------------------
     while (True): 
         TestPulseLoopTest(alcttype)
-        k=input("\nDid all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
+        k=input("\n    Did all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
         if k=="p":
             logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
             done = True
             errs = 1
             break
         elif k=="f":
-            s=input("\n Please record which channels failed the test: ")
+            s=input("\n    Please record which channels failed the test: ")
             logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
             logging.info("\t         Failure indicated on channels %s" % s)
             done = True
@@ -959,7 +962,7 @@ def StandbySelfCheck(alcttype):
 
     if done: 
         while True: 
-            k=input("Make sure to remove Shunt from TP 28/29! <y> to confirm")
+            k=input("    Make sure to remove Shunt from TP 28/29! <y> to confirm: ")
             if k=="y": 
                 return (errs)
             if k=="s": 
@@ -975,9 +978,9 @@ def SubtestMenu(alcttype):
     parlen = alct.alct[alcttype].groups + 2
     while True:
         common.ClearScreen()
-        print("\n================================================================================")
+        print("\n===============================================================================")
         print(  " Delay Chips Delay Test (Tester Board) Submenu")
-        print(  "================================================================================\n")
+        print(  "===============================================================================\n")
         print("\t 1 Check Entire Board")
         print("\t 2 Check Single Chip")
         print("\t 3 Scan Test Pulse Loopback")

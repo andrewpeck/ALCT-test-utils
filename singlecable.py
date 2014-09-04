@@ -44,7 +44,7 @@ TestNames = ['',                #Dummy entry to number from 1
 #       5 = 'Shifting 5s and As'
 #       6 = 'Random Data'
 def SingleCableTest(test,channel,npasses=10):
-    alct.SetChain(alct.arJTAGChains[3])
+    alct.SetChain(alct.VIRTEX_CONTROL)
     errcnt                  = 0
     CustomData              = 0x1234
     senddata                = 0x0000
@@ -207,9 +207,9 @@ def SubtestMenu(alcttype):
     channel=0
     while True:
         common.ClearScreen()
-        print("\n================================================================================"  )
+        print("\n==============================================================================="  )
         print(  " Single Cable Test Submenu"                                                        )
-        print(  "================================================================================\n")
+        print(  "===============================================================================\n")
         print("\t 0 Run All Tests")
         print("\t 1 Custom Data Test")
         print("\t 2 Walking 1 Test")

@@ -787,9 +787,9 @@ def RandomData(alcttype, npasses=50):
 def SubtestMenu(alcttype):
     while True:
         common.ClearScreen()
-        print("\n================================================================================")
+        print("\n===============================================================================")
         print(  " Delay Chips Test Submenu")
-        print(  "================================================================================\n")
+        print(  "===============================================================================\n")
         print("\t 0 Run All Tests")
         print("\t 1 Walking 1 Test")
         print("\t 2 Walking 0 Test")

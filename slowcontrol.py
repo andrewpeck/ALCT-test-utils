@@ -719,9 +719,9 @@ def SubtestMenu(alcttype):
     channel=0
     while True:
         common.ClearScreen()
-        print("\n================================================================================")
+        print("\n===============================================================================")
         print(  " Slow Control Test Submenu")
-        print(  "================================================================================\n")
+        print(  "===============================================================================\n")
         print("\t 0 Slow Control Automatic Self Test")
         print("\t 1 Thresholds Linearity Test")
         print("\t 2 Read Voltages")

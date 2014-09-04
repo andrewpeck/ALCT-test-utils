@@ -267,9 +267,11 @@ SLOWCTL_PROGRAM = 0x1 # Slow Control Programming
 VIRTEX_CONTROL  = 0x4 # Virtex Control
 VIRTEX_PROGRAM  = 0x5 # Virtex Programming
 
+# TODO: 
 # Array of JTAG Chains... legacy of old code
 # Still used in some places but hope to remove
-arJTAGChains = [SLOWCTL_PROGRAM, SLOWCTL_CONTROL, VIRTEX_PROGRAM, VIRTEX_CONTROL]
+# OK I think its all done
+# arJTAGChains = [SLOWCTL_PROGRAM, SLOWCTL_CONTROL, VIRTEX_PROGRAM, VIRTEX_CONTROL]
 
 # Select JTAG Programming Chain
 def SetChain(ch):
