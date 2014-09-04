@@ -69,47 +69,44 @@ RegSz = {
     0x18:   0,  # InputDisable  // JTAG Instruction to Disable input Register Clock (for debugging)
     0x19:  31,  # YRwrite       // Extended Config Register Write
     0x1A:  49,  # OSread        // Output FIFO read (for debugging via JTAG) LENGTH=49,49,49,51,51
-    0x1B:   1,  # SNread        // 
+    0x1B:   1,  # SNread        //
     0x1F:   1}  # Bypass        // Bypass Register
 
 #-------------------------------------------------------------------------------
 # ID Masks and ID Codes
 #-------------------------------------------------------------------------------
 
-PROG_SC_EPROM_ID        = 0X0005024093
-PROG_SC_EPROM_ID_MASK   = 0X01FFFFFFFF
+SC_EPROM_ID        = 0X0005024093
+SC_EPROM_ID_MASK   = 0X01FFFFFFFF
 
-PROG_SC_FPGA_ID         = 0X0000838126
-PROG_SC_FPGA_ID_MASK    = 0X01FFFFFFFF
+SC_FPGA_ID         = 0X0000838126
+SC_FPGA_ID_MASK    = 0X01FFFFFFFF
 
-PROG_V_EPROM1_ID        = 0X000A04C126
-PROG_V_EPROM1_ID_MASK   = 0X003FFFFFFF
-PROG_V_EPROM1_ID2       = 0X000A06C126
+V_EPROM1_ID_MASK   = 0X003FFFFFFF
+V_EPROM1_ID        = 0X000A04C126
+V_EPROM1_ID2       = 0X000A06C126
 
-PROG_V_EPROM2_ID        = 0X0005026093
-PROG_V_EPROM2_ID_MASK   = 0X003FFFFFFF
+V_EPROM2_ID_MASK   = 0X003FFFFFFF
+V_EPROM2_ID        = 0X0005026093
+V_EPROM2_ID2       = 0X0005036093
 
-PROG_V_EPROM2_ID2       = 0X0005036093
+V1000E_ID          = 0X000290024C
+V1000E_ID_MASK     = 0X003FFFFFFF
 
-PROG_V_FPGA_ID          = 0X000290024C
-PROG_V_FPGA_ID_MASK     = 0X003FFFFFFF
+V600E_ID           = 0X0001460126
+V600E_ID_MASK      = 0X000FFFFFFF
 
-PROG_V_FPGA600_7_ID     = 0X0021460126
-PROG_V_FPGA600_7_ID_MASK= 0X003FFFFFFF
+SC_IR_SIZE         = 11
+SC_ID_DR_SIZE      = 33
+V1000_IR_SIZE      = 21
+V600_IR_SIZE       = 13
+V_ID_DR_SIZE       = 34
 
-PROG_V_FPGA600_ID       = 0X0001460126
-PROG_V_FPGA600_ID_MASK  = 0X000FFFFFFF
+CTRL_SC_FPGA_ID    = 0x09072001B8
+CTRL_SC_ID_DR_SIZE = 40
 
-PROG_SC_IR_SIZE         = 11
-PROG_SC_ID_DR_SIZE      = 33
-PROG_V_IR_SIZE          = 21
-PROG_V_ID_DR_SIZE       = 34
-
-CTRL_SC_FPGA_ID         = 0x09072001B8
-CTRL_SC_ID_DR_SIZE      = 40
-
-USER_V_FPGA_ID          = 0x0925200207
-USER_V_ID_DR_SIZE       = 40
+USER_V_FPGA_ID     = 0x0925200207
+USER_V_ID_DR_SIZE  = 40
 
 #-------------------------------------------------------------------------------
 # Board Parameters (unused)
@@ -267,7 +264,7 @@ SLOWCTL_PROGRAM = 0x1 # Slow Control Programming
 VIRTEX_CONTROL  = 0x4 # Virtex Control
 VIRTEX_PROGRAM  = 0x5 # Virtex Programming
 
-# TODO: 
+# TODO:
 # Array of JTAG Chains... legacy of old code
 # Still used in some places but hope to remove
 # OK I think its all done
@@ -283,14 +280,14 @@ def SetChain(ch):
 
 # Write Virtex Register
 def WriteRegister(reg, value, length=-1):
-    if (length==-1): 
+    if (length==-1):
         # These Registers should NOT be written automatically since their size is board dependent
-        if (reg == 0x01 or reg == 0x02 or reg == 0x13 or reg == 0x14 or reg == 0x15 or reg == 0x16 or reg==0x16 or reg == 0x1A): 
+        if (reg == 0x01 or reg == 0x02 or reg == 0x13 or reg == 0x14 or reg == 0x15 or reg == 0x16 or reg==0x16 or reg == 0x1A):
             print ("Very naughty call to Write Register...")
-            sys.exit() 
+            sys.exit()
 
         length = RegSz[reg]     # length of register
-    else: 
+    else:
         length = length
 
     mask   = 2**(length)-1  # Bitmask of 1s to mask the register
@@ -299,15 +296,15 @@ def WriteRegister(reg, value, length=-1):
 
 # Read Virtex Register
 def ReadRegister(reg, length=-1):
-    if (length==-1): 
+    if (length==-1):
         # These Registers should NOT be written automatically since their size is board dependent
-        if (reg == 0x01 or reg == 0x02 or reg == 0x13 or reg == 0x14 or reg == 0x15 or reg == 0x16 or reg==0x16 or reg == 0x1A): 
+        if (reg == 0x01 or reg == 0x02 or reg == 0x13 or reg == 0x14 or reg == 0x15 or reg == 0x16 or reg==0x16 or reg == 0x1A):
             print ("Very naughty call to Write Register...")
-            sys.exit() 
+            sys.exit()
 
         length = RegSz[reg]     # length of register
-    else: 
-        length = length 
+    else:
+        length = length
 
     jtag.WriteIR(reg, V_IR)
     result = jtag.ReadDR(0x0,length)
@@ -423,7 +420,7 @@ def SCReadFPGAID():
     return(result)
 
 def SCEraseEPROM():
-    if (SCReadEPROMID & PROG_SC_EPROM_ID_MASK) == PROG_SC_EPROM_ID :
+    if (SCReadEPROMID & SC_EPROM_ID_MASK) == SC_EPROM_ID :
         jtag.WriteIR(0x7E8, 11)
         jtag.WriteDR(0x04,   7)
         jtag.WriteIR(0x7EB, 11)
@@ -444,7 +441,7 @@ def SCBlankCheckEPROM(errs):
     length = 16385
     blocks = 64
 
-    if	(SCReadEPROMID & PROG_SC_EPROM_ID_MASK) == PROG_SC_EPROM_ID:
+    if	(SCReadEPROMID & SC_EPROM_ID_MASK) == SC_EPROM_ID:
         jtag.WriteIR(0x7E8,11)
         jtag.WriteDR(0x34,7)
         jtag.WriteIR(0x7E5,11)
@@ -508,8 +505,8 @@ def VReadEPROMID2():
     return(result)
 
 def VEraseEPROM1():
-    if  ((VReadEPROMID1 & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID) or  \
-        ((VReadEPROMID1 & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID2):
+    if  ((VReadEPROMID1 & V_EPROM1_ID_MASK) == V_EPROM1_ID) or  \
+        ((VReadEPROMID1 & V_EPROM1_ID_MASK) == V_EPROM1_ID2):
         jtag.WriteIR(0x1FE8,13)
         jtag.WriteDR(0x8,8)
         jtag.WriteIR(0x1FEB,13)
@@ -525,8 +522,8 @@ def VEraseEPROM1():
     return(result)
 
 def VEraseEPROM2():
-    if  ((VReadEPROMID2 & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID) or \
-        ((VReadEPROMID2 & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID2):
+    if  ((VReadEPROMID2 & V_EPROM2_ID_MASK) == V_EPROM2_ID) or \
+        ((VReadEPROMID2 & V_EPROM2_ID_MASK) == V_EPROM2_ID2):
         jtag.WriteIR(0x1FFFE8,21)
         jtag.WriteDR(0x4,8)
         jtag.WriteIR(0x1FFFEB,21)
@@ -541,8 +538,8 @@ def VEraseEPROM2():
         return(False)
 
 def V600EraseEPROM():
-    if  ((VReadEPROMID1 & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID) or \
-        ((VReadEPROMID1 & PROG_V_EPROM2_ID_MASK) == PROG_V_EPROM2_ID2) :
+    if  ((VReadEPROMID1 & V_EPROM2_ID_MASK) == V_EPROM2_ID) or \
+        ((VReadEPROMID1 & V_EPROM2_ID_MASK) == V_EPROM2_ID2) :
         jtag.WriteIR(0x1FE8,13)
         jtag.WriteDR(0x8,8)
         jtag.WriteIR(0x1FEB,13)
@@ -562,8 +559,8 @@ def VBlankCheckEPROM1(errs):
     blocks = 512
     result=False
 
-    if  ((VReadEPROMID1 & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID) or \
-        ((VReadEPROMID1 & PROG_V_EPROM1_ID_MASK) == PROG_V_EPROM1_ID2):
+    if  ((VReadEPROMID1 & V_EPROM1_ID_MASK) == V_EPROM1_ID) or \
+        ((VReadEPROMID1 & V_EPROM1_ID_MASK) == V_EPROM1_ID2):
         jtag.WriteIR(0x1FE8,13)
         jtag.WriteDR(0x34,7)
         jtag.WriteIR(0x1FF0,13)
@@ -600,7 +597,7 @@ def VBlankCheckEPROM1(errs):
 
         if (errs == 0):
             result = True
-        else: 
+        else:
             result = errs
 
     return(result)
@@ -614,91 +611,104 @@ def V600BlankCheckEPROM(errs):
     #PLACEHOLDER
 
 # Detect Mezzanine Type -- Works with only V600E or V1000E...
-# Need to update for Spartan
+# TODO: update for Spartan ID Codes
 def DetectMezzanineType():
-    SetChain(arJTAGChains[2])
-    Err = 0
+    SetChain(VIRTEX_PROGRAM)
     # Mezzanine Chip Types
-    # VIRTEX600  = 0x00 (0)
-    # VIRTEX1000 = 0x01 (1)
-    # UNKNOWN    = 0xFF (255)
-    #Check EPROM 1 ID
-    ir = 0x1FFFFF
-    jtag.WriteIR(ir, PROG_V_IR_SIZE)
+    # VIRTEX600  =  0
+    # VIRTEX1000 =  1
+    # UNKNOWN    = -1
 
-    ir = 0x1FFEFF
-    jtag.WriteIR(ir, PROG_V_IR_SIZE)
+    #######################################################################
+    # Check if we have a Match for the Virtex 1000E
+    #######################################################################
+    Err = 0
 
-    data = 0x0000000000
-    data = jtag.ReadDR(data, PROG_V_ID_DR_SIZE)
+    # Check EPROM 1 ID Code
+    jtag.WriteIR(0x1FFFFF, V1000_IR_SIZE)
+    jtag.WriteIR(0x1FFEFF, V1000_IR_SIZE)
+    data = jtag.ReadDR(0x0, V_ID_DR_SIZE)
+    data = data & V_EPROM1_ID_MASK
 
-    data = data & PROG_V_EPROM1_ID_MASK
-
-    if (data != PROG_V_EPROM1_ID) and (data != PROG_V_EPROM1_ID2):
+    if (data != V_EPROM1_ID) and (data != V_EPROM1_ID2):
         Err+=1
 
-    #Check EPROM 2 ID
-    ir = 0x1FFFFF
-    jtag.WriteIR(ir, PROG_V_IR_SIZE)
+    # Check EPROM 2 ID Code
+    jtag.WriteIR(0x1FFFFF, V1000_IR_SIZE)
+    jtag.WriteIR(0x1FFFFE, V1000_IR_SIZE)
+    data = jtag.ReadDR(0x0, V_ID_DR_SIZE)
+    data = data & V_EPROM2_ID_MASK
 
-    ir = 0x1FFFFE
-    jtag.WriteIR(ir, PROG_V_IR_SIZE)
-
-    data = 0x0000000000
-    data = jtag.ReadDR(data, PROG_V_ID_DR_SIZE)
-    data = data & PROG_V_EPROM2_ID_MASK
-    if (data != PROG_V_EPROM2_ID) and (data != PROG_V_EPROM2_ID2):
+    if (data != V_EPROM2_ID) and (data != V_EPROM2_ID2):
         Err+=1
 
-    ir = 0x1FFFFF
-    jtag.WriteIR(ir, PROG_V_IR_SIZE)
+    # Check Virtex ID Code
+    jtag.WriteIR(0x1FFFFF, V1000_IR_SIZE)
+    jtag.WriteIR(0x09FFFF, V1000_IR_SIZE)
+    data = jtag.ReadDR(0x0, V_ID_DR_SIZE)
+    data = data & V1000E_ID_MASK
 
-    ir = 0x09FFFF
-    jtag.WriteIR(ir, PROG_V_IR_SIZE)
-
-    data = 0x0000000000
-    data = jtag.ReadDR(data, PROG_V_ID_DR_SIZE)
-    data = data & PROG_V_FPGA_ID_MASK
-    if data != PROG_V_FPGA_ID:
+    if data != V1000E_ID:
         Err += 1
 
+    # No Errors So We Have a Match
     if Err==0:
-        print('\t Mezanine Board with Xilinx Virtex 1000 chip is detected')
-        MezChipType = VIRTEX1000
+        return (VIRTEX1000)
+
+    #######################################################################
+    # It wasn't the 1000, so now check if it Matches the Virtex600E
+    #######################################################################
+
+    # Reset Error Counter
+    Err = 0
+
+
+    # Check EEPROM ID Code
+    jtag.WriteIR(0x1FFF,    V600_IR_SIZE)
+    jtag.WriteIR(0x1FFF,    V600_IR_SIZE)
+    jtag.WriteIR(0x1FFE,    V600_IR_SIZE)
+    data = jtag.ReadDR(0x0, V_ID_DR_SIZE)
+    data = data & V_EPROM2_ID_MASK
+
+    if (data != V_EPROM2_ID) and (data != V_EPROM2_ID2):
+        Err += 1
+
+    # Check Virtex ID Code
+    jtag.WriteIR       (0x1FFF,    V600_IR_SIZE)
+    jtag.WriteIR       (0x09FF,    V600_IR_SIZE)
+    data = jtag.ReadDR (0x0,       V_ID_DR_SIZE)
+    data = data & V600E_ID_MASK
+
+    if data != V600E_ID:
+        Err +=1
+
+    # No Errors, so we have a match
+    if Err == 0:
+        return(VIRTEX600)
+
+    #######################################################################
+    # It wasn't either of those... so we return -1 (Unknown)
+    #######################################################################
     else:
-        Err = 0
-        ir = 0x1fff
-        jtag.WriteIR(ir, PROG_V_IR_SIZE-8)
+        return(-1)
 
-        ir = 0x1fff
-        jtag.WriteIR(ir, PROG_V_IR_SIZE-8)
-
-        ir = 0x1ffe
-        jtag.WriteIR(ir, PROG_V_IR_SIZE-8)
-
-        data = 0x0000000000
-        data = jtag.ReadDR(data, PROG_V_ID_DR_SIZE)
-        data = data & PROG_V_EPROM2_ID_MASK
-
-        if (data != PROG_V_EPROM2_ID) and (data != PROG_V_EPROM2_ID2):
-            Err += 1
-
-        ir = 0x1fff
-        jtag.WriteIR(ir, PROG_V_IR_SIZE-8)
-
-        ir = 0x09ff
-        jtag.WriteIR(ir, PROG_V_IR_SIZE-8)
-
-        data = 0x0000000000
-        data = jtag.ReadDR(data, PROG_V_ID_DR_SIZE)
-        data = data & PROG_V_FPGA600_ID_MASK
-        if data != PROG_V_FPGA600_ID:
-           Err +=1
-
-        if Err == 0:
-            print('\t Mezzanine Board with Xilinx Virtex 600 chip is detected')
-            MezChipType = VIRTEX600
-        else:
-            print('\t ERROR: Could not detect Mezanine Board')
-            MezChipType = UNKNOWN
-    return(MezChipType)
+def ReadIDCode (index):
+    if index == 0:
+        SetChain(VIRTEX_PROGRAM)
+        # Read Virtex ID Code
+        jtag.WriteIR(0xFFFF,21)
+        return(jtag.ReadDR (0,32))
+    if index == 1:
+        # Read EPROM #1 ID Code
+        jtag.WriteIR(0x1FFEFF,21)
+        return(jtag.ReadDR (0,32))
+    if index == 2:
+        # Read EPROM #2 ID Code
+        jtag.WriteIR(0x1FFFFE,21)
+        return(jtag.ReadDR (0,32))
+    if index == 3:
+        # Set Slow Control Control Chain
+        SetChain(SLOWCTL_CONTROL)
+        # Read Slow Control Spartan User ID Code
+        jtag.WriteIR(0x0,6)
+        return(jtag.ReadDR (0,40))
