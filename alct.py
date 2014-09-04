@@ -10,11 +10,6 @@ import time
 import sys
 from common import MutableNamedTuple
 
-# ------------------------------------------------------------------------------
-
-VIRTEX600       = 0x00 # Mezzanine Detection Virtex 600 Code
-VIRTEX1000      = 0x01 # Mezzanine Detection Virtex 1000 Code
-UNKNOWN         = 0xFF # Mezzanine Detection Unknown ID Code
 
 # ------------------------------------------------------------------------------
 # Mezzanine Control Addresses
@@ -108,13 +103,38 @@ CTRL_SC_ID_DR_SIZE = 40
 USER_V_FPGA_ID     = 0x0925200207
 USER_V_ID_DR_SIZE  = 40
 
+#------------------------------------------------------------------------------
+# JTAG Instruction Registers
 #-------------------------------------------------------------------------------
-# ALCTTYPE Definitions
+SLOW_CTL        = 0x0
+FAST_CTL        = 0x1
+BOARD_SN        = 0x2
+MEZAN_SN        = 0x3
+VRTX_CH	        = 0x3
+V_IR            = 0x5
+SC_IR           = 0x6
+
+#------------------------------------------------------------------------------
+# JTAG Chains
+#-------------------------------------------------------------------------------
+SLOWCTL_CONTROL = 0x0 # Slow Control Control
+SLOWCTL_PROGRAM = 0x1 # Slow Control Programming
+VIRTEX_CONTROL  = 0x4 # Virtex Control
+VIRTEX_PROGRAM  = 0x5 # Virtex Programming
+
+#-------------------------------------------------------------------------------
+# ALCTTYPE Enumeration
 #-------------------------------------------------------------------------------
 ALCT288 = 0 # ALCT 288 Channels
 ALCT384 = 1 # ALCT 384 Channels
 ALCT672 = 2 # ALCT 672 Channels
 
+# ------------------------------------------------------------------------------
+# Virtex Mezzanine ID Enumeration
+# ------------------------------------------------------------------------------
+
+VIRTEX600       = 0x00 # Mezzanine Detection Virtex 600 Code
+VIRTEX1000      = 0x01 # Mezzanine Detection Virtex 1000 Code
 
 #-------------------------------------------------------------------------------
 # Power Supply Enumeration
@@ -145,7 +165,7 @@ alct[1].chips         = 24
 alct[1].delaylines    = 16
 alct[1].pwrchans      = 4
 
-#ALCT288 = 2
+#ALCT672 = 2
 alct[2].name          = 'ALCT672'
 alct[2].channels      = 672
 alct[2].groups        = 7
@@ -153,24 +173,6 @@ alct[2].chips         = 42
 alct[2].delaylines    = 16
 alct[2].pwrchans      = 4
 
-#------------------------------------------------------------------------------
-# JTAG Instruction Registers
-#-------------------------------------------------------------------------------
-SLOW_CTL        = 0x0
-FAST_CTL        = 0x1
-BOARD_SN        = 0x2
-MEZAN_SN        = 0x3
-VRTX_CH	        = 0x3
-V_IR            = 0x5
-SC_IR           = 0x6
-
-#------------------------------------------------------------------------------
-# JTAG Chains
-#-------------------------------------------------------------------------------
-SLOWCTL_CONTROL = 0x0 # Slow Control Control
-SLOWCTL_PROGRAM = 0x1 # Slow Control Programming
-VIRTEX_CONTROL  = 0x4 # Virtex Control
-VIRTEX_PROGRAM  = 0x5 # Virtex Programming
 
 # Select JTAG Programming Chain
 def SetChain(ch):
@@ -211,14 +213,6 @@ def ReadRegister(reg, length=-1):
     jtag.WriteIR(reg, V_IR)
     result = jtag.ReadDR(0x0,length)
     return(result)
-
-#------------------------------------------------------------------------------
-# S/N Readout
-#------------------------------------------------------------------------------
-
-alct_idreg  = MutableNamedTuple()   #ALCT ID Register
-sc_idreg    = MutableNamedTuple()   #Slow Control ID Register
-v_idreg     = MutableNamedTuple()
 
 #------------------------------------------------------------------------------
 
