@@ -298,7 +298,6 @@ def StrToIDCode(idstr):
 
 def SCReadEPROMID():
     jtag.WriteIR(0x7F0,11)
-    time.sleep(0.1)     #time.sleep 100 ms
     jtag.WriteIR(0x7FF,11)
     jtag.WriteIR(0x7FE,11)
     result = jtag.ReadDR(0xffffffff,33)
@@ -307,7 +306,6 @@ def SCReadEPROMID():
 
 def SCReadFPGAID():
     jtag.WriteIR(0x7F0,11)
-    time.sleep(0.1)     #time.sleep 100 ms
     jtag.WriteIR(0x7FF,11)
     jtag.WriteIR(0x6FF,11)
     result = jtag.ReadDR(0x1fffffffe,33)
@@ -324,7 +322,6 @@ def VReadFPGAID():
 
 def VReadEPROMID1():
     jtag.WriteIR(0x1FF0,13)
-    time.sleep(0.1)     #time.sleep 100 ms
     jtag.WriteIR(0x1FFF,13)
     jtag.WriteIR(0x1FFF,13)
     jtag.WriteIR(0x1FFE,13)
@@ -334,7 +331,6 @@ def VReadEPROMID1():
 
 def VReadEPROMID2():
     jtag.WriteIR(0x1FFFF0,21)
-    time.sleep(0.1)     #time.sleep 100 ms
     jtag.WriteIR(0x1FFFFF,21)
     jtag.WriteIR(0x1FFFFE,21)
     result = jtag.ReadDR(0xffffffff,34)
@@ -394,7 +390,7 @@ def DetectMezzanineType():
     Err = 0
 
 
-    # Check EEPROM ID Code
+    # Check EEPROM2 ID Code
     jtag.WriteIR(0x1FFF,    V600_IR_SIZE)
     jtag.WriteIR(0x1FFF,    V600_IR_SIZE)
     jtag.WriteIR(0x1FFE,    V600_IR_SIZE)
@@ -423,23 +419,68 @@ def DetectMezzanineType():
     else:
         return(-1)
 
+
+
+def slow_control_fpga_id():
+    # Field       Len Typical Description
+    # -------     --- ------- --------------------------
+    # [3:0]       4   7       Chip ID number, fixed at 7
+    # [7:4]       4   C       Software Version ID [0-F]
+    # [23:8]      16  2001    Year: 4 BCD digits
+    # [31:24]     8   17      Day:  2 BCD digits
+    # [39:32]     8   09      Month: 2 BCD digits
+    SetChain(SLOWCTL_CONTROL)
+    jtag.WriteIR(0x0,6)
+    return(jtag.ReadDR (0,40))
+
+def mezzanine_fpga_id():
+    #	Virtex-E / Spartan-6 ID register
+    #	Field		Len	Name	Description
+    #	-------		---	----	--------------------------
+    #	[5:0]		6	ver		Firmware version
+    #	[8:6]		3	wgn		(see Table 9)
+    #	[9]			1	bf		(see Table 9)
+    #	[10]		1	np		(see Table 9)
+    #	[11]		1	mr		(see Table 9)
+    #	[12]		1	ke		(see Table 9)
+    #	[13]		1	rl		(see Table 9)
+    #	[14]		1	pb		(see Table 9)
+    #	[15]		1	sp6		(see Table 9)
+    #	[16]		1	seu		(see Table 9)
+    #	[18:17]		2	resvd	Reserved
+    #	[30:19]		12	year	binary code
+    #	[35:31]		5	day		binary code
+    #	[39:36]		4	month	binary code
+    SetChain(VIRTEX_CONTROL)
+    jtag.WriteIR(0x0,6)
+    return(jtag.ReadDR (0,40))
+
+
 def ReadIDCode (index):
+    # Read Virtex ID Code
     if index == 0:
-        SetChain(VIRTEX_PROGRAM)
-        # Read Virtex ID Code
-        jtag.WriteIR(0xFFFF,21)
-        return(jtag.ReadDR (0,32))
+        return(mezzanine_fpga_id())
+
+    # Read EPROM #1 ID Code
     if index == 1:
-        # Read EPROM #1 ID Code
-        jtag.WriteIR(0x1FFEFF,21)
-        return(jtag.ReadDR (0,32))
+        jtag.WriteIR(0x1FFFFF, 21)
+        jtag.WriteIR(0x1FFEFF, 21)
+        return(jtag.ReadDR(0x0, 32) & V_EPROM1_ID_MASK)
+
+    # Read EPROM #2 ID Code
     if index == 2:
-        # Read EPROM #2 ID Code
-        jtag.WriteIR(0x1FFFFE,21)
-        return(jtag.ReadDR (0,32))
+        jtag.WriteIR(0x1FFFFF, V1000_IR_SIZE)
+        jtag.WriteIR(0x1FFFFE, V1000_IR_SIZE)
+        data = jtag.ReadDR(0x0, V_ID_DR_SIZE) & V_EPROM2_ID_MASK
+        if (data > 0):
+            return(data)
+        else:
+            # Check EEPROM2 ID Code
+            jtag.WriteIR(0x1FFF,    V600_IR_SIZE)
+            jtag.WriteIR(0x1FFF,    V600_IR_SIZE)
+            jtag.WriteIR(0x1FFE,    V600_IR_SIZE)
+            return(jtag.ReadDR(0x0, V_ID_DR_SIZE) & V_EPROM2_ID_MASK)
+
+    # Read Slow Control Spartan User ID Code
     if index == 3:
-        # Set Slow Control Control Chain
-        SetChain(SLOWCTL_CONTROL)
-        # Read Slow Control Spartan User ID Code
-        jtag.WriteIR(0x0,6)
-        return(jtag.ReadDR (0,40))
+        return(slow_control_fpga_id())
