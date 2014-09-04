@@ -109,15 +109,6 @@ USER_V_FPGA_ID     = 0x0925200207
 USER_V_ID_DR_SIZE  = 40
 
 #-------------------------------------------------------------------------------
-# Board Parameters (unused)
-#-------------------------------------------------------------------------------
-
-#MAX_DELAY_GROUPS            = 7
-#MAX_DELAY_CHIPS_IN_GROUP    = 6
-#MAX_NUM_AFEB                = 42
-
-
-#-------------------------------------------------------------------------------
 # ALCTTYPE Definitions
 #-------------------------------------------------------------------------------
 ALCT288 = 0 # ALCT 288 Channels
@@ -162,89 +153,6 @@ alct[2].chips         = 42
 alct[2].delaylines    = 16
 alct[2].pwrchans      = 4
 
-#-------------------------------------------------------------------------------
-# CHAMBER Definitions
-# Unused at the moment... consider to remove..
-#-------------------------------------------------------------------------------
-ME1_1 = 0 # ME1/1
-ME1_2 = 1 # ME1/2
-ME1_3 = 2 # ME1/3
-ME2_1 = 3 # ME2/1
-ME2_2 = 4 # ME2/2
-ME3_1 = 5 # ME3/1
-ME3_2 = 6 # ME3/2
-ME4_1 = 7 # ME4/1
-ME4_2 = 8 # ME4/2
-
-#-------------------------------------------------------------------------------
-# Array of Tuples to hold properties of Different Chamber Types
-# Unused at the moment... consider to remove..
-#-------------------------------------------------------------------------------
-chamb_table = [ MutableNamedTuple() for i in range(9)]
-
-chamb_table[0].name         = 'ME1/1'
-chamb_table[0].chmbtype     = ME1_1
-chamb_table[0].alct         = ALCT288
-chamb_table[0].wires        = 288
-chamb_table[0].afebs_on551  = 18
-chamb_table[0].afebs_on552  = 0
-
-chamb_table[1].name         = 'ME1/2'
-chamb_table[1].chmbtype     = ME1_2
-chamb_table[1].alct         = ALCT384
-chamb_table[1].wires        = 384
-chamb_table[1].afebs_on551  = 12
-chamb_table[1].afebs_on552  = 12
-
-chamb_table[2].name         = 'ME1/3'
-chamb_table[2].chmbtype     = ME1_3
-chamb_table[2].alct         = ALCT288
-chamb_table[2].wires        = 192
-chamb_table[2].afebs_on551  = 12
-chamb_table[2].afebs_on552  = 0
-
-chamb_table[3].name         = 'ME2/1'
-chamb_table[3].chmbtype     = ME2_1
-chamb_table[3].alct         = ALCT672
-chamb_table[3].wires        = 672
-chamb_table[3].afebs_on551  = 18
-chamb_table[3].afebs_on552  = 24
-
-chamb_table[4].name         = 'ME2/2'
-chamb_table[4].chmbtype     = ME2_2
-chamb_table[4].alct         = ALCT384
-chamb_table[4].wires        = 384
-chamb_table[4].afebs_on551  = 12
-chamb_table[4].afebs_on552  = 12
-
-chamb_table[5].name         = 'ME3/1'
-chamb_table[5].chmbtype     = ME3_1
-chamb_table[5].alct         = ALCT672
-chamb_table[5].wires        = 576
-chamb_table[5].afebs_on551  = 12
-chamb_table[5].afebs_on552  = 24
-
-chamb_table[6].name         = 'ME3/2'
-chamb_table[6].chmbtype     = ME3_2
-chamb_table[6].alct         = ALCT384
-chamb_table[6].wires        = 384
-chamb_table[6].afebs_on551  = 12
-chamb_table[6].afebs_on552  = 12
-
-chamb_table[7].name         = 'ME4/1'
-chamb_table[7].chmbtype     = ME4_1
-chamb_table[7].alct         = ALCT672
-chamb_table[7].wires        = 576
-chamb_table[7].afebs_on551  = 12
-chamb_table[7].afebs_on552  = 24
-
-chamb_table[8].name         = 'ME4/2'
-chamb_table[8].chmbtype     = ME4_2
-chamb_table[8].alct         = ALCT384
-chamb_table[8].wires        = 384
-chamb_table[8].afebs_on551  = 12
-chamb_table[8].afebs_on552  = 12
-
 #------------------------------------------------------------------------------
 # JTAG Instruction Registers
 #-------------------------------------------------------------------------------
@@ -263,12 +171,6 @@ SLOWCTL_CONTROL = 0x0 # Slow Control Control
 SLOWCTL_PROGRAM = 0x1 # Slow Control Programming
 VIRTEX_CONTROL  = 0x4 # Virtex Control
 VIRTEX_PROGRAM  = 0x5 # Virtex Programming
-
-# TODO:
-# Array of JTAG Chains... legacy of old code
-# Still used in some places but hope to remove
-# OK I think its all done
-# arJTAGChains = [SLOWCTL_PROGRAM, SLOWCTL_CONTROL, VIRTEX_PROGRAM, VIRTEX_CONTROL]
 
 # Select JTAG Programming Chain
 def SetChain(ch):
@@ -321,17 +223,17 @@ v_idreg     = MutableNamedTuple()
 #------------------------------------------------------------------------------
 
 # Read Slow Control or Mezzanine FIRMWARE FPGA ID Codes
-def ReadIDCode (alct_ctl):
-    if (alct_ctl == SLOW_CTL):
-        SetChain(SLOW_CTL) # Slow Control Control Chain
-        jtag.WriteIR(0, SC_IR)
-        return(jtag.ReadDR(0x00, CTRL_SC_ID_DR_SIZE))
-    elif (alct_ctl == FAST_CTL):
-        SetChain(4) # Virtex Control Chain
-        jtag.WriteIR(0, V_IR)
-        return(jtag.ReadDR(0x00, USER_V_ID_DR_SIZE))
-    else:
-        return(0)
+#def ReadIDCode (alct_ctl):
+#    if (alct_ctl == SLOW_CTL):
+#        SetChain(SLOW_CTL) # Slow Control Control Chain
+#        jtag.WriteIR(0, SC_IR)
+#        return(jtag.ReadDR(0x00, CTRL_SC_ID_DR_SIZE))
+#    elif (alct_ctl == FAST_CTL):
+#        SetChain(4) # Virtex Control Chain
+#        jtag.WriteIR(0, V_IR)
+#        return(jtag.ReadDR(0x00, USER_V_ID_DR_SIZE))
+#    else:
+#        return(0)
 
 # Read Board Silicon Serial Numbers
 def ReadBoardSN(board_type):
@@ -419,64 +321,6 @@ def SCReadFPGAID():
     jtag.WriteIR(0x7FF,11)
     return(result)
 
-def SCEraseEPROM():
-    if (SCReadEPROMID & SC_EPROM_ID_MASK) == SC_EPROM_ID :
-        jtag.WriteIR(0x7E8, 11)
-        jtag.WriteDR(0x04,   7)
-        jtag.WriteIR(0x7EB, 11)
-        jtag.WriteDR(0x001, 17)
-        jtag.WriteIR(0x7EC, 11)
-
-        time.sleep(0.2)     #sleep 200 ms
-        jtag.WriteIR(0x7F0, 11)
-
-        time.sleep(0.1)     #sleep 100 ms
-        jtag.WriteIR(0x7FF, 11)
-        jtag.WriteDR(0x0,    2)
-        return(True)
-    else:
-        return(False)
-
-def SCBlankCheckEPROM(errs):
-    length = 16385
-    blocks = 64
-
-    if	(SCReadEPROMID & SC_EPROM_ID_MASK) == SC_EPROM_ID:
-        jtag.WriteIR(0x7E8,11)
-        jtag.WriteDR(0x34,7)
-        jtag.WriteIR(0x7E5,11)
-        time.sleep(0.1)     #time.sleep 100 ms
-        errs = 0
-        for i in range(0,blocks):
-            jtag.StartDRShift()
-            pmax = length//32
-            for p in range(pmax):
-                data = 0
-                if (length-32*p) > 32:
-                    data = jtag.ShiftData(0xFFFFFFFF, 32, False)
-                    if data == 0xFFFFFFFF :
-                        errs += 1
-                else:
-                    data = jtag.ShiftData(0xFFFFFFFF, length - 32*p, True)
-                    if data == (0xFFFFFFFF >> (32-(length - 32*p))):
-                        errs += 1
-            jtag.ExitDRShift()
-            if (errs > 0):
-                break
-        jtag.WriteIR(0x7F0,11)
-        time.sleep(0.1)     #time.sleep 100 ms
-        jtag.WriteIR(0x7FF,11)
-        jtag.WriteIR(0x7F0,11)
-        time.sleep(0.1)     #time.sleep 100 ms
-        jtag.WriteIR(0x7FF,11)
-        jtag.WriteIR(0x7F0,11)
-        time.sleep(0.1)     #time.sleep 100 ms
-        jtag.WriteIR(0x7FF,11)
-        if (errs == 0):
-            result = True
-    else:
-        result = False
-
 def VReadFPGAID():
     jtag.WriteIR(0x1F,5)
     jtag.WriteIR(0x1F,5)
@@ -503,112 +347,6 @@ def VReadEPROMID2():
     result = jtag.ReadDR(0xffffffff,34)
     jtag.WriteIR(0x1FFFFFF,21)
     return(result)
-
-def VEraseEPROM1():
-    if  ((VReadEPROMID1 & V_EPROM1_ID_MASK) == V_EPROM1_ID) or  \
-        ((VReadEPROMID1 & V_EPROM1_ID_MASK) == V_EPROM1_ID2):
-        jtag.WriteIR(0x1FE8,13)
-        jtag.WriteDR(0x8,8)
-        jtag.WriteIR(0x1FEB,13)
-        jtag.WriteDR(0x2,18)
-        jtag.WriteIR(0x1FEC,13)
-        time.sleep(0.2)     #time.sleep 200 ms
-        jtag.WriteIR(0x1FF0,13)
-        time.sleep(0.1)     #time.sleep 100 ms
-        jtag.WriteIR(0x1FFF,13)
-        result = True
-    else:
-        result = False
-    return(result)
-
-def VEraseEPROM2():
-    if  ((VReadEPROMID2 & V_EPROM2_ID_MASK) == V_EPROM2_ID) or \
-        ((VReadEPROMID2 & V_EPROM2_ID_MASK) == V_EPROM2_ID2):
-        jtag.WriteIR(0x1FFFE8,21)
-        jtag.WriteDR(0x4,8)
-        jtag.WriteIR(0x1FFFEB,21)
-        jtag.WriteDR(0x1,18)
-        jtag.WriteIR(0x1FFFEC,21)
-        time.sleep(0.2)     #time.sleep 200 ms
-        jtag.WriteIR(0x1FFFF0,21)
-        time.sleep(0.1)     #time.sleep 100 ms
-        jtag.WriteIR(0x1FFFFF,21)
-        return(True)
-    else:
-        return(False)
-
-def V600EraseEPROM():
-    if  ((VReadEPROMID1 & V_EPROM2_ID_MASK) == V_EPROM2_ID) or \
-        ((VReadEPROMID1 & V_EPROM2_ID_MASK) == V_EPROM2_ID2) :
-        jtag.WriteIR(0x1FE8,13)
-        jtag.WriteDR(0x8,8)
-        jtag.WriteIR(0x1FEB,13)
-        jtag.WriteDR(0x2,18)
-        jtag.WriteIR(0x1FEC,13)
-        time.sleep(0.2)     #time.sleep 200 ms
-        jtag.WriteIR(0x1FF0,13)
-        time.sleep(0.1)     #time.sleep 100 ms
-        jtag.WriteIR(0x1FFF,13)
-        return(True)
-    else:
-        return(False)
-    return(result)
-
-def VBlankCheckEPROM1(errs):
-    length = 8192
-    blocks = 512
-    result=False
-
-    if  ((VReadEPROMID1 & V_EPROM1_ID_MASK) == V_EPROM1_ID) or \
-        ((VReadEPROMID1 & V_EPROM1_ID_MASK) == V_EPROM1_ID2):
-        jtag.WriteIR(0x1FE8,13)
-        jtag.WriteDR(0x34,7)
-        jtag.WriteIR(0x1FF0,13)
-        time.sleep(0.1)     #time.sleep 100 ms
-        jtag.WriteIR(0x1FE8,13)
-        jtag.WriteDR(0x34,7)
-        jtag.WriteIR(0x1FEB,13)
-        jtag.WriteDR(0x0,17)
-        errs = 0
-
-        for i in range(0,blocks):
-            jtag.WriteIR(0x1FEF,13)
-            time.sleep(0.1)     #time.sleep 100 ms
-            jtag.StartDRShift()
-            for p in range(0,(length)//32):
-                data = 0
-                if ( (length-32*p) > 32):
-                    data = jtag.ShiftData(0xFFFFFFFF, 32, False)
-                    if (data == 0xFFFFFFFF):
-                        errs += 1
-                else:
-                    data = jtag.ShiftData(0xFFFFFFFF, length - 32*p, True)
-                    if data == (0xFFFFFFFF >> (32-(length - 32*p))):
-                        errs += 1
-            jtag.ExitDRShift()
-            if (errs > 0) :
-                break
-
-        jtag.WriteIR(0x1FF0,13)
-        time.sleep(0.1)     #time.sleep 100 ms
-        jtag.WriteIR(0x1FFF,13)
-        jtag.WriteIR(0x1FFF,13)
-        jtag.WriteDR(0x0,2)
-
-        if (errs == 0):
-            result = True
-        else:
-            result = errs
-
-    return(result)
-
-def VBlankCheckEPROM2(errs):
-    return(0)
-    #PLACEHOLDER
-
-def V600BlankCheckEPROM(errs):
-    return(0)
-    #PLACEHOLDER
 
 # Detect Mezzanine Type -- Works with only V600E or V1000E...
 # TODO: update for Spartan ID Codes
