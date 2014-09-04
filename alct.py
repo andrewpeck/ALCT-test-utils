@@ -15,30 +15,29 @@ from common import MutableNamedTuple
 # Mezzanine Control Addresses
 # ------------------------------------------------------------------------------
 
-IDRead          = 0x00 # ID Read Address
-HCMaskRead      = 0x01
-HCMaskWrite     = 0x02
-RdTrig          = 0x03
-WrTrig          = 0x04
-RdCfg           = 0x06 # read control register
-WrCfg           = 0x07 # write control register
-Wdly            = 0x0D # write delay lines. cs_dly bits in Par
-Rdly            = 0x0E # read  delay lines. cs_dly bits in Par
-CollMaskRead    = 0x13
-CollMaskWrite   = 0x14
-ParamRegRead    = 0x15
-DelayCtrlRead   = 0x15
-ParamRegWrite   = 0x16
-DelayCtrlWrite  = 0x16
-InputEnable     = 0x17
-InputDisable    = 0x18
-YRwrite         = 0x19
-OSread          = 0x1A
-SNRead          = 0x1B
-SNwrite0        = 0x1C
-SNwrite1        = 0x1D
-SNreset         = 0x1E
-Bypass          = 0x1F
+# Name          Adr      Len   Dir     Description
+IDRead        = 0x00  #  40    read    Virtex ID register
+HCMaskRead    = 0x01  #  384   read    hot mask
+HCMaskWrite   = 0x02  #  384   write   hot mask
+RdTrig        = 0x03  #  5     read    trigger register
+WrTrig        = 0x04  #  5     write   trigger register
+RdCfg         = 0x06  #  69    read    control register
+WrCfg         = 0x07  #  69    write   control register
+Wdly          = 0x0D  #  120   write   delay lines. cs_dly bits in Par
+Rdly          = 0x0E  #  121?  read    delay lines. cs_dly bits in Par
+CollMaskRead  = 0x13  #  224   read    collision pattern mask
+CollMaskWrite = 0x14  #  224   write   collision pattern mask
+ParamRegRead  = 0x15  #  6     read    delay line control register actually
+ParamRegWrite = 0x16  #  6     read    delay line control register actually
+InputEnable   = 0x17  #  0     write?  commands to disable and enable input
+InputDisable  = 0x18  #  0     write?  commands to disable and enable input
+YRwrite       = 0x19  #  31    write   output register (for debugging with UCLA test board)
+OSread        = 0x1A  #  49    read    output storage
+SNread        = 0x1B  #  1     read    one bit of serial number
+SNwrite0      = 0x1C  #  0     write   0 bit into serial number chip
+SNwrite1      = 0x1D  #  0     write   1 bit into serial number chip
+SNreset       = 0x1E  #  0     write   reset serial number chip
+Bypass        = 0x1F  #  1     bypass
 
 #-------------------------------------------------------------------------------
 # Array of the Sizes of Virtex Register Locations
@@ -147,6 +146,7 @@ V55_2_PWR_SPLY = 3        # Power Supply 5.5V (2)
 #-------------------------------------------------------------------------------
 # Array of Tuples to hold Properties of Different Board Types
 #-------------------------------------------------------------------------------
+
 alct = [ MutableNamedTuple() for i in range(3)]
 
 #ALCT288 = 0
@@ -157,7 +157,7 @@ alct[0].chips         = 18           # Number of Delay Chips per Group
 alct[0].delaylines    = 16          # Number of Channels Per Delay Chip
 alct[0].pwrchans      = 3           # Number of Power Inputs
 
-#ALCT288 = 1
+#ALCT384 = 1
 alct[1].name          = 'ALCT384'
 alct[1].channels      = 384
 alct[1].groups        = 4
@@ -172,7 +172,6 @@ alct[2].groups        = 7
 alct[2].chips         = 42
 alct[2].delaylines    = 16
 alct[2].pwrchans      = 4
-
 
 # Select JTAG Programming Chain
 def SetChain(ch):
