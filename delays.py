@@ -184,8 +184,7 @@ def PrintPatterns(alcttype, SendPtrns, ReadPtrns):
     output += ('\n\t <-Read: %s' % readstr)
     print(output)
 
-# Sends a walking 1 pattern through the delay ASICs
-def Walking1(alcttype):
+def WalkingBit(bit,alcttype):
     ngroups = alct.alct[alcttype].groups
     SendPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
     ReadPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
@@ -197,7 +196,13 @@ def Walking1(alcttype):
     fStop       = False
     fStopOnError= True
 
-    print('    Walking 1 Test')
+    if bit==1: 
+        print('    Walking 1 Test')
+    elif bit==0: 
+        print('    Walking 0 Test')
+    else: 
+        raise Exception("Invalid test selected")
+        
 
     alct.SetChain(alct.VIRTEX_CONTROL)
 
@@ -206,9 +211,13 @@ def Walking1(alcttype):
 
         for i in range(alct.alct[alcttype].groups):
             for j in range(6):
-                SendValues[i][j]    = 0
-                SendPtrns [i][j]    = 0 or ((bit // 16) == ((i*6)+j)) << (bit % 16)
-                ReadPtrns [i][j]    = 0
+                if bit==1: 
+                    SendValues[i][j]    = 0
+                    SendPtrns [i][j]    = 0 or ((bit // 16) == ((i*6)+j)) << (bit % 16)
+                    ReadPtrns [i][j]    = 0
+                if bit==0:
+                    SendValues[i][j] = 0x0000
+                    SendPtrns [i][j] = 0xFFFF & (~(((bit//16)==((i*6)+j)) << (bit%16)))
 
         SetDelayLines(0x7F, SendPtrns, SendValues, alcttype)
         ReadPtrns = ReadPatterns(alcttype)
@@ -216,65 +225,37 @@ def Walking1(alcttype):
         ErrOnePass = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
         Errs = Errs + ErrOnePass
         if (ErrOnePass > 0):
-            print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
+            print("\t Error on bit %3i (Chip #%2i Channel %2i)" % (bit+1, bit//16 + 1, bit%16 + 1 ))
         #PrintPatterns(alcttype, SendPtrns, ReadPtrns)
 
     # Fini
     if (Errs == 0): 
-        print       ('\t ====> PASSED: Walking 1 Test Finished with %i Errors ' % Errs)
-        logging.info('\t PASSED: Walking 1 Test Finished with %i Errors ' % Errs)
+        if bit==1:
+            print       ('\t ====> PASSED: Walking 1 Test' % Errs)
+            logging.info('\t ====> PASSED: Walking 1 Test' % Errs)
+        if bit==0:
+            print       ('\t ====> PASSED: Walking 0 Test' % Errs)
+            logging.info('\t ====> PASSED: Walking 0 Test' % Errs)
         beeper.passed()
     else: 
-        print       ('\t ====> FAILED: Walking 1 Test Finished with %i Errors ' % Errs)
-        logging.info('\t FAILED: Walking 1 Test Finished with %i Errors ' % Errs)
+        if bit==1:
+            print       ('\t ====> FAILED: Walking 1 Test Finished with %i Errors ' % Errs)
+            logging.info('\t ====> FAILED: Walking 1 Test Finished with %i Errors ' % Errs)
+        if bit==0:
+            print       ('\t ====> FAILED: Walking 0 Test Finished with %i Errors ' % Errs)
+            logging.info('\t ====> FAILED: Walking 0 Test Finished with %i Errors ' % Errs)
         beeper.failed()
     return (Errs)
 
 # Sends a walking 1 pattern through the delay ASICs
+def Walking1(alcttype):
+    return(WalkingBit(1,alcttype)
+
+# Sends a walking 1 pattern through the delay ASICs
 def Walking0(alcttype):
-    ngroups = alct.alct[alcttype].groups
-    SendPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
-    SendValues = [[0 for j in range(6)] for i in range(ngroups)]
+    return(WalkingBit(0,alcttype)
 
-    Wires = alct.alct[alcttype].channels
-    Errs        = 0
-    ErrOnePass  = 0
-    fStop       = False
-
-    print('    Walking 0 Test')
-
-    alct.SetChain(alct.VIRTEX_CONTROL)
-
-    for bit in range (Wires):
-        alct.WriteRegister(0x11,0x4000,0x16)
-
-        for i in range (alct.alct[alcttype].groups):
-            for j in range(6):
-                    SendValues[i][j] = 0x0000
-                    SendPtrns [i][j] = 0xFFFF & (~(((bit//16)==((i*6)+j)) << (bit%16)))
-
-        SetDelayLines(0x7F, SendPtrns, SendValues, alcttype)
-        ReadPtrns = ReadPatterns(alcttype)
-        #PrintPatterns(alcttype, SendPtrns, ReadPtrns)
-
-        ErrOnePass  = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
-        Errs        = Errs + ErrOnePass
-        if (ErrOnePass > 0):
-            print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
-
-    # Fini
-    if (Errs == 0): 
-        print       ('\t ====> PASSED: Walking 0 Test Finished with %i Errors ' % Errs)
-        logging.info('\t PASSED: Walking 0 Test Finished with %i Errors ' % Errs)
-        beeper.passed()
-    else: 
-        print       ('\n\t ====> FAILED: Walking 0 Test Finished with %i Errors ' % Errs)
-        logging.info('\t FAILED: Walking 0 Test Finished with %i Errors ' % Errs)
-        beeper.failed()
-    return (Errs)
-
-# Fills delay ASICs with a Walking 1
-def Filling1(alcttype):
+def FillingBit(alcttype):
     ngroups = alct.alct[alcttype].groups
     SendPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
     SendValues = [[0 for j in range(6)] for i in range(ngroups)]
@@ -284,14 +265,23 @@ def Filling1(alcttype):
     ErrOnePass = 0
     fStop      = False
 
-    print       ('    Filling 1s Test')
+    if bit==1:   
+        print       ('    Filling 1s Test')
+    elif bit==0: 
+        print       ('    Filling 0s Test')
+    else: 
+        raise Exception("Invalid Test Selected")
 
     alct.SetChain(alct.VIRTEX_CONTROL)
 
     for i in range(alct.alct[alcttype].groups):
         for j in range(6):
-            SendValues[i][j] = 0
-            SendPtrns [i][j] = 0
+            if bit==1: 
+                SendValues[i][j] = 0x0000
+                SendPtrns [i][j] = 0x0000
+            if bit==0: 
+                SendValues[i][j] = 0x0000
+                SendPtrns [i][j] = 0xFFFF
 
     SetDelayLines(0xF,SendPtrns,SendValues,alcttype)
 
@@ -300,8 +290,12 @@ def Filling1(alcttype):
 
         for i in range(alct.alct[alcttype].groups):
             for j in range(6):
-                SendValues[i][j] = 0
-                SendPtrns [i][j] = SendPtrns[i][j] | (((bit//16) == ((i*6)+j)) << (bit % 16))
+                if bit==1: 
+                    SendValues[i][j] = 0
+                    SendPtrns [i][j] = SendPtrns[i][j] | (((bit//16) == ((i*6)+j)) << (bit % 16))
+                if bit==0: 
+                    SendValues[i][j] = 0x0000
+                    SendPtrns [i][j] = SendPtrns[i][j] & (~(((bit // 16) == ((i*6)+j)) << (bit % 16)))
 
         SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
         ReadPtrns = ReadPatterns(alcttype)
@@ -312,63 +306,31 @@ def Filling1(alcttype):
             print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
     # Fini
     if (Errs==0):
-        print       ('\t ====> PASSED: Filling by 1s Test Finished with %i Errors ' % Errs)
-        logging.info('\t PASSED: Filling by 1s Test Finished with %i Errors ' % Errs)
+        if bit==1: 
+            print       ('\t ====> PASSED: Filling by 1s Test' % Errs)
+            logging.info('\t ====> PASSED: Filling by 1s Test' % Errs)
+        if bit==0:
+            print        ('\t ====> PASSED: Filling by 0s Test' % Errs)
+            logging.info ('\t ====> PASSED: Filling by 0s Test' % Errs)
         beeper.passed()
     else: 
-        print       ('\n\t ====> FAILED: Filling by 1s Test Finished with %i Errors ' % Errs)
-        logging.info('\t FAILED: Filling by 1s Test Finished with %i Errors ' % Errs)
+        if bit==1:
+            print       ('\t ====> FAILED: Filling by 1s Test Finished with %i Errors ' % Errs)
+            logging.info('\t ====> FAILED: Filling by 1s Test Finished with %i Errors ' % Errs)
+        if bit==0:
+            print        ('\t ====> FAILED: Filling by 0s Test Finished with %i Errors ' % Errs)
+            logging.info ('\t ====> FAILED: Filling by 0s Test Finished with %i Errors ' % Errs)
         beeper.failed()
+
     return (Errs)
+
+# Fills delay ASICs with a Walking 1
+def Filling1(alcttype):
+    return(FillingBit(1,alcttype))
 
 # Unfills delay ASICs with a Walking 0
 def Filling0(alcttype):
-    ngroups = alct.alct[alcttype].groups
-    SendPtrns  = [[0 for j in range(6)] for i in range(ngroups)]
-    SendValues = [[0 for j in range(6)] for i in range(ngroups)]
-
-    Wires = alct.alct[alcttype].channels
-    Errs       = 0
-    ErrOnePass = 0
-    fStop      = True
-
-    print        ('    Filling 0s Test')
-    alct.SetChain(alct.VIRTEX_CONTROL)
-
-    for i in range(alct.alct[alcttype].groups):
-        for j in range(6):
-            SendValues[i][j] = 0x0000
-            SendPtrns [i][j] = 0xFFFF
-
-    SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
-
-    for bit in range(Wires):
-        alct.WriteRegister(0x11,0x4000,0x16)
-
-        for i in range(alct.alct[alcttype].groups):
-            for j in range(6):
-                SendValues[i][j] = 0x0000
-                SendPtrns [i][j] = SendPtrns[i][j] & (~(((bit // 16) == ((i*6)+j)) << (bit % 16)))
-
-        SetDelayLines(0xF, SendPtrns, SendValues, alcttype)
-        ReadPtrns = ReadPatterns(alcttype)
-
-        ErrOnePass = CheckPatterns(SendPtrns, ReadPtrns,alcttype)
-        Errs       = Errs + ErrOnePass
-        if (ErrOnePass > 0):
-            print("\t Error on bit %3i (Possible Problem with Chip #%2i Channel %2i" % (bit+1, bit//16 + 1, bit%16 + 1 ))
-
-    # Fini
-    if (Errs == 0): 
-        print        ('\t ====> PASSED: Filling by 0s Test Finished with %i Errors ' % Errs)
-        logging.info ('\t PASSED: Filling by 0s Test Finished with %i Errors ' % Errs)
-        beeper.passed()
-    else: 
-        print        ('\n\t ====> FAILED: Filling by 0s Test Finished with %i Errors ' % Errs)
-        logging.info ('\t FAILED: Filling by 0s Test Finished with %i Errors ' % Errs)
-        beeper.failed()
-
-    return (Errs)
+    return(FillingBit(0,alcttype))
 
 # Shifts 5 and A through the delay asic... 0101010101 --> 10101010101..
 # Uses HIGH current.. maybe not a good test.
@@ -417,8 +379,8 @@ def Shifting5andA(alcttype, npasses=25):
             send = send + format(SendPtrns[i][j],'04X')
 
         if ErrOnePass > 0:
-            print ("    Pass %2i of %2i" % (p+1, npasses))
-            print("\t Error: Write=%s Read=%s " % (send, read))
+            print("        Pass %2i of %2i" % (p+1, npasses))
+            print("           Error: Write=%s Read=%s " % (send, read))
         else: 
             if debug: 
                 print ("    Pass %2i of %2i" % (p+1, npasses))
@@ -433,12 +395,12 @@ def Shifting5andA(alcttype, npasses=25):
 
     # Fini
     if (Errs == 0): 
-        print        ('\t ====> PASSED: Shifting 5 and A Test Finished with %i Errors ' % Errs)
-        logging.info ('\t PASSED: Shifting 5 and A Test Finished with %i Errors ' % Errs)
+        print        ('\t ====> PASSED: Shifting 5 and A Test' % Errs)
+        logging.info ('\t ====> PASSED: Shifting 5 and A Test' % Errs)
         beeper.passed()
     else: 
-        print        ('\n\t ====> FAILED: Shifting 5 and A Test Finished with %i Errors ' % Errs)
-        logging.info ('\t FAILED: Shifting 5 and A Test Finished with %i Errors ' % Errs)
+        print        ('\t ====> FAILED: Shifting 5 and A Test Finished with %i Errors ' % Errs)
+        logging.info ('\t ====> FAILED: Shifting 5 and A Test Finished with %i Errors ' % Errs)
         beeper.failed()
 
     return (Errs)
@@ -490,8 +452,8 @@ def RandomData(alcttype, npasses=50):
 
         # If error, print pattern
         if ErrOnePass > 0:
-            print ("    Pass %i of %i" % (p+1, npasses))
-            print("\t Error: Write=%s Read=%s " % (send, read))
+            print("        Pass %2i of %2i" % (p+1, npasses))
+            print("           Error: Write=%s Read=%s " % (send, read))
         else: 
             if debug: 
                 print ("    Pass %i of %i" % (p+1, npasses))
@@ -508,12 +470,12 @@ def RandomData(alcttype, npasses=50):
 
     # Fini
     if (Errs==0): 
-        print        ('\t ====> PASSED: Random Data Test Finished with %i Errors ' % Errs)
-        logging.info ('\t PASSED: Random Data Test Finished with %i Errors ' % Errs)
+        print        ('\t ====> PASSED: Random Data Test' % Errs)
+        logging.info ('\t ====> PASSED: Random Data Test' % Errs)
         beeper.passed()
     else: 
-        print        ('\n\t ====> FAILED: Random Data Test Finished with %i Errors ' % Errs)
-        logging.info ('\t FAILED: Random Data Test Finished with %i Errors ' % Errs)
+        print        ('\t ====> FAILED: Random Data Test Finished with %i Errors ' % Errs)
+        logging.info ('\t ====> FAILED: Random Data Test Finished with %i Errors ' % Errs)
         beeper.failed()
     return (Errs)
 
@@ -814,7 +776,6 @@ def SubtestMenu(alcttype):
         k=input("\n<cr> to return to menu: ")
 
 def PatternsSelfTest(alcttype): 
-    logging.info ('\nDelay ASICs Pattern Test:')
     Errs = 0 
     Errs += Walking1(alcttype)
     Errs += Walking0(alcttype)
