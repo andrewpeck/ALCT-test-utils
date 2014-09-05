@@ -353,14 +353,14 @@ def ReadAllThresholds(alcttype):
     print("\n%s> Read All Thresholds" % common.Now())
     for j in range (NUM_AFEB):
         thresh = ReadThreshold(j)
-        print("\t  AFEB #%02i:  Threshold=%.3fV (ADC=0x%03X)" % (j, (ADC_REF/1023)*thresh, thresh))
+        print("\tAFEB #%02i:  Threshold=%.3fV (ADC=0x%03X)" % (j, (ADC_REF/1023)*thresh, thresh))
 
 def WriteAllThresholds(thresh,alcttype): 
     NUM_AFEB = alct.alct[alcttype].chips
     print("\n%s> Write All Thresholds to %i" % (common.Now(), thresh))
     for i in range(NUM_AFEB):
         SetThreshold(i, thresh);
-    print("\t  All thresholds set to %i" % thresh)
+    print("\tAll thresholds set to %i" % thresh)
 
 #------------------------------------------------------------------------------
 # Read ALCT board 12 bit voltage monitoring
@@ -434,33 +434,33 @@ def CheckThresholds(first, last, depth=1):
     if (first==last): last+=1
     for afeb in range(first, last):
         afebErrs = 0
-        print("\t Testing AFEB #%2i" % afeb)
+        print("    Testing AFEB #%2i" % afeb)
         for thresh in range(256):
             if thresh%depth == 0:
                 write=thresh
                 SetThreshold(afeb,write)
                 read = ReadThreshold(afeb)/4.0
                 if abs(write - read) > ThreshToler:
-                    print("\t\t ERROR: Write=%3i Read=%3.0f" % (write,read) )
+                    print("\tERROR: Write=%3i Read=%3.0f" % (write,read) )
                     afebErrs +=1
         Errs+=afebErrs
         ErrMatrix[afeb]=afebErrs
 
-    logging.info ("\t Summary: ")
-    for afeb in range(first, last):
-        if (ErrMatrix[afeb] > 0): 
-            logging.info("\t\t FAIL: AFEB #%2i with %i Errors" % (afeb, ErrMatrix[afeb]))
-        else:
-            logging.info("\t\t PASS: AFEB #%2i" %(afeb))
 
     if Errs==0:
-        print        ('\t\t PASS: Thresholds Linearity Test')
-        logging.info ('\t\t PASS: Thresholds Linearity Test')
+        print        ('\t====> PASSED: Thresholds Linearity Test')
+        logging.info ('\t====> PASSED: Thresholds Linearity Test')
         return(0)
     else:
-        print        ('\t\t FAIL: Thresholds Test with %i Total Errors' % Errs)
-        logging.info ('\t\t FAIL: Thresholds Test with %i Total Errors' % Errs)
-        return(Errs)
+        print        ('\t====> FAILED: Thresholds Test with %i Total Errors' % Errs)
+        logging.info ('\t====> FAILED: Thresholds Test with %i Total Errors' % Errs)
+
+        logging.info ("\t    Summary: ")
+        for afeb in range(first, last):
+            if (ErrMatrix[afeb] > 0): 
+                logging.info("\t\tFAILED: AFEB #%2i with %i Errors" % (afeb, ErrMatrix[afeb]))
+
+    return(Errs)
 
 # Checks ALCT-AFEB standby register
 def CheckStandbyRegister():
@@ -472,13 +472,15 @@ def CheckStandbyRegister():
         readval = ReadGroupStandbyReg(i)
         if readval != sendval:
             Errs = Errs+1
-            print('Error: Standby Register for Wire Group #%i send=%02X read=%02X' % ((i+1),sendval,readval))
+            print('\tERROR: Standby Register for Wire Group #%i send=0x%02X read=0x%02X' % ((i+1),sendval,readval))
 
     if Errs==0:
-        print('\t ====> Passed')
+        print       ('\t====> PASSED: Standby Register Test' % Errs)
+        logging.info('\t====> PASSED: Standby Register Test' % Errs)
         return(0)
     else:
-        print('\t ====> Failed Standby Register Test with %i Errors' % Errs)
+        print       ('\t====> FAILED: Standby Register Test with %i Errors' % Errs)
+        logging.info('\t====> FAILED: Standby Register Test with %i Errors' % Errs)
         return(Errs)
 
 # Checks Test Pulse Down register
@@ -489,15 +491,17 @@ def CheckTestPulsePowerDown():
     SetTestPulsePower(sendval)
     readval = ReadTestPulsePower()
     if readval != sendval:
-        print('\t Error: Test Pulse Power Down send=%02X read=%02X' % (sendval,readval))
+        print('\tERROR: Test Pulse Power Down send=0x%02X read=0x%02X' % (sendval,readval))
         Errs+=1
 
     if Errs==0:
-        print('\t ====> Passed')
-        return(0)
+        print       ('\t====> PASSED Test Pulse Power Down Test' % Errs)
+        logging.info('\t====> PASSED Test Pulse Power Down Test' % Errs)
     else:
-        print('\t ====> Failed Test Pulse Power Down Test with %i Errors' % Errs)
-        return(Errs)
+        print       ('\t====> FAILED Test Pulse Power Down Test with %i errors' % Errs)
+        logging.info('\t====> FAILED Test Pulse Power Down Test with %i errors' % Errs)
+
+    return(Errs)
 
 # Checks Test Pulse Up register
 def CheckTestPulsePowerUp():
@@ -507,14 +511,16 @@ def CheckTestPulsePowerUp():
     SetTestPulsePower(sendval)
     readval = ReadTestPulsePower()
     if readval != sendval:
-        print('Error: Test Pulse Power Up send=%02X read=%02X' % (sendval,readval))
+        print('ERROR: Test Pulse Power Up send=0x%02X read=0x%02X' % (sendval,readval))
         Errs += 1
 
     if Errs==0:
-        print('\t ====> Passed')
+        print       ('\t====> PASSED Test Pulse Power Up Test')
+        logging.info('\t====> PASSED Test Pulse Power Up Test')
         return(0)
     else:
-        print('\t ====> Failed Test Pulse Power Up Test with %i Errors' % Errs)
+        print       ('\t====> FAILED Test Pulse Power Up Test with %i errors' % Errs)
+        logging.info('\t====> FAILED Test Pulse Power Up Test with %i errors' % Errs)
         return(Errs)
 
 def CheckTestPulseWireGroupMask():
@@ -524,13 +530,15 @@ def CheckTestPulseWireGroupMask():
         SetTestPulseWireGroupMask(sendval)
         readval = ReadTestPulseWireGroupMask()
         if readval != sendval:
-            print('\t Error: Test Pulse Wire Group Mask send=%02X read=%02X' % (sendval,readval))
+            print('\tERROR: Test Pulse Wire Group Mask send=0x%02X read=0x%02X' % (sendval,readval))
             Errs += 1
     if Errs==0:
-        print('\t ====> Passed')
+        print       ('\t====> PASSED Test Pulse Wire Group Mask Test')
+        logging.info('\t====> PASSED Test Pulse Wire Group Mask Test')
         return(0)
     else:
-        print('\t ====> Failed Test Pulse Wire Group Mask Test with %i Errors' % Errs)
+        print       ('\t====> FAILED Test Pulse Wire Group Mask Test with %i errors' % Errs)
+        logging.info('\t====> FAILED Test Pulse Wire Group Mask Test with %i errors' % Errs)
         return(Errs)
 
 def CheckTestPulseStripLayerMask():
@@ -540,13 +548,15 @@ def CheckTestPulseStripLayerMask():
         SetTestPulseWireGroupMask(sendval)
         readval = ReadTestPulseWireGroupMask()
         if readval != sendval:
-            print('\t Error: Test Pulse Strip Layer Mask send=%02X read=%02X' % (sendval,readval))
+            print('\tERROR: Test Pulse Strip Layer Mask send=0x%02X read=0x%02X' % (sendval,readval))
             Errs += 1
     if Errs==0:
-        print('\t ====> Passed')
+        print       ('\t====> PASSED')
+        logging.info('\t====> PASSED')
         return(0)
     else:
-        print('\t ====> Failed Test Pulse Wire Group Mask Test with %i Errors' % Errs)
+        print       ('\t====> FAILED Test Pulse Wire Group Mask Test with %i errors' % Errs)
+        logging.info('\t====> FAILED Test Pulse Wire Group Mask Test with %i errors' % Errs)
         return(Errs)
 
 # Automatically checks all voltages for a given alct type
@@ -561,17 +571,19 @@ def CheckVoltages(alcttype):
 
         if abs(voltage-ref) > toler:
             Errs+=1
-            print("\t Fail", end='')
+            print("\tFail", end='')
         else:
-            print("\t Pass ", end='')
+            print("\tPass ", end='')
 
-        print("\t %s \tread=%.03f expect=%.03f +- %0.03f" % (arVoltages[i].ref, voltage, ref, toler))
+        print("\t%s \tread=%.03f expect=%.03f +- %0.03f" % (arVoltages[i].ref, voltage, ref, toler))
 
     if Errs==0:
-        print('\t ====> Passed')
+        print       ('\t====> PASSED: Voltage Test' % Errs)
+        logging.info('\t====> PASSED: Voltage Test' % Errs)
         return(0)
     else:
-        print('\t ====> Failed Voltage Test with %i Errors' % Errs)
+        print       ('\t====> FAILED: Voltage Test with %i errors' % Errs)
+        logging.info('\t====> FAILED: Voltage Test with %i errors' % Errs)
         return(Errs)
 
 # Automatically checks all currents for a given alct type
@@ -592,19 +604,19 @@ def CheckCurrents(alcttype):
 
         if abs(current-ref) > toler:
             Errs+=1
-            print("\t Fail", end='')
+            print("\tFail", end='')
         else:
-            print("\t Pass ", end='')
+            print("\tPass ", end='')
 
-        print("\t %s \tread=%.03f expect=%.03f +- %0.03f" % (arCurrents[i].ref, readval*arCurrents[i].coef, ref, arCurrents[i].toler))
+        print("\t%s \tread=%.03f expect=%.03f +- %0.03f" % (arCurrents[i].ref, readval*arCurrents[i].coef, ref, arCurrents[i].toler))
 
     if Errs==0:
-        print        ('\t PASS: Currents Check')
-        logging.info ("\t FAIL: Currents Check")
+        print        ('\t====> PASSED: Currents Check')
+        logging.info ("\t====> FAILED: Currents Check")
         return(0)
     else:
-        print        ('\t FAIL: Current Test with %i Errors' % Errs)
-        logging.info ('\t FAIL: Current Test with %i Errors' % Errs)
+        print        ('\t====> FAILED: Current Test with %i errors' % Errs)
+        logging.info ('\t====> FAILED: Current Test with %i errors' % Errs)
         return(Errs)
 
 # Checks temperature against reference (should be close to ambient)
@@ -615,16 +627,18 @@ def CheckTemperature():
     temp = (readval * arTemperature.coef)-50
     if not (abs(temp-arTemperature.refval) < arTemperature.toler):
         Errs+=1
-        print("\t Fail ", end='')
+        print("\tFail ", end='')
     else:
-        print("\t Pass ", end='')
+        print("\tPass ", end='')
     print("Temperature read=%.03f expect=%.03f +- %0.03f" % (temp, arTemperature.refval, arTemperature.toler))
 
     if Errs==0:
-        print('\t ====> Passed')
+        print       ('\t====> PASSED Temperature Check')
+        logging.info('\t====> PASSED Temperature Check')
         return(0)
     else:
-        print('\t ====> Failed')
+        print       ('\t====> FAILED Temperature Check')
+        logging.info('\t====> FAILED Temperature Check')
         return(Errs)
 
 # Runs an automatic self-test of Slow Control Functions
@@ -634,80 +648,49 @@ def SelfTest(alcttype):
     Errs = 0
     alct.SetChain(alct.SLOW_CTL)
 
-    print("\nSlow Control Self Test\n")
-    print("Make sure NORMAL firmware is loaded (alct{288,384,672}.mcs)")
-    print("Make sure Tester Board is Disconnected")
-    print("Make sure Clock Source jumper is set to position 1/2")
+    print("\nSlow Control Self Test")
+    print("    * Make sure NORMAL firmware is loaded (alct{288,384,672}.mcs)")
+    print("    * Make sure Tester Board is Disconnected")
+    print("    * Make sure Clock Source jumper is set to position 1/2")
     while True: 
-        k = input("\t <cr> to continue")
+        k = input("\t<cr> to continue")
         if not k: break
 
     logging.info("\nSlow Control Self Test:")
 
-    #--------------------------------------------------------------------------
-    fail = CheckVoltages(alcttype)
-    if (fail): 
-        Errs += fail
-        logging.info("\t FAIL: Voltages Check")
-    else: 
-        logging.info("\t PASS: Voltages Check")
+    #-Check Voltages-----------------------------------------------------------
+    Errs += CheckVoltages(alcttype)
 
     #-Check Currents-----------------------------------------------------------
-    fail = CheckCurrents(alcttype)
-    Errs += fail
+    Errs += CheckCurrents(alcttype)
 
     #-Check On-board Temperature-----------------------------------------------
-    fail = CheckTemperature()
-    if (fail):
-        Errs += fail
-        logging.info("\t FAIL: Temperature Check")
-    else: 
-        logging.info("\t PASS: Temperature Check")
+    Errs += CheckTemperature()
 
-    #--------------------------------------------------------------------------
-    fail = CheckThresholds(0,alct.alct[alcttype].groups*6,17)
-    if (fail):
-        Errs += fail
+    #-Quick Thresholds Check---------------------------------------------------
+    Errs += CheckThresholds(0,alct.alct[alcttype].groups*6,17)
 
-    #--------------------------------------------------------------------------
-    fail = CheckStandbyRegister()
-    if (fail):
-        Errs += fail
-        logging.info("\t FAIL: Standby Register Check with %i Errors" % fail)
-    else: 
-        logging.info("\t PASS: Standby Register Check")
+    #-Standby Register Check---------------------------------------------------
+    Errs += CheckStandbyRegister()
 
-    #--------------------------------------------------------------------------
-    fail = CheckTestPulsePowerDown()
-    if (fail):
-        Errs += fail
-        logging.info("\t FAIL: Test Pulse Power Down with %i Errors" % fail)
-    else: 
-        logging.info("\t PASS: Test Pulse Power Down")
+    #-Test Pulse Power Down Check----------------------------------------------
+    Errs += CheckTestPulsePowerDown()
         
-    #--------------------------------------------------------------------------
-    fail = CheckTestPulsePowerUp()
-    if (fail):
-        Errs += fail
-        logging.info("\t FAIL: Test Pulse Power Up with %i Errors" % fail)
-    else:                    
-        logging.info("\t PASS: Test Pulse Power Up")
+    #-Test Pulse Power Up Check------------------------------------------------
+    Errs += CheckTestPulsePowerUp()
 
-    #--------------------------------------------------------------------------
-    fail = CheckTestPulseWireGroupMask()
-    if (fail):
-        Errs += fail
-        logging.info("\t FAIL: Test Pulse Wire Group Mask Failed with %i Errors" % fail)
-    else: 
-        logging.info("\t PASS: Test Pulse Wire Group Mask")
+    #-Test Pulse Wire Group Mask Check-----------------------------------------
+    Errs += CheckTestPulseWireGroupMask()
 
     #After finishing tests, turn off AFEBS to reduce power
-    SetStandbyReg(0) #Turn Off All AFEBs
+    SetStandbyReg(0x0) #Turn Off All AFEBs
 
     if Errs>0:
-        print('\nSlow Control Self Test Failed with %i Errors' % Errs)
+        print       ('\nFAILED: Slow Control Self Test Failed with %i Errors' % Errs)
+        logging.info('\nFAILED: Slow Control Self Test Failed with %i Errors' % Errs)
     else:
-        print('\nSlow Control Self Test Passed Without Errors')
+        print       ('\nPASSED: Slow Control Self Test Passed Without Errors')
+        logging.info('\nPASSED: Slow Control Self Test Passed Without Errors')
 
     return (Errs)
 

@@ -28,9 +28,6 @@ import logging
 alcttype = 1
 
 def main():
-    #if os.name == 'nt':
-        #ctypes.windll.inpout32.Closedriver()
-        #ctypes.windll.inpout32.Opendriver(True)
     MainMenu()
     time.sleep(0.1)
 
@@ -243,7 +240,7 @@ def AutomaticFullTest():
 
     logging.info("Testing %s #%s with Mezzanine #%s" % (StringALCTType(alcttype), baseboardSN, mezzanineSN))
     logging.info('\nID Codes Detected: ')
-    logging.info(" %s" % PrintIDCodes())
+    logging.info("\t%s" % PrintIDCodes())
 
     #-------------------------------------------------------------------------------
     # Single cable loopback tests to Check Connectivity of AFEB Connectors,
@@ -251,9 +248,10 @@ def AutomaticFullTest():
     #-------------------------------------------------------------------------------
 
     print("")
-    print("Please load Single Cable Firmware")
-    print("Ensure that Clock source jumper is set to position 1/2")
-    print("Check that 40Mhz oscillator is installed")
+    print("Single Cable Tests:")
+    print("    * Please load Single Cable Firmware")
+    print("    * Ensure that Clock source jumper is set to position 1/2")
+    print("    * Check that 40Mhz oscillator is installed")
     while True:
         k=input("\t <s> to skip, <j> to set jtag programming chain, <cr> to Continue: ")
         print("")
@@ -276,7 +274,10 @@ def AutomaticFullTest():
     #-------------------------------------------------------------------------------
 
     while True:
-        print("Please load Test Firmware and set Clock Source Jumper to position 2/3.")
+        print("Testing Firmware Tests:")
+        print("    * Please load Test Firmware")
+        print("    * Set Clock Source Jumper to position 2/3.")
+        print("    * Connect Tester Board")
         k=input("\t <s> to skip, <j> to set JTAG programming chain, <cr> to Continue: ")
         print("")
 
@@ -288,7 +289,10 @@ def AutomaticFullTest():
             break
         if not k:
             # Delays Chips Pattern Tests
-            print ('\nDelay ASICs Pattern Test:')
+            print       ('Delay ASICs Pattern Test:')
+            logging.info('Delay ASICs Pattern Test:')
+
+            print("")
             while True:
                 k=input("\t<s> to skip, <cr> to continue test: ")
                 print("")
@@ -303,10 +307,9 @@ def AutomaticFullTest():
             # Thresholds Linearity Test
 
             # Tester Board Test
-            print ('\nTester Board Delay ASICs Delay Verification Test:')
+            print ('Tester Board Delay ASICs Delay Verification Test:')
             while True:
                 k=input("\t<s> to skip, <cr> to continue test: ")
-                print("")
                 if k=="s":
                     skipped += 1
                     logging.info("SKIPPED: Delay ASICs Delay Verification Test")
@@ -319,7 +322,6 @@ def AutomaticFullTest():
             print("\nTest Pulse Semi-Automatic Self Test: ")
             while True:
                 k=input("\t<s> to skip, <cr> to continue test: ")
-                print("")
                 if k=="s":
                     skipped += 1
                     logging.info("SKIPPED: Test Pulse Semi-Automatic Self-Test")
@@ -351,8 +353,11 @@ def AutomaticFullTest():
     #-------------------------------------------------------------------------------
 
     while True:
-        k=input("Please load Normal Firmware. \n\t <s> to skip, <j> to set JTAG programming chain, <cr> to Continue: ")
-        print("")
+        print("Normal Firmware Tests:")
+        print("    * Please load Normal Firmware")
+        print("    * Disconnect Tester Board")
+        print("    * Ensure that Clock source jumper is set to position 1/2")
+        k=input("\t <s> to skip, <j> to set JTAG programming chain, <cr> to Continue: ")
 
         if k=="j":
             alct.SetChain(alct.VIRTEX_PROGRAM)  # Mezzanine Programming
@@ -376,6 +381,7 @@ def AutomaticFullTest():
     print("        1) Test pulse can correctly turn ON and OFF")
     print("        2) Test pulse amplitude is correct")
     print("    Recommended scope settings: 200 us, 500mV")
+    print("")
 
     slowcontrol.SetTestPulsePower(1)       # Turn on Test Pulse Generator
     slowcontrol.SetTestPulsePowerAmp(208)  # Set amplitude to approximately 1V
@@ -421,7 +427,6 @@ def AutomaticFullTest():
     print("Voltage Reference Check:")
 
     # Manual check of reference voltage
-    print("                                                                ")
     print("    Please verify the precision voltage reference on chips:     ")
     print("        * U2, U3, U4         for ALCT-288                       ")
     print("        * U2, U3, U4         for ALCT-384                       ")
@@ -471,6 +476,32 @@ def AutomaticFullTest():
     #-------------------------------------------------------------------------------
     logging.info("\nFinal configuration: ")
 
+    # Manual check of crystal oscillator
+    print("\nVerify that all Power Indicator LEDs are on, and approx. same brightness")
+    while True:
+        k=input("\t<y> to confirm, <s> to skip: ")
+        if k=="y":
+            logging.info("\t PASS: Power LED Brightness Check")
+            break
+        if k=="s":
+            logging.info("SKIPPED: Power LED Brightness Check")
+            skipped +=1
+            break
+
+
+    # Manual check of crystal oscillator
+    print("\nVerify that the crystal oscillator is removed")
+    while True:
+        k=input("\t<y> to confirm, <s> to skip: ")
+        if k=="y":
+            logging.info("\t PASS: User confirmed that crystal oscillator is removed")
+            break
+        if k=="s":
+            logging.info("SKIPPED: Crystal oscillator removal")
+            skipped +=1
+            break
+
+
     # Manual check of clock select jumper
     print("")
     print("Please verify the position of clock select jumpers is set to EXTERNAL!")
@@ -484,18 +515,6 @@ def AutomaticFullTest():
             break
         if k=="s":
             logging.info("SKIPPED: Clock select shunt check")
-            skipped +=1
-            break
-
-    # Manual check of crystal oscillator
-    print("\nVerify that the crystal oscillator is removed")
-    while True:
-        k=input("\t<y> to confirm, <s> to skip: ")
-        if k=="y":
-            logging.info("\t PASS: User confirmed that crystal oscillator is removed")
-            break
-        if k=="s":
-            logging.info("SKIPPED: Crystal oscillator removal")
             skipped +=1
             break
 
@@ -546,9 +565,6 @@ def StringALCTType(type):
     elif type == 1: s = "ALCT-384"
     elif type == 2: s = "ALCT-672"
     return(s)
-
-#if os.name == 'nt':
-#    atexit.register(ctypes.windll.inpout32.Closedriver)
 
 if __name__ == "__main__":
     main()

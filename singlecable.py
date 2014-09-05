@@ -144,7 +144,7 @@ def SingleCableTest(test,channel,npasses=10):
             if (readdata != senddata):
                 errcnt += 1
                 if bit==0: print ('\t Pass %2i' % (npass+1))
-                print("\t\t ====> Fail: ", end="")
+                print("\t    Error: ", end="")
                 print('Read=0x%04X Expect=0x%04X' % (readdata,senddata))
                 if StopOnErrorSingleCable:
                     return(0)
@@ -156,18 +156,18 @@ def SingleCableTest(test,channel,npasses=10):
 
 
     if errcnt==0:
-        print('\t ====> Passed with 0 Errors')
+        print('\t ====> PASSED: with 0 Errors')
     else:
-        print('\t ====> Failed %i Errors' % errcnt)
+        print('\t ====> FAILED: with %i Errors' % errcnt)
     return (errcnt)
 
 def SingleCableSelfTest(alcttype):
-    print("\nStarting Single Cable Automatic Test\n")
+    print("Starting Single Cable Automatic Test")
     errcnt = 0
 
     logging.info("\nStarting Single Cable Self Test:")
     for (channel) in range (alct.alct[alcttype].chips):
-        k = input ("\nPlease connect ALCT connector J5 to AFEB connector %i. \n\t <s> to skip, <cr> to continue: " % channel)
+        k = input ("    Please connect ALCT connector J5 to AFEB connector %i. \n\t <s> to skip, <cr> to continue: " % channel)
         print("")
 
         # skip connector
@@ -182,24 +182,26 @@ def SingleCableSelfTest(alcttype):
                 fail = SingleCableTest(i,channel,10)
                 if fail:
                     errcnt += fail
-                    logging.info("\t\t FAIL: %-12s with %3i Errors" % (TestNames[i], fail))
+                    logging.info("\t\t FAILED: %-12s with %3i Errors" % (TestNames[i], fail))
                     beeper.failed()
                 else:
-                    logging.info("\t\t PASS: %-12s " % TestNames[i])
+                    logging.info("\t\t PASSED: %-12s " % TestNames[i])
                     beeper.passed()
 
+        print("")
 
     # Tests Summary
 
-    print        ("Single Cable Self-Test Summary:")
+    print("")
+    print        ("\tSingle Cable Self-Test Summary:")
     logging.info ("\tSingle Cable Self-Test Summary:")
 
     if errcnt==0:
-        print        ('\n\t ====> Passed')
-        logging.info ('\t\t ====> PASS: Single Cable Test')
+        print        ('\t\t ====> PASS: Single Cable Test\n')
+        logging.info ('\t\t ====> PASS: Single Cable Test\n')
     else:
-        print        ('\n\t ====> Failed Single Cable Test with %i Total Errors' % errcnt)
-        logging.info ('\t\t ====> FAIL: Single Cable Test with %i Total Errors' % errcnt)
+        print        ('\t\t ====> FAIL: Single Cable Test with %i Total Errors\n' % errcnt)
+        logging.info ('\t\t ====> FAIL: Single Cable Test with %i Total Errors\n' % errcnt)
 
     return (errcnt)
 

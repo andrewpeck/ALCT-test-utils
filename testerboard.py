@@ -483,12 +483,10 @@ def ChipDelayScan(chip, alcttype):
     DeltaBeginTime      = [0]*16
     ErrorDeltaDelay     = 0
 
-    print("==============================================================================")
-    print('     Running Chip Delay Scan on Chip %i: '% chip)
-    print('        * Ensure Clock Select Switch is Set to Position 2/3')
-    print('        * Load test firmware')
-    print('        * Connect special tester board to ALCT')
-    print("==============================================================================\n")
+    print('Running Chip Delay Scan on Chip %i: '% chip)
+    print('    * Ensure Clock Select Switch is Set to Position 2/3')
+    print('    * Load test firmware')
+    print('    * Connect special tester board to ALCT')
     while True: 
         k = input("\n\t<cr> to continue when ready.")
         if not k: break
@@ -641,16 +639,14 @@ def TestboardDelaysCheck(alcttype):
     Delay_Time          = [[0 for i in range(16)] for j in range(NUM_AFEB)]
 
     print    ("")
-    print    ("================================================================================")
     print    ('Running Chip Delay Scan on Full Board')
-    print    ('\t* Ensure Clock Select Switch is Set to Position 2/3')
-    print    ('\t* Load test firmware')
-    print    ('\t* Connect delays test board to ALCT')
-    print    ("================================================================================")
+    print    ('    * Ensure Clock Select Switch is Set to Position 2/3')
+    print    ('    * Load test firmware')
+    print    ('    * Connect delays test board to ALCT')
     k = input("        <cr> to continue when ready.")
 
-    print('\nRunning Delays Test on ALCT Board')
-    logging.info ("\n Delay ASICs Delay Test:")
+    print        ("\nDelay ASICs Delay Test:")
+    logging.info ("\nDelay ASICs Delay Test:")
 
     for chip in range(NUM_AFEB):
         count=0
@@ -688,8 +684,8 @@ def TestboardDelaysCheck(alcttype):
         # 0x20 = 100000 => Delta Delay Time Too Large
         #------------------------------------------------------------------------------
         if (ErrMeasDly & 0x1): 
-            print       ('\t FAIL: Cannot find StartDly_0 on Chip #%2i' % chip)
-            logging.info('\t FAIL: Cannot find StartDly_0 on Chip #%2i' % chip)
+            print       ('\t FAILED: Cannot find StartDly_0 on Chip #%2i' % chip)
+            logging.info('\t FAILED: Cannot find StartDly_0 on Chip #%2i' % chip)
             ErrDelayTest+=1
             if (RegMaskDone[chip]==0):
                 print       ('\t All Pins Failed')
@@ -707,33 +703,33 @@ def TestboardDelaysCheck(alcttype):
                 print(PinErrors)
         #------------------------------------------------------------------------------
         if (ErrMeasDly & 0x2):
-            print        ('\t FAIL: Cannot find StartDly_15 on Chip: %2i' % chip)
-            logging.info ('\t FAIL: Cannot find StartDly_15 on Chip: %2i' % chip)
+            print        ('\t FAILED: Cannot find StartDly_15 on Chip: %2i' % chip)
+            logging.info ('\t FAILED: Cannot find StartDly_15 on Chip: %2i' % chip)
             ErrDelayTest+=1
         #------------------------------------------------------------------------------
         if (ErrMeasDly & 0x4): 
             for l in range(16):
                 if (PulseWidth[l] < 30):
-                    print        ('\t FAIL: Chip=%2i Pin=%2i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
-                    logging.info ('\t FAIL: Chip=%2i Pin=%2i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
+                    print        ('\t FAILED: Chip=%2i Pin=%2i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
+                    logging.info ('\t FAILED: Chip=%2i Pin=%2i Width of Pulse=%.02f (less than 30 ns): ' % (chip, l, PulseWidth[l]))
                     ErrDelayTest+=1
         #------------------------------------------------------------------------------
         if (ErrMeasDly & 0x8): 
             for l in range(16):
                 if (PulseWidth[l] > 45):
-                    print        ('\t FAIL: Chip=%2i Pin=%2i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
-                    logging.info ('\t FAIL: Chip=%2i Pin=%2i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
+                    print        ('\t FAILED: Chip=%2i Pin=%2i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
+                    logging.info ('\t FAILED: Chip=%2i Pin=%2i Width of Pulse=%.02f (greater than 45 ns): ' % (chip, l, PulseWidth[l]))
                     ErrDelayTest+=1
         #------------------------------------------------------------------------------
         if (ErrMeasDly & 0x10): 
-            print        ('\t FAIL: Chip=%i DeltaBeginTime=%.02fns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
-            logging.info ('\t FAIL: Chip=%i DeltaBeginTime=%.02fns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
+            print        ('\t FAILED: Chip=%i DeltaBeginTime=%.02fns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
+            logging.info ('\t FAILED: Chip=%i DeltaBeginTime=%.02fns (max=%.02fns)' % (chip, DeltaBegin_Max[chip], MaxDeltaBegin))
             ErrDelayTest+=1
         #------------------------------------------------------------------------------
         if (ErrMeasDly & 0x20): 
                 if i==5:
-                    print        ('\t FAIL: Chip=%2i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
-                    logging.info ('\t FAIL: Chip=%2i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
+                    print        ('\t FAILED: Chip=%2i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
+                    logging.info ('\t FAILED: Chip=%2i DeltaDelay=%.02fns (max=%.02fns)' % (chip, DeltaDelay_Max[chip], MaxDeltaDelay))
                     ErrDelayTest+=1
                 else: 
                     print        ('\t WTF!?')
@@ -742,12 +738,12 @@ def TestboardDelaysCheck(alcttype):
         if (AverageDelay_Time[chip] < MinDelay) or (AverageDelay_Time[chip] > MaxDelay) :
             ErrorDeltaDelay[chip] = AverageDelay_Time[chip]
             if (AverageDelay_Time[chip] < MinDelay):
-                print        ('\t FAIL: Chip %2i Average Delay=%.2fns is less than %.02f' % (chip,AverageDelay_Time[chip],MinDelay))
-                logging.info ('\t FAIL: Chip %2i Average Delay=%.2fns is less than %.02f' % (chip,AverageDelay_Time[chip],MinDelay))
+                print        ('\t FAILED: Chip %2i Average Delay=%.2fns is less than %.02f' % (chip,AverageDelay_Time[chip],MinDelay))
+                logging.info ('\t FAILED: Chip %2i Average Delay=%.2fns is less than %.02f' % (chip,AverageDelay_Time[chip],MinDelay))
                 ErrDelayTest+=1
             elif (AverageDelay_Time[chip] > MaxDelay):
-                print        ('\t FAIL: Chip %2i Average Delay=%.2fns is more than %.02f' % (chip,AverageDelay_Time[chip],MaxDelay))
-                logging.info ('\t FAIL: Chip %2i Average Delay=%.2fns is more than %.02f' % (chip,AverageDelay_Time[chip],MaxDelay))
+                print        ('\t FAILED: Chip %2i Average Delay=%.2fns is more than %.02f' % (chip,AverageDelay_Time[chip],MaxDelay))
+                logging.info ('\t FAILED: Chip %2i Average Delay=%.2fns is more than %.02f' % (chip,AverageDelay_Time[chip],MaxDelay))
                 ErrDelayTest+=1
             else: 
                 print        ('\t WTF!?')
@@ -763,7 +759,7 @@ def TestboardDelaysCheck(alcttype):
     return (ErrDelayTest)
 
 #-------------------------------------------------------------------------------
-# procedure TForm1.Button15Click(Sender: TObject);
+# procedure TForm1.Button15Click(Sender: TObject)
 # set
 #-------------------------------------------------------------------------------
 def SetStandby(channel,cbStandby): 
@@ -771,12 +767,12 @@ def SetStandby(channel,cbStandby):
     slowcontrol.SetStandbyForChan(channel,cbStandby)
 
 def ResetTestPulseChannel(channel, cbLoop, cbStandby, alcttype):
-    TouchFIFO(channel);
-    alct.SetChain(alct.SLOW_CTL);
+    TouchFIFO(channel)
+    alct.SetChain(alct.SLOW_CTL)
 
     # Setting Thresholds to 200
     for j in range (alct.alct[alcttype].chips):
-        slowcontrol.SetThreshold(j, 200);
+        slowcontrol.SetThreshold(j, 200)
 
     slowcontrol.SetTestPulseWireGroupMask (0x7F)
     slowcontrol.SetTestPulseStripLayerMask(0x3F)
@@ -807,7 +803,7 @@ def StandbyLoopTest(alcttype):
 def ChannelLoopTest(cbLoop,cbStandby,alcttype): 
     NUM_AFEB = alct.alct[alcttype].chips
 
-    alct.SetChain(alct.SLOW_CTL);
+    alct.SetChain(alct.SLOW_CTL)
 
     # Set Test Pulse Power On
     slowcontrol.SetTestPulsePower(1)
@@ -838,32 +834,32 @@ def ChannelLoopTest(cbLoop,cbStandby,alcttype):
                 if chip < (NUM_AFEB//2): 
                     group = chip // 3
                 else:
-                    group = (chip-NUM_AFEB//2) // 3;
+                    group = (chip-NUM_AFEB//2) // 3
 
                 write = (~(1 << group)) & 0x7F
                 slowcontrol.SetTestPulseWireGroupMask(write)
                 read = slowcontrol.ReadTestPulseWireGroupMask()
 
                 if (read != write):
-                    print('ERROR: Test Stopped -> Could not set Test Pulse Wire Group Mask')
+                    print('\t ERROR: Could not set Test Pulse Wire Group Mask')
                     #ConfigureTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
                     #break
 
-            #-------------------------------------------------------------------
+            #-Last Pass, Turn off standby---------------------------------------
             if (Pass == 9): 
                 if cbLoop:
-                    slowcontrol.SetStandbyForChan(chip, False);
+                    slowcontrol.SetStandbyForChan(chip, False)
 
             #-------------------------------------------------------------------
             slowcontrol.SetStandbyForChan (chip, False)
             slowcontrol.SetStandbyForChan (chip, True)
             slowcontrol.SetThreshold      (chip, (Pass % 2)*255)
-            TouchFIFO         (chip);
+            TouchFIFO                     (chip)
 
             ResetTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
 
 def TouchFIFO (chip):
-    alct.SetChain(alct.VIRTEX_CONTROL);
+    alct.SetChain(alct.VIRTEX_CONTROL)
 
     # Write to FIFO
     jtag.WriteIR  (0x1A,                                     alct.V_IR)
@@ -905,7 +901,7 @@ def TestPulseSelfCheck(alcttype):
         TestPulseLoopTest(alcttype)
         k=input("\n    Did all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
         if k=="p":
-            logging.info("\t PASSED: User failed board on Test Pulse Loopback Test")
+            logging.info("\t PASSED: User passed board on Test Pulse Loopback Test")
             errs = 0
             break
         elif k=="f":
@@ -943,7 +939,7 @@ def StandbySelfCheck(alcttype):
         TestPulseLoopTest(alcttype)
         k=input("\n    Did all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
         if k=="p":
-            logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
+            logging.info("\t PASSED: User passed board on Test Pulse Loopback Test")
             done = True
             errs = 1
             break
@@ -961,11 +957,14 @@ def StandbySelfCheck(alcttype):
             continue
 
     if done: 
+        print('')
         while True: 
-            k=input("    Make sure to remove Shunt from TP 28/29! <y> to confirm: ")
+            k=input("    Make sure to remove Shunt from TP 28/29! \n\t<y> to confirm: ")
             if k=="y": 
+                print('')
                 return (errs)
             if k=="s": 
+                print('')
                 return (1)
 
 #------------------------------------------------------------------------------

@@ -16,28 +16,30 @@ from common import MutableNamedTuple
 # ------------------------------------------------------------------------------
 
 # Name          Adr      Len   Dir     Description
-IDRead        = 0x00  #  40    read    Virtex ID register
-HCMaskRead    = 0x01  #  384   read    hot mask
-HCMaskWrite   = 0x02  #  384   write   hot mask
-RdTrig        = 0x03  #  5     read    trigger register
-WrTrig        = 0x04  #  5     write   trigger register
-RdCfg         = 0x06  #  69    read    control register
-WrCfg         = 0x07  #  69    write   control register
-Wdly          = 0x0D  #  120   write   delay lines. cs_dly bits in Par
-Rdly          = 0x0E  #  121?  read    delay lines. cs_dly bits in Par
-CollMaskRead  = 0x13  #  224   read    collision pattern mask
-CollMaskWrite = 0x14  #  224   write   collision pattern mask
-ParamRegRead  = 0x15  #  6     read    delay line control register actually
-ParamRegWrite = 0x16  #  6     read    delay line control register actually
-InputEnable   = 0x17  #  0     write?  commands to disable and enable input
-InputDisable  = 0x18  #  0     write?  commands to disable and enable input
-YRwrite       = 0x19  #  31    write   output register (for debugging with UCLA test board)
-OSread        = 0x1A  #  49    read    output storage
-SNread        = 0x1B  #  1     read    one bit of serial number
-SNwrite0      = 0x1C  #  0     write   0 bit into serial number chip
-SNwrite1      = 0x1D  #  0     write   1 bit into serial number chip
-SNreset       = 0x1E  #  0     write   reset serial number chip
-Bypass        = 0x1F  #  1     bypass
+IDRead         = 0x00  #  40    read    Virtex ID register
+HCMaskRead     = 0x01  #  384   read    hot mask
+HCMaskWrite    = 0x02  #  384   write   hot mask
+RdTrig         = 0x03  #  5     read    trigger register
+WrTrig         = 0x04  #  5     write   trigger register
+RdCfg          = 0x06  #  69    read    control register
+WrCfg          = 0x07  #  69    write   control register
+Wdly           = 0x0D  #  120   write   delay lines. cs_dly bits in Par
+Rdly           = 0x0E  #  121?  read    delay lines. cs_dly bits in Par
+CollMaskRead   = 0x13  #  224   read    collision pattern mask
+CollMaskWrite  = 0x14  #  224   write   collision pattern mask
+ParamRegRead   = 0x15  #  6     read    delay line control register actually
+DelayCtrlRead  = 0x15
+ParamRegWrite  = 0x16  #  6     read    delay line control register actually
+DelayCtrlWrite = 0x16
+InputEnable    = 0x17  #  0     write?  commands to disable and enable input
+InputDisable   = 0x18  #  0     write?  commands to disable and enable input
+YRwrite        = 0x19  #  31    write   output register (for debugging with UCLA test board)
+OSread         = 0x1A  #  49    read    output storage
+SNread         = 0x1B  #  1     read    one bit of serial number
+SNwrite0       = 0x1C  #  0     write   0 bit into serial number chip
+SNwrite1       = 0x1D  #  0     write   1 bit into serial number chip
+SNreset        = 0x1E  #  0     write   reset serial number chip
+Bypass         = 0x1F  #  1     bypass
 
 #-------------------------------------------------------------------------------
 # Array of the Sizes of Virtex Register Locations

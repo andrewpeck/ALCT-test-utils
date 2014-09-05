@@ -7,7 +7,7 @@
 
 import os
 if os.name=='nt':
-    BACKEND = "python"
+    BACKEND = "ctypes"
 else:
     BACKEND = "python"
 
