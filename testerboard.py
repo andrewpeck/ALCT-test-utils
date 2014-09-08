@@ -980,12 +980,12 @@ def SubtestMenu(alcttype):
         print("\n===============================================================================")
         print(  " Delay Chips Delay Test (Tester Board) Submenu")
         print(  "===============================================================================\n")
-        print("\t 1 Check Entire Board")
-        print("\t 2 Check Single Chip")
-        print("\t 3 Scan Test Pulse Loopback")
-        print("\t 4 Scan Standby Loopback")
-        print("")
-        print("\t ? Test Information")
+        print("    1 Check Entire Board")
+        print("    2 Check Single Chip")
+        print("    3 Scan Test Pulse Loopback")
+        print("    4 Scan Standby Loopback")
+        print("   ")
+        print("    ? Test Information")
 
         k=input("\nChoose Test or <cr> to return to Main Menu: ")
         if not k: break

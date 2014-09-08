@@ -292,7 +292,6 @@ def AutomaticFullTest():
             print       ('Delay ASICs Pattern Test:')
             logging.info('Delay ASICs Pattern Test:')
 
-            print("")
             while True:
                 k=input("\t<s> to skip, <cr> to continue test: ")
                 print("")
@@ -304,10 +303,8 @@ def AutomaticFullTest():
                     errors += delays.PatternsSelfTest(alcttype)
                     break
 
-            # Thresholds Linearity Test
-
             # Tester Board Test
-            print ('Tester Board Delay ASICs Delay Verification Test:')
+            print ('\nTester Board Delay ASICs Delay Verification Test:')
             while True:
                 k=input("\t<s> to skip, <cr> to continue test: ")
                 if k=="s":
