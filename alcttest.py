@@ -527,13 +527,13 @@ def AutomaticFullTest():
         logging.info ("\t NOTE: %i Tests were Skipped!" % (skipped))
 
     if (errors > 0):
-        print        ("\t ====> FAIL: ALCT #%s with mezzanine #%s failed with %i errors" % (baseboardSN, mezzanineSN, errors))
+        print        ("\t FAIL: ALCT #%s with mezzanine #%s failed with %i errors" % (baseboardSN, mezzanineSN, errors))
         logging.info ("\t FAIL: ALCT #%s with mezzanine #%s failed with %i errors" % (baseboardSN, mezzanineSN, errors))
     elif (errors == 0 and skipped==0):
-        print        ("\t ====> PASS: ALCT #%s with mezzanine #%s passed all tests" % (baseboardSN, mezzanineSN))
+        print        ("\t PASS: ALCT #%s with mezzanine #%s passed all tests" % (baseboardSN, mezzanineSN))
         logging.info ("\t PASS: ALCT #%s with mezzanine #%s passed all tests" % (baseboardSN, mezzanineSN))
     else:
-        print        ("\t ====> FAIL: ALCT #%s with mezzanine #%s passed all tests performed, but tests were skipped." % (baseboardSN, mezzanineSN))
+        print        ("\t FAIL: ALCT #%s with mezzanine #%s passed all tests performed, but tests were skipped." % (baseboardSN, mezzanineSN))
         logging.info ("\t FAIL: ALCT #%s with mezzanine #%s passed all tests performed, but tests were skipped" % (baseboardSN, mezzanineSN))
 
     beeper.playTune(beeper.FINI)
@@ -542,6 +542,7 @@ def AutomaticFullTest():
 
 # Prints and Returns hardware ID codes..
 # FIXME: doesn't read some of them out. Need to understand why.
+# They don't  readout correctly in the old-software either though, however
 def PrintIDCodes():
     #idcodestr  = ("Fast Control Firmware ID: 0x%X\n"     % alct.ReadIDCode (0x0))
     #idcodestr += ("    EEPROM1 ID Code:          0x%X\n" % alct.ReadIDCode (0x1))

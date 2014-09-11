@@ -340,7 +340,7 @@ def VReadEPROMID2():
     return(result)
 
 # Detect Mezzanine Type -- Works with only V600E or V1000E...
-# TODO: update for Spartan ID Codes
+# TODO: update for Spartan ID Codes? Maybe pointless since we don't have test firmware for the Spartan :(
 def DetectMezzanineType():
     SetChain(VIRTEX_PROGRAM)
     # Mezzanine Chip Types

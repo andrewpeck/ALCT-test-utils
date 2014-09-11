@@ -56,6 +56,8 @@ lengthOf = {
 
 ################################################################################
 # Low Level Test Board FIFO Functions
+# These are functions for controlling the Specialty Tester Board, which has a
+# number of built-in, dedicated FIFO Chips.
 ################################################################################
 
 def SetFIFOChannel(ch,startdly):
@@ -65,9 +67,9 @@ def SetFIFOMode(mode):
     alct.WriteRegister(WrParamF, (0x8 | mode) & 0xF, lengthOf[WrParamF])
 
 def SetFIFOReset():
-    alct.WriteRegister(WrParamF,8,          lengthOf[WrParamF])
-    alct.WriteRegister(WrParamF,FIFO_RESET, lengthOf[WrParamF])
-    alct.WriteRegister(WrParamF,8,          lengthOf[WrParamF])
+    alct.WriteRegister(WrParamF, 8,          lengthOf[WrParamF])
+    alct.WriteRegister(WrParamF, FIFO_RESET, lengthOf[WrParamF])
+    alct.WriteRegister(WrParamF, 8,          lengthOf[WrParamF])
 
 def SetFIFOWrite():
     alct.WriteRegister(WrParamF,FIFO_WRITE, lengthOf[WrParamF])
@@ -78,20 +80,24 @@ def SetFIFORead():
 def SetFIFOReadWrite():
     alct.WriteRegister(WrParamF,FIFO_WRITE | FIFO_READ, lengthOf[WrParamF])
 
+# Clock the FIFO Once
 def FIFOClock():
     alct.WriteRegister(WrFIFO,0x1, lengthOf[WrFIFO])
 
 def ReadFIFOCounters():
     return(alct.ReadRegister(RdCntReg,lengthOf[RdCntReg]))
 
+# Set data word to write into Tester Board FIFO
 def SetFIFOValue(val):
     alct.WriteRegister(WrDatF,val, lengthOf[WrDatF])
 
+# Set delay of Tester Board DDD Chip
 def SetTestBoardDelay(delay):
     alct.WriteRegister(WrParamF, FIFO_RESET,                                 lengthOf[WrParamF])
     alct.WriteRegister(WrDlyF,   0xFF & common.FlipByte((255-delay) & 0xFF), lengthOf[WrDlyF])
     alct.WriteRegister(WrParamF, 0x8,                                        lengthOf[WrParamF])
 
+# Set delay of ALCT Delay ASIC
 def SetALCTBoardDelay(ch, delay, alcttype):
     DelayValue   = [0x0] * 6 # 6 delay chips in group
     DelayPattern = [0x0] * 6 # 6 delay chips in group
@@ -136,22 +142,18 @@ def ReadFIFO(numwords, alcttype):
     SetFIFOReadWrite()
     ALCTEnableInput(alcttype)
 
+    # We want to clock the FIFO once for every number of words
     jtag.WriteIR(WrFIFO,alct.V_IR)             # FIFOClock
     for i in range(numwords):
-        jtag.WriteDR(0x1,lengthOf[WrFIFO])     # FIFOClock
+        jtag.WriteDR(0x1,lengthOf[WrFIFO])
 
-    # TODO: 
-    # This really sucks please fix it..
-    # Have a look at http://stackoverflow.com/questions/7983684/how-to-switch-byte-order-of-binary-data
-
-    cntstr=format(ReadFIFOCounters(), '032X')  # Convert int to string
-    cntstr = cntstr[::-1]                      # Reverse String (change endianess)
-
+    # We need to reverse the order of the FIFO data
+    read = format(ReadFIFOCounters(), '032X')  # Convert int to string
+    read = read[::-1]                          # Reverse String (change endianess)
     cntrs = [0]*16 # "array of byte"
     for i in range (16):
-        num = int(cntstr[:2],16)    # We extract the first byte (2 hex characters) and convert them to an integer
-        cntstr = cntstr[2:]         # Remove the extracted bytes from the string for the next pass. 
-        cntrs[15-i] = num           # fill cntrs array
+        cntrs[15-i] = int(read[:2],16)    # We extract the first byte (2 hex characters) and convert them to an integer
+        read = read[2:]                   # Remove the extracted bytes from the string for the next pass. 
 
     return(cntrs)
 
@@ -748,47 +750,159 @@ def TestboardDelaysCheck(alcttype):
 
     return (ErrDelayTest)
 
-#-------------------------------------------------------------------------------
-# procedure TForm1.Button15Click(Sender: TObject)
-# set
-#-------------------------------------------------------------------------------
-def SetStandby(channel,cbStandby): 
-    alct.SetChain(alct.SLOW_CTL)
-    slowcontrol.SetStandbyForChan(channel,cbStandby)
 
+#------------------------------------------------------------------------------
+# Functions for Checking Test Pulses and Standby Modes using the Tester Board
+#------------------------------------------------------------------------------
+
+# Resets Test Pulse Channels to Some Default Value
 def ResetTestPulseChannel(channel, cbLoop, cbStandby, alcttype):
     TouchFIFO(channel)
     alct.SetChain(alct.SLOW_CTL)
 
-    # Setting Thresholds to 200
-    for j in range (alct.alct[alcttype].chips):
+    for j in range (alct.alct[alcttype].chips):      # Set AFEB Thresholds
         slowcontrol.SetThreshold(j, 200)
 
-    slowcontrol.SetTestPulseWireGroupMask (0x7F)
-    slowcontrol.SetTestPulseStripLayerMask(0x3F)
-    slowcontrol.SetStandbyReg(0)
-    slowcontrol.SetTestPulsePower(0)
-    slowcontrol.SetTestPulsePowerAmp(255)
-    slowcontrol.SetTestPulsePower(1)
+    slowcontrol.SetTestPulseWireGroupMask (0x7F)     # Turn on All AFEB Pulses
+    slowcontrol.SetTestPulseStripLayerMask(0x3F)     # Turn on All Strip Pulses
+    slowcontrol.SetStandbyReg(0)                     # Shut Down All AFEBs
+    slowcontrol.SetTestPulsePower(0)                 # Turn Off Test Pulses
+    slowcontrol.SetTestPulsePowerAmp(255)            # Turn Amplitude to the Max
+    slowcontrol.SetTestPulsePower(1)                 # Turn On Test Pulses
 
+# I'm not sure what this is doing :(
+def TouchFIFO (chip):
+    alct.SetChain(alct.VIRTEX_CONTROL)
+
+    jtag.WriteIR  (0x1A, alct.V_IR)                        
+    jtag.WriteDR ((1 & 0x1FFF) | ((chip & 0x3F) << 13), 19)
+
+    jtag.WriteIR  (0x18, alct.V_IR)     
+    jtag.WriteDR  (0x5555, 16)
+
+    jtag.WriteIR  (0x18, alct.V_IR)
+    jtag.WriteDR  (0xAAAA, 16)
+
+    jtag.WriteIR  (0x1A, alct.V_IR)
+    jtag.WriteDR ((0x1 & 0x1FFF) | (( chip & 0x3F) << 13), 19)
+
+    jtag.WriteIR  (0x19, alct.V_IR)
+    jtag.ReadDR   (0x00, 16)
+
+    jtag.WriteIR  (0x19, alct.V_IR)
+    jtag.ReadDR   (0x00, 16)
+
+# Test for Checking AFEB Wire Group Test Pulses
 def TestPulseLoopTest(alcttype): 
-    slowcontrol.SetTestPulsePower(1)       # Turn on Test Pulse Generator
-    slowcontrol.SetTestPulsePowerAmp(208)  # Set amplitude to approximately 1V
     cbLoop    = True
     cbStandby = False
+
+    slowcontrol.SetTestPulsePower(1)       # Turn on Test Pulse Generator
+    slowcontrol.SetTestPulsePowerAmp(255)  # Set Amplitude to Max
+
     ChannelLoopTest(cbLoop,cbStandby,alcttype)
 
-def StandbyLoopTest(alcttype): 
-    #------------------------------------------------------------------------
-    while True: 
-        print ("Make sure to connect a shunt across TP1_28 and TP1_29!!!")
-        k = input("\t<cr> to continue")
-        if not k: 
-            break
+# Loop through AFEB channels, outputting their test pulses to the tester-board LEMO Output
+def TestPulseSelfCheck(alcttype):
+    Errs = 0
+    alct.SetChain(alct.SLOW_CTL)
 
+    logging.info("\nTest Pulse Semi-Automatic Self Test")
+
+    print("")
+    print("    * Connect LEMO output J3 (near power connector) to oscilloscope")
+    print("      and configure scope to trigger from it ")
+    print("    * Connect LEMO output on the bottom of large testing board to")
+    print("      another channel of the oscilloscope. ")
+    print("")
+    print("    * We want to verify that, as the LEMO output from the tester board")
+    print("      switches between inputs, a pulse is generated at each input")
+    print("      and is of consistent amplitude")
+    while True: 
+        k = input("\n       <cr> to continue when ready.")
+        if not k: break
+    print("")
+
+    #--------------------------------------------------------------------------
+    TestPulseLoopTest(alcttype)
+    while (True): 
+        k=input("\n    Did all channels pass the test? \n\t<p> to pass, <f> to fail, <r> to repeat the scan: ")
+        if k=="p":
+            logging.info("        PASSED: User passed board on Test Pulse Loopback Test")
+            errs = 0
+            break
+        elif k=="f":
+            print       ("")
+            s=input     ("Please record which channels failed the test: ")
+            logging.info("        FAILED: User failed board on Test Pulse Loopback Test")
+            logging.info("                Failure indicated on channels %s" % s)
+            errs = 1
+            break
+        elif k=="r":
+            TestPulseLoopTest(alcttype)
+        else: 
+            pass
+
+    return (errs)
+
+# Test for Checking AFEB Standby Modes
+def StandbyLoopTest(alcttype): 
     cbLoop    = True
     cbStandby = True
     ChannelLoopTest(cbLoop,cbStandby,alcttype)
+
+# Check Standby Modes using the specialty tester board. 
+# So long as a jumper is placed on TP28/29, LED D14 will blink on Error. 
+def StandbySelfCheck(alcttype):
+    Errs = 0
+    alct.SetChain(alct.SLOW_CTL)
+
+    logging.info("\nAFEB Standby Semi-Automatic Self Test")
+    print("    * Place a shunt across Test Points 28 and 29. ")
+    print("    * Keep Tester Board attached.")
+    print("")
+    print("    * Verify that as the board is cycling through channels, the ")
+    print("      red LED labeled D14 is not blinking. Blinking indicates that ")
+    print("      the board failed to go into standby mode (that's bad). ")
+    print("")
+    print("Make sure to connect a shunt across TP1_28 and TP1_29!!!")
+
+    while True: 
+        k = input("\n\t <cr> to continue when ready.")
+        if not k: break
+    print("")
+    #--------------------------------------------------------------------------
+    TestPulseLoopTest(alcttype)
+    while (True): 
+        k=input("\n    Did all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
+        if k=="p":
+            logging.info("\t PASSED: User passed board on Test Pulse Loopback Test")
+            done = True
+            errs = 1
+            break
+        elif k=="f":
+            print       ("")
+            s=input     ("    Please record which channels failed the test: ")
+            logging.info("        FAILED: User failed board on Test Pulse Loopback Test")
+            logging.info("                Failure indicated on channels %s" % s)
+            done = True
+            errs = 0
+            break
+        elif k=="r":
+            TestPulseLoopTest(alcttype)
+        else: 
+            pass
+
+    if done: 
+        print('')
+        while True: 
+            k=input("    Make sure to remove Shunt from TP 28/29! \n\t<y> to confirm: ")
+            if k=="y": 
+                print('')
+                return (errs)
+            if k=="s": 
+                print('')
+                return (1)
 
 def ChannelLoopTest(cbLoop,cbStandby,alcttype): 
     NUM_AFEB = alct.alct[alcttype].chips
@@ -802,7 +916,7 @@ def ChannelLoopTest(cbLoop,cbStandby,alcttype):
 
 
     # Chain Loop
-    SetStandby(0,cbStandby)
+    slowcontrol.SetStandbyForChan(0,cbStandby)
 
     for chip in range(NUM_AFEB): 
         for Pass in range (10): 
@@ -847,116 +961,6 @@ def ChannelLoopTest(cbLoop,cbStandby,alcttype):
             TouchFIFO                     (chip)
 
             ResetTestPulseChannel(chip,cbLoop,cbStandby,alcttype)
-
-def TouchFIFO (chip):
-    alct.SetChain(alct.VIRTEX_CONTROL)
-
-    # Write to FIFO
-    jtag.WriteIR  (0x1A,                                     alct.V_IR)
-    jtag.WriteDR ((1 & 0x1FFF) | ((chip & 0x3F) << 13),      19)
-    jtag.WriteIR  (0x18,                                     alct.V_IR)
-    jtag.WriteDR  (0x5555,                                   16  )
-    jtag.WriteIR  (0x18,                                     alct.V_IR)
-    jtag.WriteDR  (0xAAAA,                                   16  )
-
-    # Read from FIFO
-    jtag.WriteIR  (0x1A,                                         alct.V_IR)
-    jtag.WriteDR ((0x1 & 0x1FFF) | (( chip & 0x3F) << 13),       19)
-    jtag.WriteIR  (0x19,                                         alct.V_IR)
-    jtag.ReadDR   (0x00,                                         16)
-    jtag.WriteIR  (0x19,                                         alct.V_IR)
-    jtag.ReadDR   (0x00,                                         16)
-
-def TestPulseSelfCheck(alcttype):
-    Errs = 0
-    alct.SetChain(alct.SLOW_CTL)
-
-    logging.info("\nTest Pulse Semi-Automatic Self Test")
-
-    print("")
-    print("    * Connect LEMO output J3 (near power connector) to oscilloscope")
-    print("      and configure scope to trigger from it ")
-    print("    * Connect LEMO output on the bottom of large testing board to")
-    print("      another channel of the oscilloscope. ")
-    print("")
-    print("    * We want to verify that, as the LEMO output from the tester board")
-    print("      switches between inputs, a pulse is generated at each input")
-    print("      and is of consistent amplitude")
-    while True: 
-        k = input("\n       <cr> to continue when ready.")
-        if not k: break
-    print("")
-
-    #--------------------------------------------------------------------------
-    TestPulseLoopTest(alcttype)
-    while (True): 
-        k=input("\n    Did all channels pass the test? \n\t<p> to pass, <f> to fail, <r> to repeat the scan: ")
-        if k=="p":
-            logging.info("        PASSED: User passed board on Test Pulse Loopback Test")
-            errs = 0
-            break
-        elif k=="f":
-            print       ("")
-            s=input     ("Please record which channels failed the test: ")
-            logging.info("        FAILED: User failed board on Test Pulse Loopback Test")
-            logging.info("                Failure indicated on channels %s" % s)
-            errs = 1
-            break
-        elif k=="r":
-            TestPulseLoopTest(alcttype)
-        else: 
-            pass
-
-    return (errs)
-
-
-def StandbySelfCheck(alcttype):
-    Errs = 0
-    alct.SetChain(alct.SLOW_CTL)
-
-    logging.info("\nAFEB Standby Semi-Automatic Self Test")
-    print("    * Place a shunt across Test Points 28 and 29. ")
-    print("    * Keep Tester Board attached.")
-    print("")
-    print("    * Verify that as the board is cycling through channels, the ")
-    print("      red LED labeled D14 is not blinking. Blinking indicates that ")
-    print("      the board failed to go into standby mode (that's bad). ")
-    while True: 
-        k = input("\n\t <cr> to continue when ready.")
-        if not k: break
-    print("")
-    #--------------------------------------------------------------------------
-    TestPulseLoopTest(alcttype)
-    while (True): 
-        k=input("\n    Did all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
-        if k=="p":
-            logging.info("\t PASSED: User passed board on Test Pulse Loopback Test")
-            done = True
-            errs = 1
-            break
-        elif k=="f":
-            print       ("")
-            s=input     ("    Please record which channels failed the test: ")
-            logging.info("        FAILED: User failed board on Test Pulse Loopback Test")
-            logging.info("                Failure indicated on channels %s" % s)
-            done = True
-            errs = 0
-            break
-        elif k=="r":
-            TestPulseLoopTest(alcttype)
-        else: 
-            pass
-
-    if done: 
-        print('')
-        while True: 
-            k=input("    Make sure to remove Shunt from TP 28/29! \n\t<y> to confirm: ")
-            if k=="y": 
-                print('')
-                return (errs)
-            if k=="s": 
-                print('')
-                return (1)
 
 #------------------------------------------------------------------------------
 # Subtest Menu
@@ -1005,7 +1009,6 @@ def SubtestMenu(alcttype):
             print(SubTestInfo())
 
         k=input("\n<cr> to return to menu: ")
-
 
 def SubTestInfo():
     info = """ 
