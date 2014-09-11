@@ -7,7 +7,6 @@
 #-------------------------------------------------------------------------------
 import jtaglib as jtag
 import common
-from common import MutableNamedTuple
 import alct
 #-------------------------------------------------------------------------------
 import logging
@@ -139,7 +138,7 @@ mapGroupMask = [ 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 0, 0,
 #-------------------------------------------------------------------------------
 # Container for ADC Voltage Measurement
 #-------------------------------------------------------------------------------
-arVoltages = [ MutableNamedTuple() for i in range(4)]
+arVoltages = [ common.MutableNamedTuple() for i in range(4)]
 
 arVoltages[0].ref       = '1.8v'
 arVoltages[0].refval    = 1.8
@@ -164,7 +163,7 @@ arVoltages[3].toler     = 0.2
 #-------------------------------------------------------------------------------
 # Container for ADC Current Measurement
 #-------------------------------------------------------------------------------
-arCurrents = [ MutableNamedTuple() for i in range(4)]
+arCurrents = [ common.MutableNamedTuple() for i in range(4)]
 
 arCurrents[0].ref       = '1.8v'
 arCurrents[0].ref288    = 0.667
@@ -174,11 +173,11 @@ arCurrents[0].coef      = 0.002987
 arCurrents[0].toler     = 0.1
 
 arCurrents[1].ref       = '3.3v'
-arCurrents[1].ref288    = 1.20
-arCurrents[1].ref384    = 1.20 # double check this
-arCurrents[1].ref672    = 1.20 # double check this
+arCurrents[1].ref288    = 1.30
+arCurrents[1].ref384    = 1.30 # double check this
+arCurrents[1].ref672    = 1.30 # double check this
 arCurrents[1].coef      = 0.002987
-arCurrents[1].toler     = 0.2
+arCurrents[1].toler     = 0.25
 
 arCurrents[2].ref       = '5.5v1'
 arCurrents[2].ref288    = 0.15
@@ -197,7 +196,7 @@ arCurrents[3].toler     = 0.10
 #-------------------------------------------------------------------------------
 # Container for ADC Temperature Measurement
 #-------------------------------------------------------------------------------
-arTemperature           = MutableNamedTuple()
+arTemperature           = common.MutableNamedTuple()
 
 arTemperature.ref       = 'On Board Temperature'
 arTemperature.refval    = 25.0
@@ -345,19 +344,16 @@ def ReadThreshold(ch):
 
     return(result)
 
-def ReadAllThresholds(alcttype):
-    NUM_AFEB = alct.alct[alcttype].chips
-    print("\n%s> Read All Thresholds" % common.Now())
-    for j in range (NUM_AFEB):
-        thresh = ReadThreshold(j)
-        print("\tAFEB #%02i:  Threshold=%.3fV (ADC=0x%03X)" % (j, (ADC_REF/1023)*thresh, thresh))
+#def ReadAllThresholds(alcttype):
+#    NUM_AFEB = alct.alct[alcttype].chips
+#    for j in range (NUM_AFEB):
+#        thresh = ReadThreshold(j)
+#        print("\tAFEB #%02i:  Threshold=%.3fV (ADC=0x%03X)" % (j, (ADC_REF/1023)*thresh, thresh))
 
 def WriteAllThresholds(thresh,alcttype): 
     NUM_AFEB = alct.alct[alcttype].chips
-    print("\n%s> Write All Thresholds to %i" % (common.Now(), thresh))
     for i in range(NUM_AFEB):
         SetThreshold(i, thresh);
-    print("\tAll thresholds set to %i" % thresh)
 
 #------------------------------------------------------------------------------
 # Read ALCT board 12 bit voltage monitoring
@@ -423,32 +419,36 @@ def ReadTemperature():
 # Only the modulo of the depth will be checked
 # e.g. depth=1 checks all thresholds
 #      depth=17 will check 0,17,34,...etc
-def CheckThresholds(first, last, depth=1):
-    print("Checking AFEB Thresholds")
+def CheckThresholds(first, last, depth=17):
+    print("\nChecking AFEB Thresholds")
     ErrMatrix = [0]*(42)
+
+    WriteAllThresholds(0,2)
 
     Errs=0
     if (first==last): last+=1
     for afeb in range(first, last):
         afebErrs = 0
-        print("    Testing AFEB #%2i" % afeb)
-        for thresh in range(256):
+        common.Printer("        Testing AFEB #%2i" % afeb)
+        for thresh in range(1,256):
             if thresh%depth == 0:
                 write=thresh
                 SetThreshold(afeb,write)
                 read = ReadThreshold(afeb)/4.0
                 if abs(write - read) > ThreshToler:
-                    print("\tERROR: Write=%3i Read=%3.0f" % (write,read) )
+                    print("\t    ERROR: Write=%3i Read=%3.0f" % (write,read) )
                     afebErrs +=1
         Errs+=afebErrs
         ErrMatrix[afeb]=afebErrs
 
 
     if Errs==0:
+        print        ('')
         print        ('\tPASSED: Thresholds Linearity Test')
         logging.info ('\tPASSED: Thresholds Linearity Test')
         return(0)
     else:
+        print        ('')
         print        ('\tFAILED: Thresholds Test with %i Total Errors' % Errs)
         logging.info ('\tFAILED: Thresholds Test with %i Total Errors' % Errs)
 
@@ -461,7 +461,7 @@ def CheckThresholds(first, last, depth=1):
 
 # Checks ALCT-AFEB standby register
 def CheckStandbyRegister():
-    print("Checking Standby Register")
+    print("\nChecking Standby Register")
     Errs = 0
     for i in range(7):
         sendval = 0x30 | (i & 0x0f)
@@ -472,8 +472,8 @@ def CheckStandbyRegister():
             print('\tERROR: Standby Register for Wire Group #%i send=0x%02X read=0x%02X' % ((i+1),sendval,readval))
 
     if Errs==0:
-        print       ('\tPASSED: Standby Register Test' % Errs)
-        logging.info('\tPASSED: Standby Register Test' % Errs)
+        print       ('\tPASSED: Standby Register Test')
+        logging.info('\tPASSED: Standby Register Test')
         return(0)
     else:
         print       ('\tFAILED: Standby Register Test with %i Errors' % Errs)
@@ -482,7 +482,7 @@ def CheckStandbyRegister():
 
 # Checks Test Pulse Down register
 def CheckTestPulsePowerDown():
-    print('Checking Test Pulse Power Down')
+    print('\nChecking Test Pulse Power Down')
     Errs = 0
     sendval = 0
     SetTestPulsePower(sendval)
@@ -492,8 +492,8 @@ def CheckTestPulsePowerDown():
         Errs+=1
 
     if Errs==0:
-        print       ('\tPASSED: Test Pulse Power Down Test' % Errs)
-        logging.info('\tPASSED: Test Pulse Power Down Test' % Errs)
+        print       ('\tPASSED: Test Pulse Power Down Test')
+        logging.info('\tPASSED: Test Pulse Power Down Test')
     else:
         print       ('\tFAILED: Test Pulse Power Down Test with %i errors' % Errs)
         logging.info('\tFAILED: Test Pulse Power Down Test with %i errors' % Errs)
@@ -502,7 +502,7 @@ def CheckTestPulsePowerDown():
 
 # Checks Test Pulse Up register
 def CheckTestPulsePowerUp():
-    print('Checking Test Pulse Power Up')
+    print('\nChecking Test Pulse Power Up')
     Errs = 0
     sendval = 1
     SetTestPulsePower(sendval)
@@ -521,7 +521,7 @@ def CheckTestPulsePowerUp():
         return(Errs)
 
 def CheckTestPulseWireGroupMask():
-    print('Checking Test Pulse Wire Group Mask')
+    print('\nChecking Test Pulse Wire Group Mask')
     Errs = 0
     for sendval in range (0x7F+1):
         SetTestPulseWireGroupMask(sendval)
@@ -539,7 +539,7 @@ def CheckTestPulseWireGroupMask():
         return(Errs)
 
 def CheckTestPulseStripLayerMask():
-    print('Checking Test Pulse Strip Layer Mask')
+    print('\nChecking Test Pulse Strip Layer Mask')
     Errs = 0
     for sendval in range(0x3F+1):
         SetTestPulseWireGroupMask(sendval)
@@ -558,7 +558,7 @@ def CheckTestPulseStripLayerMask():
 
 # Automatically checks all voltages for a given alct type
 def CheckVoltages(alcttype):
-    print('Checking Voltages')
+    print('\nChecking Voltages')
     Errs=0
     for i in range(alct.alct[alcttype].pwrchans):
         readval = ReadVoltageADC(i)
@@ -575,8 +575,8 @@ def CheckVoltages(alcttype):
         print("\t%s \tread=%.03f expect=%.03f +- %0.03f" % (arVoltages[i].ref, voltage, ref, toler))
 
     if Errs==0:
-        print       ('\tPASSED: Voltage Test' % Errs)
-        logging.info('\tPASSED: Voltage Test' % Errs)
+        print       ('\tPASSED: Voltage Test')
+        logging.info('\tPASSED: Voltage Test')
         return(0)
     else:
         print       ('\tFAILED: Voltage Test with %i errors' % Errs)
@@ -585,7 +585,7 @@ def CheckVoltages(alcttype):
 
 # Automatically checks all currents for a given alct type
 def CheckCurrents(alcttype):
-    print('Checking Currents')
+    print('\nChecking Currents')
     Errs=0
     for i in range(alct.alct[alcttype].pwrchans):
         readval = ReadCurrentADC(i)
@@ -618,16 +618,13 @@ def CheckCurrents(alcttype):
 
 # Checks temperature against reference (should be close to ambient)
 def CheckTemperature():
-    print('Checking Temperature')
+    print('\nChecking Temperature')
     Errs=0
     readval = ReadTemperatureADC()
     temp = (readval * arTemperature.coef)-50
     if not (abs(temp-arTemperature.refval) < arTemperature.toler):
         Errs+=1
-        print("\tFail ", end='')
-    else:
-        print("\tPass ", end='')
-    print("Temperature read=%.03f expect=%.03f +- %0.03f" % (temp, arTemperature.refval, arTemperature.toler))
+    print("\tTemperature read=%.03fC expect=%.03fC +- %0.03fC" % (temp, arTemperature.refval, arTemperature.toler))
 
     if Errs==0:
         print       ('\tPASSED: Temperature Check')
@@ -684,7 +681,7 @@ def SelfTest(alcttype):
     SetStandbyReg(0x0) #Turn Off All AFEBs
 
     if Errs>0:
-        print       ('\n\t====> FAILED: Slow Control Self Test Failed with %i Errors' % Errs)
+        print       ('\nFAILED: Slow Control Self Test Failed with %i Errors' % Errs)
         logging.info('\nFAILED: Slow Control Self Test Failed with %i Errors' % Errs)
     else:
         print       ('\nPASSED: Slow Control Self Test Passed Without Errors')
