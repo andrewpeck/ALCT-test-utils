@@ -28,8 +28,11 @@ import logging
 alcttype = 1
 
 def main():
+    if (alct.DetectMezzanineType()==alct.VIRTEX1000):
+        global alcttype
+        alcttype = alct.ALCT672
+
     MainMenu()
-    time.sleep(0.1)
 
 def MainMenu():
     while True:
@@ -130,11 +133,11 @@ def LoadMezzanineFirmware():
         print("     a. ALCT-288: SW3 to position 2/3")
         print("     b. ALCT-384: SW1 to position 2/3")
         print("     c. ALCT-672: SW2 to position 2/3")
-        k=input("\t <y> to continue")
+        k=input("\t <y> to continue: ")
         if k=="y": break
     while True:
         print("2. Power cycle the ALCT board")
-        k=input("\t <y> to continue")
+        k=input("\t <y> to continue: ")
         if k=="y": break
     while True:
         print("3. Power cycle the ALCT board")
@@ -150,11 +153,11 @@ def LoadMezzanineFirmware():
         print("        in the programming properties")
         print("5. Press 'Program Device'")
         alct.SetChain(alct.VIRTEX_PROGRAM)  # Mezzanine Programming
-        k=input("\t <y> to continue")
+        k=input("\t <y> to continue: ")
         if k=="y": break
     while True:
         print("6. Restore clock to position 1/2")
-        k=input("\t <y> to continue")
+        k=input("\t <y> to continue: ")
         if k=="y": break
     while True:
         print("Programming Finished")
@@ -164,37 +167,37 @@ def LoadMezzanineFirmware():
 
 def LoadSlowControlFirmware():
     while True:
-        print("1. Disable the built-in clock: (switch located just left of top of mezzanine card).")
-        print("     a. ALCT-288: SW3 to position 2/3")
-        print("     b. ALCT-384: SW1 to position 2/3")
-        print("     c. ALCT-672: SW2 to position 2/3")
-        k=input("\t <y> to continue")
+        print  ("1. Disable the built-in clock: (switch located just left of top of mezzanine card).")
+        print  ("     a. ALCT-288: SW3 to position 2/3")
+        print  ("     b. ALCT-384: SW1 to position 2/3")
+        print  ("     c. ALCT-672: SW2 to position 2/3")
+        k=input("        <y> to continue: ")
         if k=="y": break
     while True:
-        print("2. Power cycle the ALCT board")
-        k=input("\t <y> to continue")
+        print  ("2. Power cycle the ALCT board")
+        k=input("        <y> to continue: ")
         if k=="y": break
     while True:
-        print("3. Open iMPACT software")
-        print("     a. Under iMPACT Project, hit 'Cancel'")
-        print("     b. In top left window, double-click Boundary Scan")
-        print("     c. Initialize Chain Under File/Initialize Chain or pressing [Ctrl + I]")
-        print("     d. You should see 2 devices show up ")
-        print("     e. Bypass the first device (FPGA)")
-        print("4. Assign firmware to the EEPROM(s):")
-        print("     a. Make sure to select 'Parallel Mode'  and 'Load FPGA'")
-        print("        in the programming properties")
-        print("5. Press 'Program Device'")
         alct.SetChain(alct.SLOWCTL_PROGRAM)  # Mezzanine Programming
-        k=input("\t <y> to continue")
+        print  ("3. Open iMPACT software")
+        print  ("     a. Under iMPACT Project, hit 'Cancel'")
+        print  ("     b. In top left window, double-click Boundary Scan")
+        print  ("     c. Initialize Chain Under File/Initialize Chain or pressing [Ctrl + I]")
+        print  ("     d. You should see 2 devices show up ")
+        print  ("     e. Bypass the first device (FPGA)")
+        print  ("4. Assign firmware to the EEPROM(s):")
+        print  ("     a. Make sure to select 'Parallel Mode'  and 'Load FPGA'")
+        print  ("        in the programming properties")
+        print  ("5. Press 'Program Device'")
+        k=input("        <y> to continue: ")
         if k=="y": break
     while True:
-        print("6. Restore clock to position 1/2")
-        k=input("\t <y> to continue")
+        print  ("6. Restore clock to position 1/2")
+        k=input("        <y> to continue: ")
         if k=="y": break
     while True:
-        print("Programming Finished")
-        k=input("\t <cr> to continue")
+        print  ("Programming Finished")
+        k=input("        <cr> to continue")
         if not k: break
 
 def AutomaticFullTest():
@@ -202,9 +205,9 @@ def AutomaticFullTest():
 
     # Get Baseboard + Mezzanine Serial Numbers for Logging Purposes
     while True:
-        baseboardSN = input("\n ALCT Baseboard Serial Number: ")
+        baseboardSN = int(input("\n ALCT Baseboard Serial Number: "),10)
         if baseboardSN:
-            mezzanineSN = input(" ALCT Mezzanine Serial Number: ")
+            mezzanineSN = int(input(" ALCT Mezzanine Serial Number: "),10)
             if mezzanineSN:
                 break
         else:
@@ -216,7 +219,7 @@ def AutomaticFullTest():
     # Create Log if baseboard and mezzanine have S/N specified
     # Otherwise just log to Null
     if (baseboardSN and mezzanineSN):
-        logFileName = time.strftime("%Y%m%d-%H%M%S") + "_alct" + baseboardSN + "_mezz" + mezzanineSN + ".txt"
+        logFileName = str.format("%s_alct%03i_mezz%04i_.txt" % (time.strftime("%Y%m%d-%H%M%S"), baseboardSN, mezzanineSN))
         logFileDir = os.path.join(os.path.dirname(__file__),"testlogs/")
         if not os.path.exists(logFileDir):
             os.makedirs(logFileDir)
@@ -285,7 +288,7 @@ def AutomaticFullTest():
             alct.SetChain(alct.VIRTEX_PROGRAM)  # Mezzanine Programming
         if k=="s":
             skipped += 1
-            logging.info("SKIPPED: Test Firmware Tests")
+            logging.info("\nSKIPPED: Test Firmware Tests")
             break
         if not k:
             # Delays Chips Pattern Tests
@@ -297,7 +300,7 @@ def AutomaticFullTest():
                 print("")
                 if k=="s":
                     skipped += 1
-                    logging.info("SKIPPED: Delay ASICs Pattern Injection Test")
+                    logging.info("\nSKIPPED: Delay ASICs Pattern Injection Test")
                     break
                 if not k:
                     errors += delays.PatternsSelfTest(alcttype)
@@ -309,7 +312,7 @@ def AutomaticFullTest():
                 k=input("\t<s> to skip, <cr> to continue test: ")
                 if k=="s":
                     skipped += 1
-                    logging.info("SKIPPED: Delay ASICs Delay Verification Test")
+                    logging.info("\nSKIPPED: Delay ASICs Delay Verification Test")
                     break
                 if not k:
                     errors += testerboard.TestboardDelaysCheck(alcttype)
@@ -321,7 +324,7 @@ def AutomaticFullTest():
                 k=input("\t<s> to skip, <cr> to continue test: ")
                 if k=="s":
                     skipped += 1
-                    logging.info("SKIPPED: Test Pulse Semi-Automatic Self-Test")
+                    logging.info("\nSKIPPED: Test Pulse Semi-Automatic Self-Test")
                     break
                 if not k:
                     errors += testerboard.TestPulseSelfCheck(alcttype)
@@ -334,7 +337,7 @@ def AutomaticFullTest():
                 print("")
                 if k=="s":
                     skipped += 1
-                    logging.info("SKIPPED: Standby Mode Semi-Automatic Self-Test")
+                    logging.info("\nSKIPPED: Standby Mode Semi-Automatic Self-Test")
                     break
                 if not k:
                     errors += testerboard.StandbySelfCheck(alcttype)
@@ -350,17 +353,17 @@ def AutomaticFullTest():
     #-------------------------------------------------------------------------------
 
     while True:
-        print("Normal Firmware Tests:")
-        print("    * Please load Normal Firmware")
-        print("    * Disconnect Tester Board")
-        print("    * Ensure that Clock source jumper is set to position 1/2")
-        k=input("\t <s> to skip, <j> to set JTAG programming chain, <cr> to Continue: ")
+        print  ("Normal Firmware Tests:")
+        print  ("    * Please load Normal Firmware")
+        print  ("    * Disconnect Tester Board")
+        print  ("    * Ensure that Clock source jumper is set to position 1/2")
+        k=input("         <s> to skip, <j> to set JTAG programming chain, <cr> to Continue: ")
 
         if k=="j":
             alct.SetChain(alct.VIRTEX_PROGRAM)  # Mezzanine Programming
         if k=="s":
             skipped += 1
-            logging.info("SKIPPED: Slow Control Self Test")
+            logging.info("\nSKIPPED: Slow Control Self Test")
             break
         if not k:
             errors += slowcontrol.SelfTest(alcttype)
@@ -478,10 +481,10 @@ def AutomaticFullTest():
     while True:
         k=input("\t<y> to confirm, <s> to skip: ")
         if k=="y":
-            logging.info("\t PASS: Power LED Brightness Check")
+            logging.info("\tPASS: Power LED Brightness Check")
             break
         if k=="s":
-            logging.info("SKIPPED: Power LED Brightness Check")
+            logging.info("\tSKIPPED: Power LED Brightness Check")
             skipped +=1
             break
 
@@ -491,10 +494,10 @@ def AutomaticFullTest():
     while True:
         k=input("\t<y> to confirm, <s> to skip: ")
         if k=="y":
-            logging.info("\t PASS: User confirmed that crystal oscillator is removed")
+            logging.info("\tPASS: User confirmed that crystal oscillator is removed")
             break
         if k=="s":
-            logging.info("SKIPPED: Crystal oscillator removal")
+            logging.info("\tSKIPPED: Crystal oscillator removal")
             skipped +=1
             break
 
@@ -508,10 +511,10 @@ def AutomaticFullTest():
     while True:
         k=input("\t<y> to confirm, <s> to skip: ")
         if k=="y":
-            logging.info("\t PASS: User confirmed that Clock source shunts are set to correct position")
+            logging.info("\tPASS: User confirmed that Clock source shunts are set to correct position")
             break
         if k=="s":
-            logging.info("SKIPPED: Clock select shunt check")
+            logging.info("\tSKIPPED: Clock select shunt check")
             skipped +=1
             break
 
@@ -540,27 +543,31 @@ def AutomaticFullTest():
 # Prints and Returns hardware ID codes..
 # FIXME: doesn't read some of them out. Need to understand why.
 def PrintIDCodes():
-    idcodestr  = ("Fast Control Firmware ID: 0x%X\n" % alct.ReadIDCode (0x0))
-    idcodestr += ("    EEPROM1 ID Code:          0x%X\n" % alct.ReadIDCode (0x1))
-    idcodestr += ("    EEPROM2 ID Code:          0x%X\n" % alct.ReadIDCode (0x2))
-    idcodestr += ("    Slow Control Firmware ID: 0x%X\n" % alct.ReadIDCode (0x3))
+    #idcodestr  = ("Fast Control Firmware ID: 0x%X\n"     % alct.ReadIDCode (0x0))
+    #idcodestr += ("    EEPROM1 ID Code:          0x%X\n" % alct.ReadIDCode (0x1))
+    #idcodestr += ("    EEPROM2 ID Code:          0x%X\n" % alct.ReadIDCode (0x2))
+    idcodestr = ("    Slow Control Firmware ID: 0x%X\n" % alct.ReadIDCode (0x3))
 
-    #idcodestr += ("\t Board Serial Number:      0x%X\n" % alct.ReadBoardSN(0x2))
-    #idcodestr += ("\t Mezz. Serial Number:      0x%X"   % alct.ReadBoardSN(0x3))
     return (idcodestr)
 
 def PrintMezzType():
     mezztype = alct.DetectMezzanineType()
-    if mezztype == -1: msg = 'ERROR: Mezzanine Card Not Detected'
-    if mezztype ==  0: msg = 'Mezzanine Board with Xilinx Virtex 1000 chip is detected'
-    if mezztype ==  1: msg = 'Mezzanine Board with Xilinx Virtex  600 chip is detected'
+    if mezztype == -1:
+        msg = 'ERROR: Mezzanine Card Not Detected'
+    if mezztype ==  alct.VIRTEX1000:
+        msg = 'Mezzanine Board with Xilinx Virtex 1000 chip is detected'
+    if mezztype ==  alct.VIRTEX600:
+        msg = 'Mezzanine Board with Xilinx Virtex 600 chip is detected'
     return(msg)
 
 # Generates a string of the ALCT Type.. useful in some limited cases..
 def StringALCTType(type):
-    if   type == 0: s = "ALCT-288"
-    elif type == 1: s = "ALCT-384"
-    elif type == 2: s = "ALCT-672"
+    if   type == alct.ALCT288:
+        s = "ALCT-288"
+    elif type == alct.ALCT384:
+        s = "ALCT-384"
+    elif type == alct.ALCT672:
+        s = "ALCT-672"
     return(s)
 
 if __name__ == "__main__":
