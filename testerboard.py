@@ -588,20 +588,10 @@ def ChipDelayScan(chip, alcttype):
 #-------------------------------------------------------------------------------
 def TestboardDelaysCheck(alcttype):
     NUM_AFEB = alct.alct[alcttype].groups * 6
-    #ch, i, j, k, l, ErrMeasDly, count: integer
-    #MinDelay, MaxDelay, MaxDeltaDelay, MaxDeltaBegin: single
-    #DeltaDelay, PulseWidth: array[0..15] of Currency
-    #BeginTime_Min, AverageDelay_Time, DeltaDelay_Max, ErrorDeltaDelay: MeasDly
-    #DeltaBegin_Max: MeasDly
-    #DeltaBeginTime, Delay_Time: MeasDlyChan
-    #ErrDelayTest: boolean
-    #BoardNum: integer
-    #PathString, PinErrors: string//Zach
-    #RegMaskDone: array[0..41] of word
 
     alct.SetChain(alct.VIRTEX_CONTROL)
     ErrDelayTest    = False
-    MaxDeltaBegin   = 2
+    MaxDeltaBegin   = 2.25
     MaxDeltaDelay   = 2
     MinDelay        = 25
     MaxDelay        = 35
@@ -883,38 +873,39 @@ def TestPulseSelfCheck(alcttype):
 
     logging.info("\nTest Pulse Semi-Automatic Self Test")
 
+    print("")
     print("    * Connect LEMO output J3 (near power connector) to oscilloscope")
-    print("      and configure scope to triggering from it ")
+    print("      and configure scope to trigger from it ")
     print("    * Connect LEMO output on the bottom of large testing board to")
     print("      another channel of the oscilloscope. ")
     print("")
-    print("    * Verify that, as the LEMO output from the tester board ")
+    print("    * We want to verify that, as the LEMO output from the tester board")
     print("      switches between inputs, a pulse is generated at each input")
     print("      and is of consistent amplitude")
     while True: 
-        k = input("\n\t <cr> to continue when ready.")
+        k = input("\n       <cr> to continue when ready.")
         if not k: break
     print("")
 
     #--------------------------------------------------------------------------
+    TestPulseLoopTest(alcttype)
     while (True): 
-        TestPulseLoopTest(alcttype)
-        k=input("\n    Did all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
+        k=input("\n    Did all channels pass the test? \n\t<p> to pass, <f> to fail, <r> to repeat the scan: ")
         if k=="p":
-            logging.info("\t PASSED: User passed board on Test Pulse Loopback Test")
+            logging.info("        PASSED: User passed board on Test Pulse Loopback Test")
             errs = 0
             break
         elif k=="f":
-            s=input("\n Please record which channels failed the test: ")
-            logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
-            logging.info("\t         Failure indicated on channels %s" % s)
+            print       ("")
+            s=input     ("Please record which channels failed the test: ")
+            logging.info("        FAILED: User failed board on Test Pulse Loopback Test")
+            logging.info("                Failure indicated on channels %s" % s)
             errs = 1
             break
         elif k=="r":
-            continue 
+            TestPulseLoopTest(alcttype)
         else: 
-            print("WTF!?")
-            continue
+            pass
 
     return (errs)
 
@@ -935,8 +926,8 @@ def StandbySelfCheck(alcttype):
         if not k: break
     print("")
     #--------------------------------------------------------------------------
+    TestPulseLoopTest(alcttype)
     while (True): 
-        TestPulseLoopTest(alcttype)
         k=input("\n    Did all channels pass the test? \n\t <p> to pass, <f> to fail, <r> to repeat the scan: ")
         if k=="p":
             logging.info("\t PASSED: User passed board on Test Pulse Loopback Test")
@@ -944,17 +935,17 @@ def StandbySelfCheck(alcttype):
             errs = 1
             break
         elif k=="f":
-            s=input("\n    Please record which channels failed the test: ")
-            logging.info("\t FAILED: User failed board on Test Pulse Loopback Test")
-            logging.info("\t         Failure indicated on channels %s" % s)
+            print       ("")
+            s=input     ("    Please record which channels failed the test: ")
+            logging.info("        FAILED: User failed board on Test Pulse Loopback Test")
+            logging.info("                Failure indicated on channels %s" % s)
             done = True
             errs = 0
             break
         elif k=="r":
-            break 
+            TestPulseLoopTest(alcttype)
         else: 
-            print("WTF!?")
-            continue
+            pass
 
     if done: 
         print('')
